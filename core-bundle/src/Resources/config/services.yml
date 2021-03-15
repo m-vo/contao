@@ -864,6 +864,8 @@ services:
 
     Contao\CoreBundle\Twig\Extension\TextExtension: ~
 
+    Contao\CoreBundle\Twig\Extension\ContaoTemplateInteropExtension: ~
+
     Contao\CoreBundle\Twig\FailTolerantFilesystemLoader:
         decorates: twig.loader.native_filesystem
         arguments:

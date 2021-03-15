@@ -69,12 +69,33 @@ trait TemplateInheritance
 	protected $intBufferLevel = 0;
 
 	/**
+	 * Delegate rendering to Twig if possible
+	 * @var bool
+	 */
+	protected $blnDelegateToTwig = true;
+
+	/**
 	 * Parse the template file and return it as string
 	 *
 	 * @return string The template markup
 	 */
 	public function inherit()
 	{
+		$container = System::getContainer();
+
+		if ($this->blnDelegateToTwig)
+		{
+			$twig = $container->get('twig');
+			$twigTemplate = "{$this->strTemplate}.html.twig";
+
+			// fixme: add registry + ns handling
+			// Forward to Twig if the template is available as "<template>.html.twig"
+			if ($twig->getLoader()->exists($twigTemplate))
+			{
+				return $twig->render($twigTemplate, $this->arrData);
+			}
+		}
+
 		$strBuffer = '';
 
 		// Start with the template itself
@@ -101,7 +122,7 @@ trait TemplateInheritance
 				}
 				else
 				{
-					System::getContainer()
+					$container
 						->get('monolog.logger.contao')
 						->log(
 							LogLevel::ERROR,
