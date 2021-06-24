@@ -1316,7 +1316,7 @@ class PageModel extends Model
 			$strUrl = substr($strUrl, \strlen(Environment::get('path')) + 1);
 		}
 
-		return $this->applyLegacyLogic($strUrl, $strParams);
+		return $this->applyLegacyLogic($strUrl, $strParams ?? '');
 	}
 
 	/**
@@ -1333,7 +1333,7 @@ class PageModel extends Model
 		$objRouter = System::getContainer()->get('router');
 		$strUrl = $objRouter->generate(RouteObjectInterface::OBJECT_BASED_ROUTE_NAME, array(RouteObjectInterface::CONTENT_OBJECT => $this, 'parameters' => $strParams), UrlGeneratorInterface::ABSOLUTE_URL);
 
-		return $this->applyLegacyLogic($strUrl, $strParams);
+		return $this->applyLegacyLogic($strUrl, $strParams ?? '');
 	}
 
 	/**
@@ -1365,7 +1365,7 @@ class PageModel extends Model
 
 		$context->setBaseUrl($baseUrl);
 
-		return $this->applyLegacyLogic($strUrl, $strParams);
+		return $this->applyLegacyLogic($strUrl, $strParams ?? '');
 	}
 
 	/**
