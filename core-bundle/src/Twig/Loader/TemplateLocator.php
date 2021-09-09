@@ -12,12 +12,14 @@ declare(strict_types=1);
 
 namespace Contao\CoreBundle\Twig\Loader;
 
+use Contao\CoreBundle\Event\TwigThemeDirectoriesEvent;
 use Contao\CoreBundle\Exception\InvalidThemePathException;
 use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\CoreBundle\HttpKernel\Bundle\ContaoModuleBundle;
 use Contao\ThemeModel;
 use Doctrine\DBAL\Exception\TableNotFoundException;
 use Symfony\Component\Finder\Finder;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Webmozart\PathUtil\Path;
 
 /**
@@ -45,12 +47,18 @@ class TemplateLocator
      */
     private $framework;
 
-    public function __construct(string $projectDir, array $bundles, array $bundlesMetadata, ContaoFramework $framework)
+    /**
+     * @var EventDispatcherInterface
+     */
+    private $dispatcher;
+
+    public function __construct(string $projectDir, array $bundles, array $bundlesMetadata, ContaoFramework $framework, EventDispatcherInterface $dispatcher)
     {
         $this->projectDir = $projectDir;
         $this->bundles = $bundles;
         $this->bundlesMetadata = $bundlesMetadata;
         $this->framework = $framework;
+        $this->dispatcher = $dispatcher;
     }
 
     /**
@@ -89,7 +97,11 @@ class TemplateLocator
             $directories[$slug] = $absolutePath;
         }
 
-        return $directories;
+        $event = new TwigThemeDirectoriesEvent($directories);
+
+        $this->dispatcher->dispatch($event);
+
+        return $event->getDirectories();
     }
 
     /**

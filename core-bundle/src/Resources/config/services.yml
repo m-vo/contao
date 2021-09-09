@@ -927,6 +927,7 @@ services:
             - '%kernel.bundles%'
             - '%kernel.bundles_metadata%'
             - '@contao.framework'
+            - '@event_dispatcher'
 
     Contao\CoreBundle\Twig\Loader\FailTolerantFilesystemLoader:
         arguments:
