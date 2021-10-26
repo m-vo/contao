@@ -16,6 +16,7 @@ use Contao\CoreBundle\Exception\AjaxRedirectResponseException;
 use Contao\CoreBundle\Exception\PageNotFoundException;
 use Contao\CoreBundle\Exception\RedirectResponseException;
 use Contao\CoreBundle\File\Metadata;
+use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\CoreBundle\Image\Studio\FigureBuilder;
 use Contao\CoreBundle\Image\Studio\Studio;
 use Contao\CoreBundle\Monolog\ContaoContext as ContaoMonologContext;
@@ -835,19 +836,21 @@ abstract class Controller extends System
 			}
 		}
 
-		$arrReplace['[[TL_JQUERY]]'] = $strScripts;
+		$nonce = ContaoFramework::getNonce();
+
+		$arrReplace["[[TL_JQUERY_$nonce]]"] = $strScripts;
 		$strScripts = '';
 
 		// Add the internal MooTools scripts
-		if (!empty($GLOBALS['TL_MOOTOOLS']) && \is_array($GLOBALS['TL_MOOTOOLS']))
+		if (!empty($GLOBALS["TL_MOOTOOLS_$nonce]]"]) && \is_array($GLOBALS['TL_MOOTOOLS']))
 		{
-			foreach (array_unique($GLOBALS['TL_MOOTOOLS']) as $script)
+			foreach (array_unique($GLOBALS["TL_MOOTOOLS_$nonce]]"]) as $script)
 			{
 				$strScripts .= $script;
 			}
 		}
 
-		$arrReplace['[[TL_MOOTOOLS]]'] = $strScripts;
+		$arrReplace["[[TL_MOOTOOLS_$nonce]]"] = $strScripts;
 		$strScripts = '';
 
 		// Add the internal <body> tags
@@ -865,7 +868,7 @@ abstract class Controller extends System
 		$objLayout = ($objPage !== null) ? LayoutModel::findByPk($objPage->layoutId) : null;
 		$blnCombineScripts = ($objLayout === null) ? false : $objLayout->combineScripts;
 
-		$arrReplace['[[TL_BODY]]'] = $strScripts;
+		$arrReplace["[[TL_BODY_$nonce]]"] = $strScripts;
 		$strScripts = '';
 
 		$objCombiner = new Combiner();
@@ -932,7 +935,7 @@ abstract class Controller extends System
 			}
 		}
 
-		$arrReplace['[[TL_CSS]]'] = $strScripts;
+		$arrReplace["[[TL_CSS_$nonce]]"] = $strScripts;
 		$strScripts = '';
 
 		// Add the internal scripts
@@ -1002,7 +1005,7 @@ abstract class Controller extends System
 			}
 		}
 
-		$arrReplace['[[TL_HEAD]]'] = $strScripts;
+		$arrReplace["[[TL_HEAD_$nonce]]"] = $strScripts;
 
 		return str_replace(array_keys($arrReplace), $arrReplace, $strBuffer);
 	}

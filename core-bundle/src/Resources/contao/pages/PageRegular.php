@@ -11,6 +11,7 @@
 namespace Contao;
 
 use Contao\CoreBundle\Exception\NoLayoutSpecifiedException;
+use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\CoreBundle\Routing\ResponseContext\CoreResponseContextFactory;
 use Contao\CoreBundle\Routing\ResponseContext\HtmlHeadBag\HtmlHeadBag;
 use Contao\CoreBundle\Routing\ResponseContext\JsonLd\ContaoPageSchema;
@@ -594,14 +595,16 @@ class PageRegular extends Frontend
 			}
 		}
 
+		$nonce = ContaoFramework::getNonce();
+
 		// Add a placeholder for dynamic style sheets (see #4203)
-		$strStyleSheets .= '[[TL_CSS]]';
+		$strStyleSheets .= "[[TL_CSS_$nonce]]";
 
 		// Always add conditional style sheets at the end
 		$strStyleSheets .= $strCcStyleSheets;
 
 		// Add a placeholder for dynamic <head> tags (see #4203)
-		$strHeadTags = '[[TL_HEAD]]';
+		$strHeadTags = "[[TL_HEAD_$nonce]]";
 
 		// Add the analytics scripts
 		if ($objLayout->analytics)
@@ -639,6 +642,7 @@ class PageRegular extends Frontend
 	protected function createFooterScripts($objLayout, $objPage = null)
 	{
 		$strScripts = '';
+		$nonce = ContaoFramework::getNonce();
 
 		// jQuery
 		if ($objLayout->addJQuery)
@@ -655,7 +659,7 @@ class PageRegular extends Frontend
 			}
 
 			// Add a placeholder for dynamic scripts (see #4203)
-			$strScripts .= '[[TL_JQUERY]]';
+			$strScripts .= "[[TL_JQUERY_$nonce]]";
 		}
 
 		// MooTools
@@ -673,7 +677,7 @@ class PageRegular extends Frontend
 			}
 
 			// Add a placeholder for dynamic scripts (see #4203)
-			$strScripts .= '[[TL_MOOTOOLS]]';
+			$strScripts .= "[[TL_MOOTOOLS_$nonce]]";
 		}
 
 		// Add the framework agnostic JavaScripts
@@ -692,7 +696,7 @@ class PageRegular extends Frontend
 		}
 
 		// Add a placeholder for dynamic scripts (see #4203, #5583)
-		$strScripts .= '[[TL_BODY]]';
+		$strScripts .= "[[TL_BODY_$nonce]]";
 
 		// Add the external JavaScripts
 		$arrExternalJs = StringUtil::deserialize($objLayout->externalJs);
