@@ -842,7 +842,7 @@ abstract class Controller extends System
 		$strScripts = '';
 
 		// Add the internal MooTools scripts
-		if (!empty($GLOBALS["TL_MOOTOOLS_$nonce]]"]) && \is_array($GLOBALS['TL_MOOTOOLS']))
+		if (!empty($GLOBALS['TL_MOOTOOLS']) && \is_array($GLOBALS['TL_MOOTOOLS']))
 		{
 			foreach (array_unique($GLOBALS["TL_MOOTOOLS_$nonce]]"]) as $script)
 			{
