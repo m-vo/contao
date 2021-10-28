@@ -844,7 +844,7 @@ abstract class Controller extends System
 		// Add the internal MooTools scripts
 		if (!empty($GLOBALS['TL_MOOTOOLS']) && \is_array($GLOBALS['TL_MOOTOOLS']))
 		{
-			foreach (array_unique($GLOBALS["TL_MOOTOOLS_$nonce]]"]) as $script)
+			foreach (array_unique($GLOBALS['TL_MOOTOOLS']) as $script)
 			{
 				$strScripts .= $script;
 			}
