@@ -44,7 +44,6 @@ class ContaoFramework implements ContaoFrameworkInterface, ContainerAwareInterfa
     use ContainerAwareTrait;
 
     private static bool $initialized = false;
-    private static string $nonce = '';
 
     private RequestStack $requestStack;
     private ScopeMatcher $scopeMatcher;
@@ -83,8 +82,6 @@ class ContaoFramework implements ContaoFrameworkInterface, ContainerAwareInterfa
         Input::resetUnusedGet();
         InsertTags::reset();
         Registry::getInstance()->reset();
-
-        self::$nonce = '';
     }
 
     public function isInitialized(): bool
@@ -117,8 +114,6 @@ class ContaoFramework implements ContaoFrameworkInterface, ContainerAwareInterfa
         if (!$this->legacyRouting) {
             $this->throwOnLegacyRoutingHooks();
         }
-
-        self::$nonce = bin2hex(random_bytes(16));
     }
 
     public function setHookListeners(array $hookListeners): void
@@ -151,14 +146,6 @@ class ContaoFramework implements ContaoFrameworkInterface, ContainerAwareInterfa
         }
 
         return $this->adapterCache[$class];
-    }
-
-    /**
-     * @internal
-     */
-    public static function getNonce(): string
-    {
-        return self::$nonce;
     }
 
     /**

@@ -595,7 +595,7 @@ class PageRegular extends Frontend
 			}
 		}
 
-		$nonce = ContaoFramework::getNonce();
+		$nonce = $this->Template->getNonce();
 
 		// Add a placeholder for dynamic style sheets (see #4203)
 		$strStyleSheets .= "[[TL_CSS_$nonce]]";
@@ -642,7 +642,7 @@ class PageRegular extends Frontend
 	protected function createFooterScripts($objLayout, $objPage = null)
 	{
 		$strScripts = '';
-		$nonce = ContaoFramework::getNonce();
+		$nonce = $this->Template->getNonce();
 
 		// jQuery
 		if ($objLayout->addJQuery)

@@ -813,7 +813,7 @@ abstract class Controller extends System
 	 *
 	 * @return string The string with the replaced tags
 	 */
-	public static function replaceDynamicScriptTags($strBuffer)
+	public static function replaceDynamicScriptTags($strBuffer, $suffix = '')
 	{
 		// HOOK: add custom logic
 		if (isset($GLOBALS['TL_HOOKS']['replaceDynamicScriptTags']) && \is_array($GLOBALS['TL_HOOKS']['replaceDynamicScriptTags']))
@@ -836,9 +836,7 @@ abstract class Controller extends System
 			}
 		}
 
-		$nonce = ContaoFramework::getNonce();
-
-		$arrReplace["[[TL_JQUERY_$nonce]]"] = $strScripts;
+		$arrReplace["[[TL_JQUERY$suffix]]"] = $strScripts;
 		$strScripts = '';
 
 		// Add the internal MooTools scripts
@@ -850,7 +848,7 @@ abstract class Controller extends System
 			}
 		}
 
-		$arrReplace["[[TL_MOOTOOLS_$nonce]]"] = $strScripts;
+		$arrReplace["[[TL_MOOTOOLS$suffix]]"] = $strScripts;
 		$strScripts = '';
 
 		// Add the internal <body> tags
@@ -868,7 +866,7 @@ abstract class Controller extends System
 		$objLayout = ($objPage !== null) ? LayoutModel::findByPk($objPage->layoutId) : null;
 		$blnCombineScripts = ($objLayout === null) ? false : $objLayout->combineScripts;
 
-		$arrReplace["[[TL_BODY_$nonce]]"] = $strScripts;
+		$arrReplace["[[TL_BODY$suffix]]"] = $strScripts;
 		$strScripts = '';
 
 		$objCombiner = new Combiner();
@@ -935,7 +933,7 @@ abstract class Controller extends System
 			}
 		}
 
-		$arrReplace["[[TL_CSS_$nonce]]"] = $strScripts;
+		$arrReplace["[[TL_CSS$suffix]]"] = $strScripts;
 		$strScripts = '';
 
 		// Add the internal scripts
@@ -1005,7 +1003,7 @@ abstract class Controller extends System
 			}
 		}
 
-		$arrReplace["[[TL_HEAD_$nonce]]"] = $strScripts;
+		$arrReplace["[[TL_HEAD$suffix]]"] = $strScripts;
 
 		return str_replace(array_keys($arrReplace), $arrReplace, $strBuffer);
 	}

@@ -77,6 +77,23 @@ trait TemplateInheritance
 	protected $blnDebug;
 
 	/**
+	 * @var string
+	 */
+	private $nonce;
+
+	/**
+	 * @internal
+	 */
+	public function getNonce()
+	{
+		if (!$this->nonce) {
+			$this->nonce = bin2hex(random_bytes(16));
+		}
+
+		return $this->nonce;
+	}
+
+	/**
 	 * Parse the template file and return it as string
 	 *
 	 * @return string The template markup
@@ -192,7 +209,7 @@ trait TemplateInheritance
 	 */
 	public function parent()
 	{
-		$nonce = ContaoFramework::getNonce();
+		$nonce = $this->getNonce();
 
 		echo "[[TL_PARENT_$nonce]]";
 	}
@@ -207,7 +224,7 @@ trait TemplateInheritance
 	public function block($name)
 	{
 		$this->arrBlockNames[] = $name;
-		$nonce = ContaoFramework::getNonce();
+		$nonce = $this->getNonce();
 
 		// Root template
 		if ($this->strParent === null)
@@ -235,7 +252,7 @@ trait TemplateInheritance
 				// Output everything before the first TL_PARENT tag
 				if (strpos($this->arrBlocks[$name], "[[TL_PARENT_$nonce]]") !== false)
 				{
-					list($content) = explode("[[TL_PARENT_$nonce]]", $this->arrBlocks[$name], 2);
+					[$content] = explode("[[TL_PARENT_$nonce]]", $this->arrBlocks[$name], 2);
 					echo $content;
 				}
 
@@ -282,7 +299,7 @@ trait TemplateInheritance
 		// Root template
 		if ($this->strParent === null)
 		{
-			$nonce = ContaoFramework::getNonce();
+			$nonce = $this->getNonce();
 
 			// Handle nested blocks
 			if ($this->arrBlocks[$name] != "[[TL_PARENT_$nonce]]")
@@ -290,7 +307,7 @@ trait TemplateInheritance
 				// Output everything after the first TL_PARENT tag
 				if (strpos($this->arrBlocks[$name], "[[TL_PARENT_$nonce]]") !== false)
 				{
-					list(, $content) = explode("[[TL_PARENT_$nonce]]", $this->arrBlocks[$name], 2);
+					[, $content] = explode("[[TL_PARENT_$nonce]]", $this->arrBlocks[$name], 2);
 					echo $content;
 				}
 

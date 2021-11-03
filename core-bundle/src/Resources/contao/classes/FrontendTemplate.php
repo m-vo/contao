@@ -129,7 +129,7 @@ class FrontendTemplate extends Template
 
 		// Replace insert tags
 		$this->strBuffer = $this->replaceInsertTags($this->strBuffer);
-		$this->strBuffer = $this->replaceDynamicScriptTags($this->strBuffer); // see #4203
+		$this->strBuffer = $this->replaceDynamicScriptTags($this->strBuffer, '_'.$this->Template->getNonce()); // see #4203
 
 		// HOOK: allow to modify the compiled markup (see #4291)
 		if (isset($GLOBALS['TL_HOOKS']['modifyFrontendPage']) && \is_array($GLOBALS['TL_HOOKS']['modifyFrontendPage']))
