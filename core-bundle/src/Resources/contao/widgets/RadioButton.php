@@ -34,6 +34,17 @@ class RadioButton extends Widget
 	protected $strTemplate = 'be_widget_rdo';
 
 	/**
+	 * @param array $arrAttributes
+	 */
+	public function __construct($arrAttributes=null)
+	{
+		parent::__construct($arrAttributes);
+
+		$this->preserveTags = true;
+		$this->decodeEntities = true;
+	}
+
+	/**
 	 * Add specific attributes
 	 *
 	 * @param string $strKey
@@ -115,7 +126,7 @@ class RadioButton extends Widget
 		// Add an unknown option, so it is not lost when saving the record (see #920)
 		if (isset($this->unknownOption[0]))
 		{
-			$arrAllOptions[] = array('value'=>$this->unknownOption[0], 'label'=>$GLOBALS['TL_LANG']['MSC']['unknownOption']);
+			$arrAllOptions[] = array('value' => $this->unknownOption[0], 'label' => sprintf($GLOBALS['TL_LANG']['MSC']['unknownOption'], $this->unknownOption[0]));
 		}
 
 		foreach ($arrAllOptions as $i=>$arrOption)
@@ -124,11 +135,11 @@ class RadioButton extends Widget
 				'<input type="radio" name="%s" id="opt_%s" class="tl_radio" value="%s"%s%s onfocus="Backend.getScrollOffset()"> <label for="opt_%s">%s</label>',
 				$this->strName,
 				$this->strId . '_' . $i,
-				StringUtil::specialchars($arrOption['value']),
+				StringUtil::specialchars($arrOption['value'] ?? ''),
 				$this->isChecked($arrOption),
 				$this->getAttributes(),
 				$this->strId . '_' . $i,
-				$arrOption['label']
+				$arrOption['label'] ?? null
 			);
 		}
 

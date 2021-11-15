@@ -71,7 +71,7 @@ class Database
 		// Deprecated since Contao 4.0, to be removed in Contao 5.0
 		if (!empty($arrConfig))
 		{
-			@trigger_error('Passing a custom configuration to Database::__construct() has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+			trigger_deprecation('contao/core-bundle', '4.0', 'Passing a custom configuration to "Contao\Database::__construct()" has been deprecated and will no longer work in Contao 5.0.');
 
 			$arrParams = array
 			(
@@ -270,7 +270,7 @@ class Database
 				$this->setDatabase($strDatabase);
 			}
 
-			$this->arrCache[$strDatabase] = $this->resConnection->getSchemaManager()->listTableNames();
+			$this->arrCache[$strDatabase] = $this->resConnection->createSchemaManager()->listTableNames();
 
 			// Restore the database
 			if ($strDatabase !== null && $strDatabase != $strOldDatabase)
@@ -553,7 +553,7 @@ class Database
 				foreach (array_reverse(array_keys($arrOrdered)) as $pid)
 				{
 					$pos = (int) array_search($pid, $arrReturn);
-					array_insert($arrReturn, $pos+1, $arrOrdered[$pid]);
+					ArrayUtil::arrayInsert($arrReturn, $pos+1, $arrOrdered[$pid]);
 				}
 
 				$arrReturn = $this->getChildRecords($arrChilds, $strTable, $blnSorting, $arrReturn, $strWhere);
@@ -565,7 +565,7 @@ class Database
 			}
 		}
 
-		return $arrReturn;
+		return array_map('\intval', $arrReturn);
 	}
 
 	/**
@@ -573,23 +573,29 @@ class Database
 	 *
 	 * @param integer $intId    The ID of the record
 	 * @param string  $strTable The table name
+	 * @param bool    $skipId   Omit the provided ID in the result set
 	 *
 	 * @return array An array of parent record IDs
 	 */
-	public function getParentRecords($intId, $strTable)
+	public function getParentRecords($intId, $strTable, bool $skipId = false)
 	{
-		$arrReturn = array();
+		// Limit to a nesting level of 10
+		$ids = $this->prepare("SELECT id, @pid:=pid FROM $strTable WHERE id=?" . str_repeat(" UNION SELECT id, @pid:=pid FROM $strTable WHERE id=@pid", 9))
+					->execute($intId)
+					->fetchEach('id');
 
-		// Currently supports a nesting-level of 10
-		$objPages = $this->prepare("SELECT id, @pid:=pid FROM $strTable WHERE id=?" . str_repeat(" UNION SELECT id, @pid:=pid FROM $strTable WHERE id=@pid", 9))
-						 ->execute($intId);
-
-		while ($objPages->next())
+		// Trigger recursion in case our query returned exactly 10 IDs in which case we might have higher parent records
+		if (\count($ids) === 10)
 		{
-			$arrReturn[] = $objPages->id;
+			$ids = array_merge($ids, $this->getParentRecords(end($ids), $strTable, true));
 		}
 
-		return $arrReturn;
+		if ($skipId && ($key = array_search($intId, $ids)) !== false)
+		{
+			unset($ids[$key]);
+		}
+
+		return array_map('\intval', array_values($ids));
 	}
 
 	/**
@@ -599,7 +605,7 @@ class Database
 	 */
 	public function setDatabase($strDatabase)
 	{
-		$this->resConnection->exec("USE $strDatabase");
+		$this->resConnection->executeStatement("USE $strDatabase");
 	}
 
 	/**
@@ -640,7 +646,7 @@ class Database
 			$arrLocks[] = $this->resConnection->quoteIdentifier($table) . ' ' . $mode;
 		}
 
-		$this->resConnection->exec('LOCK TABLES ' . implode(', ', $arrLocks) . ';');
+		$this->resConnection->executeStatement('LOCK TABLES ' . implode(', ', $arrLocks) . ';');
 	}
 
 	/**
@@ -648,7 +654,7 @@ class Database
 	 */
 	public function unlockTables()
 	{
-		$this->resConnection->exec('UNLOCK TABLES;');
+		$this->resConnection->executeStatement('UNLOCK TABLES;');
 	}
 
 	/**
@@ -663,14 +669,13 @@ class Database
 		try
 		{
 			// MySQL 8 compatibility
-			$this->resConnection->executeQuery('SET @@SESSION.information_schema_stats_expiry = 0');
+			$this->resConnection->executeStatement('SET @@SESSION.information_schema_stats_expiry = 0');
 		}
 		catch (DriverException $e)
 		{
 		}
 
-		$statement = $this->resConnection->executeQuery('SHOW TABLE STATUS LIKE ' . $this->resConnection->quote($strTable));
-		$status = $statement->fetch(\PDO::FETCH_ASSOC);
+		$status = $this->resConnection->fetchAssociative('SHOW TABLE STATUS LIKE ' . $this->resConnection->quote($strTable));
 
 		return $status['Data_length'] + $status['Index_length'];
 	}
@@ -687,14 +692,13 @@ class Database
 		try
 		{
 			// MySQL 8 compatibility
-			$this->resConnection->executeQuery('SET @@SESSION.information_schema_stats_expiry = 0');
+			$this->resConnection->executeStatement('SET @@SESSION.information_schema_stats_expiry = 0');
 		}
 		catch (DriverException $e)
 		{
 		}
 
-		$statement = $this->resConnection->executeQuery('SHOW TABLE STATUS LIKE ' . $this->resConnection->quote($strTable));
-		$status = $statement->fetch(\PDO::FETCH_ASSOC);
+		$status = $this->resConnection->fetchAssociative('SHOW TABLE STATUS LIKE ' . $this->resConnection->quote($strTable));
 
 		return $status['Auto_increment'];
 	}
@@ -710,8 +714,7 @@ class Database
 
 		if (empty($ids))
 		{
-			$statement = $this->resConnection->executeQuery(implode(' UNION ALL ', array_fill(0, 10, "SELECT UNHEX(REPLACE(UUID(), '-', '')) AS uuid")));
-			$ids = $statement->fetchAll(\PDO::FETCH_COLUMN);
+			$ids = $this->resConnection->fetchFirstColumn(implode(' UNION ALL ', array_fill(0, 10, "SELECT UNHEX(REPLACE(UUID(), '-', '')) AS uuid")));
 		}
 
 		return array_pop($ids);
@@ -760,7 +763,7 @@ class Database
 	 */
 	public function executeUncached($strQuery)
 	{
-		@trigger_error('Using Database::executeUncached() has been deprecated and will no longer work in Contao 5.0. Use Database::execute() instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.0', 'Using "Contao\Database::executeUncached()" has been deprecated and will no longer work in Contao 5.0. Use "Contao\Database::execute()" instead.');
 
 		return $this->execute($strQuery);
 	}
@@ -777,7 +780,7 @@ class Database
 	 */
 	public function executeCached($strQuery)
 	{
-		@trigger_error('Using Database::executeCached() has been deprecated and will no longer work in Contao 5.0. Use Database::execute() instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.0', 'Using "Contao\Database::executeCached()" has been deprecated and will no longer work in Contao 5.0. Use "Contao\Database::execute()" instead.');
 
 		return $this->execute($strQuery);
 	}

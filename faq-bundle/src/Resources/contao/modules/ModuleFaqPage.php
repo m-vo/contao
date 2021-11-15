@@ -10,7 +10,7 @@
 
 namespace Contao;
 
-use Patchwork\Utf8;
+use Contao\CoreBundle\Image\Studio\Studio;
 
 /**
  * Class ModuleFaqPage
@@ -39,7 +39,7 @@ class ModuleFaqPage extends Module
 		if ($request && System::getContainer()->get('contao.routing.scope_matcher')->isBackendRequest($request))
 		{
 			$objTemplate = new BackendTemplate('be_wildcard');
-			$objTemplate->wildcard = '### ' . Utf8::strtoupper($GLOBALS['TL_LANG']['FMD']['faqpage'][0]) . ' ###';
+			$objTemplate->wildcard = '### ' . $GLOBALS['TL_LANG']['FMD']['faqpage'][0] . ' ###';
 			$objTemplate->title = $this->headline;
 			$objTemplate->id = $this->id;
 			$objTemplate->link = $this->name;
@@ -71,9 +71,9 @@ class ModuleFaqPage extends Module
 	 */
 	protected function compile()
 	{
-		$objFaq = FaqModel::findPublishedByPids($this->faq_categories);
+		$objFaqs = FaqModel::findPublishedByPids($this->faq_categories);
 
-		if ($objFaq === null)
+		if ($objFaqs === null)
 		{
 			$this->Template->faq = array();
 
@@ -85,33 +85,36 @@ class ModuleFaqPage extends Module
 
 		$tags = array();
 		$arrFaqs = array_fill_keys($this->faq_categories, array());
-		$projectDir = System::getContainer()->getParameter('kernel.project_dir');
 
 		// Add FAQs
-		while ($objFaq->next())
+		foreach ($objFaqs as $objFaq)
 		{
 			/** @var FaqModel $objFaq */
 			$objTemp = (object) $objFaq->row();
 
 			// Clean the RTE output
 			$objTemp->answer = StringUtil::toHtml5($objFaq->answer);
-
 			$objTemp->answer = StringUtil::encodeEmail($objTemp->answer);
+
 			$objTemp->addImage = false;
+			$objTemp->addBefore = false;
 
 			// Add an image
-			if ($objFaq->addImage && $objFaq->singleSRC)
+			if ($objFaq->addImage)
 			{
-				$objModel = FilesModel::findByUuid($objFaq->singleSRC);
+				$figure = System::getContainer()
+					->get(Studio::class)
+					->createFigureBuilder()
+					->from($objFaq->singleSRC)
+					->setSize($objFaq->size)
+					->setMetadata($objFaq->getOverwriteMetadata())
+					->setLightboxGroupIdentifier('lightbox[' . substr(md5('mod_faqpage_' . $objFaq->id), 0, 6) . ']')
+					->enableLightbox((bool) $objFaq->fullsize)
+					->buildIfResourceExists();
 
-				if ($objModel !== null && is_file($projectDir . '/' . $objModel->path))
+				if (null !== $figure)
 				{
-					// Do not override the field now that we have a model registry (see #6303)
-					$arrFaq = $objFaq->row();
-					$arrFaq['singleSRC'] = $objModel->path;
-					$strLightboxId = 'lightbox[' . substr(md5('mod_faqpage_' . $objFaq->id), 0, 6) . ']'; // see #5810
-
-					$this->addImageToTemplate($objTemp, $arrFaq, null, $strLightboxId, $objModel);
+					$figure->applyLegacyTemplateData($objTemp, $objFaq->imagemargin, $objFaq->floating);
 				}
 			}
 
@@ -165,6 +168,11 @@ class ModuleFaqPage extends Module
 		$this->Template->faq = $arrFaqs;
 		$this->Template->request = Environment::get('indexFreeRequest');
 		$this->Template->topLink = $GLOBALS['TL_LANG']['MSC']['backToTop'];
+
+		$this->Template->getSchemaOrgData = static function () use ($objFaqs)
+		{
+			return ModuleFaq::getSchemaOrgData($objFaqs);
+		};
 	}
 }
 

@@ -30,6 +30,18 @@ services:
     contao.command.debug_fragments:
         class: Contao\CoreBundle\Command\DebugFragmentsCommand
 
+    Contao\CoreBundle\Command\DebugPagesCommand:
+        arguments:
+            - '@contao.framework'
+            - '@Contao\CoreBundle\Routing\Page\PageRegistry'
+
+    Contao\CoreBundle\Command\DebugContaoTwigCommand:
+        arguments:
+            - '@Contao\CoreBundle\Twig\Loader\ContaoFilesystemLoader'
+            - '@Contao\CoreBundle\Twig\Loader\ContaoFilesystemLoaderWarmer'
+            - '@Contao\CoreBundle\Twig\Loader\ThemeNamespace'
+            - '%kernel.project_dir%'
+
     contao.command.filesync:
         class: Contao\CoreBundle\Command\FilesyncCommand
 
@@ -68,12 +80,23 @@ services:
             - '@event_dispatcher'
         public: true
 
+    Contao\CoreBundle\Command\UserCreateCommand:
+        arguments:
+            - '@contao.framework'
+            - '@database_connection'
+            - '@security.password_hasher_factory'
+            - '@Contao\CoreBundle\Intl\Locales'
+
+    Contao\CoreBundle\Command\UserListCommand:
+        arguments:
+            - '@contao.framework'
+
     contao.command.user_password_command:
         class: Contao\CoreBundle\Command\UserPasswordCommand
         arguments:
             - '@contao.framework'
             - '@database_connection'
-            - '@security.encoder_factory'
+            - '@security.password_hasher_factory'
 
     contao.command.version:
         class: Contao\CoreBundle\Command\VersionCommand

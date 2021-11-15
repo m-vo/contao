@@ -117,13 +117,9 @@
         <source>Author and system administrator</source>
         <target>Auteur et administrateur système</target>
       </trans-unit>
-      <trans-unit id="tl_faq_category.deleteConfirm">
-        <source>Deleting category ID %s will also delete all its FAQs! Continue?</source>
-        <target>La suppression de la catégorie ID %s entraînera la suppression de toutes ses questions ! Voulez-vous vraiment continuer ?</target>
-      </trans-unit>
       <trans-unit id="tl_faq_category.new.0">
         <source>New</source>
-        <target>Nouveau</target>
+        <target>Actualité</target>
       </trans-unit>
       <trans-unit id="tl_faq_category.new.1">
         <source>Create a new category</source>

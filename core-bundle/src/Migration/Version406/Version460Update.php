@@ -22,10 +22,7 @@ use Doctrine\DBAL\Connection;
  */
 class Version460Update extends AbstractMigration
 {
-    /**
-     * @var Connection
-     */
-    private $connection;
+    private Connection $connection;
 
     public function __construct(Connection $connection)
     {
@@ -39,7 +36,7 @@ class Version460Update extends AbstractMigration
 
     public function shouldRun(): bool
     {
-        $schemaManager = $this->connection->getSchemaManager();
+        $schemaManager = $this->connection->createSchemaManager();
 
         if (!$schemaManager->tablesExist(['tl_content'])) {
             return false;
@@ -53,7 +50,7 @@ class Version460Update extends AbstractMigration
     public function run(): MigrationResult
     {
         // Convert 403 pages to 401 pages so the login redirect does not break
-        $this->connection->query("
+        $this->connection->executeStatement("
             UPDATE
                 tl_page
             SET
@@ -63,7 +60,7 @@ class Version460Update extends AbstractMigration
         ");
 
         // Adjust the search module settings (see contao/core-bundle#1462)
-        $this->connection->query("
+        $this->connection->executeStatement("
             UPDATE
                 tl_module
             SET
@@ -74,14 +71,14 @@ class Version460Update extends AbstractMigration
         ");
 
         // Activate the "overwriteLink" option (see contao/core-bundle#1459)
-        $this->connection->query("
+        $this->connection->executeStatement("
             ALTER TABLE
                 tl_content
             ADD
                 overwriteLink CHAR(1) DEFAULT '' NOT NULL
         ");
 
-        $this->connection->query("
+        $this->connection->executeStatement("
             UPDATE
                 tl_content
             SET
@@ -91,7 +88,7 @@ class Version460Update extends AbstractMigration
         ");
 
         // Revert the incorrect version 2.8 update changes
-        $this->connection->query('
+        $this->connection->executeStatement('
             UPDATE
                 tl_member
             SET
@@ -111,24 +108,24 @@ class Version460Update extends AbstractMigration
                 activation != '' AND dateAdded < :dateAdded
         ");
 
-        $stmt->execute([':dateAdded' => strtotime('-1 day')]);
+        $stmt->executeStatement([':dateAdded' => strtotime('-1 day')]);
 
         // Update the video element settings (see contao/core-bundle#1348)
-        $this->connection->query('
+        $this->connection->executeStatement('
             ALTER TABLE
                 tl_content
             ADD
                 playerOptions text NULL
         ');
 
-        $this->connection->query('
+        $this->connection->executeStatement('
             ALTER TABLE
                 tl_content
             ADD
                 vimeoOptions text NULL
         ');
 
-        $statement = $this->connection->query("
+        $elements = $this->connection->fetchAllAssociative("
             SELECT
                 id, type, youtubeOptions
             FROM
@@ -137,8 +134,8 @@ class Version460Update extends AbstractMigration
                 autoplay = '1'
         ");
 
-        while (false !== ($element = $statement->fetch(\PDO::FETCH_OBJ))) {
-            switch ($element->type) {
+        foreach ($elements as $element) {
+            switch ($element['type']) {
                 case 'player':
                     $stmt = $this->connection->prepare('
                         UPDATE
@@ -149,11 +146,11 @@ class Version460Update extends AbstractMigration
                             id = :id
                     ');
 
-                    $stmt->execute([':options' => serialize(['player_autoplay']), ':id' => $element->id]);
+                    $stmt->executeStatement([':options' => serialize(['player_autoplay']), ':id' => $element['id']]);
                     break;
 
                 case 'youtube':
-                    $options = StringUtil::deserialize($element->youtubeOptions);
+                    $options = StringUtil::deserialize($element['youtubeOptions']);
                     $options[] = 'youtube_autoplay';
 
                     $stmt = $this->connection->prepare('
@@ -165,7 +162,7 @@ class Version460Update extends AbstractMigration
                             id = :id
                     ');
 
-                    $stmt->execute([':options' => serialize($options), ':id' => $element->id]);
+                    $stmt->executeStatement([':options' => serialize($options), ':id' => $element['id']]);
                     break;
 
                 case 'vimeo':
@@ -178,28 +175,28 @@ class Version460Update extends AbstractMigration
                             id = :id
                     ');
 
-                    $stmt->execute([':options' => serialize(['vimeo_autoplay']), ':id' => $element->id]);
+                    $stmt->executeStatement([':options' => serialize(['vimeo_autoplay']), ':id' => $element['id']]);
                     break;
             }
         }
 
-        $this->connection->query('
+        $this->connection->executeStatement('
             ALTER TABLE
                 tl_content
             ADD
                 playerStart int(10) unsigned NOT NULL default 0
         ');
 
-        $this->connection->query('UPDATE tl_content SET playerStart = youtubeStart');
+        $this->connection->executeStatement('UPDATE tl_content SET playerStart = youtubeStart');
 
-        $this->connection->query('
+        $this->connection->executeStatement('
             ALTER TABLE
                 tl_content
             ADD
                 playerStop int(10) unsigned NOT NULL default 0
         ');
 
-        $this->connection->query('UPDATE tl_content SET playerStop = youtubeStop');
+        $this->connection->executeStatement('UPDATE tl_content SET playerStop = youtubeStop');
 
         return $this->createResult(true);
     }

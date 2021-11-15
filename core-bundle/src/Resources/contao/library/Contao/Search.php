@@ -11,7 +11,6 @@
 namespace Contao;
 
 use Contao\Database\Result;
-use Patchwork\Utf8;
 
 /**
  * Creates and queries the search index
@@ -59,6 +58,7 @@ class Search
 		$arrSet['groups'] = $arrData['groups'];
 		$arrSet['pid'] = $arrData['pid'];
 		$arrSet['language'] = $arrData['language'];
+		$arrSet['meta'] = json_encode((array) $arrData['meta']);
 
 		// Get the file size from the raw content
 		if (!$arrSet['filesize'])
@@ -154,10 +154,12 @@ class Search
 			$arrData['description'] = trim(preg_replace('/ +/', ' ', StringUtil::decodeEntities($tags[1])));
 		}
 
+		$arrData['keywords'] = '';
+
 		// Get the keywords
 		if (preg_match('/<meta[^>]+name="keywords"[^>]+content="([^"]*)"[^>]*>/i', $strHead, $tags))
 		{
-			$arrData['keywords'] = trim(preg_replace('/ +/', ' ', StringUtil::decodeEntities($tags[1])));
+			$arrData['keywords'] .= trim(preg_replace('/ +/', ' ', StringUtil::decodeEntities($tags[1])));
 		}
 
 		// Read the title and alt attributes
@@ -175,7 +177,21 @@ class Search
 		$arrSet['text'] = trim(preg_replace('/ +/', ' ', StringUtil::decodeEntities($arrSet['text'])));
 
 		// Calculate the checksum
-		$arrSet['checksum'] = md5($arrSet['text']);
+		$arrSet['checksum'] = md5($arrSet['text'] . $arrSet['meta']);
+
+		$blnIndexExists = $objDatabase
+			->prepare("SELECT EXISTS(SELECT id FROM tl_search WHERE checksum=? AND pid=? AND url=?) as indexExists")
+			->execute($arrSet['checksum'], $arrSet['pid'], $arrSet['url'])
+			->indexExists;
+
+		// The page has already been indexed and has not changed (see #2235)
+		if ($blnIndexExists)
+		{
+			return false;
+		}
+
+		// Prevent deadlocks
+		$objDatabase->query("LOCK TABLES tl_search WRITE, tl_search_index WRITE, tl_search_term WRITE");
 
 		$objIndex = $objDatabase->prepare("SELECT id, url FROM tl_search WHERE checksum=? AND pid=?")
 								->limit(1)
@@ -192,6 +208,8 @@ class Search
 							->set($arrSet)
 							->execute($objIndex->id);
 			}
+
+			$objDatabase->query("UNLOCK TABLES");
 
 			// The same page has been indexed under a different URL already (see #8460)
 			return false;
@@ -225,7 +243,7 @@ class Search
 		unset($arrSet);
 
 		// Split words
-		$arrWords = self::splitIntoWords(Utf8::strtolower($strText), $arrData['language']);
+		$arrWords = self::splitIntoWords(mb_strtolower($strText), $arrData['language']);
 		$arrIndex = array();
 
 		// Index words
@@ -240,25 +258,113 @@ class Search
 			$arrIndex[$strWord] = 1;
 		}
 
+		// Decrement document frequency counts
+		$objDatabase
+			->prepare("
+				UPDATE tl_search_term
+				INNER JOIN tl_search_index ON tl_search_term.id = tl_search_index.termId AND tl_search_index.pid = ?
+				SET documentFrequency = GREATEST(1, documentFrequency) - 1
+			")
+			->execute($intInsertId);
+
 		// Remove the existing index
 		$objDatabase->prepare("DELETE FROM tl_search_index WHERE pid=?")
 					->execute($intInsertId);
+
+		// Add new terms and increment frequency counts of existing terms
+		$objDatabase
+			->prepare("
+				INSERT INTO tl_search_term (term, documentFrequency)
+				VALUES " . implode(', ', array_fill(0, \count($arrIndex), '(?, 1)')) . "
+				ON DUPLICATE KEY UPDATE documentFrequency = documentFrequency + 1
+			")
+			->execute(array_map('strval', array_keys($arrIndex)));
+
+		// Remove obsolete terms
+		$objDatabase->query("DELETE FROM tl_search_term WHERE documentFrequency = 0");
+
+		$objTermIds = $objDatabase
+			->prepare("
+				SELECT term, id AS termId
+				FROM tl_search_term
+				WHERE term IN (" . implode(',', array_fill(0, \count($arrIndex), '?')) . ")
+			")
+			->execute(array_map('strval', array_keys($arrIndex)));
+
+		$arrTermIds = array();
+
+		foreach ($objTermIds->fetchAllAssoc() as $arrTermId)
+		{
+			$arrTermIds[$arrTermId['term']] = (int) $arrTermId['termId'];
+		}
 
 		$arrQuery = array();
 		$arrValues = array();
 
 		foreach ($arrIndex as $k=>$v)
 		{
-			$arrQuery[] = '(?, ?, ?, ?)';
+			if (empty($arrTermIds[$k]))
+			{
+				continue;
+			}
+
+			$arrQuery[] = '(?, ?, ?)';
 			$arrValues[] = $intInsertId;
-			$arrValues[] = $k;
+			$arrValues[] = $arrTermIds[$k];
 			$arrValues[] = $v;
-			$arrValues[] = $arrData['language'];
 		}
 
 		// Create the new index
-		$objDatabase->prepare("INSERT INTO tl_search_index (pid, word, relevance, language) VALUES " . implode(', ', $arrQuery))
+		$objDatabase->prepare("INSERT INTO tl_search_index (pid, termId, relevance) VALUES " . implode(', ', $arrQuery))
 					->execute($arrValues);
+
+		$row = $objDatabase->query("SELECT IFNULL(MIN(id), 0), IFNULL(MAX(id), 0), COUNT(*) FROM tl_search")->fetchRow();
+
+		list($intMinId, $intMaxId, $intCount) = array_map('intval', $row);
+
+		// If the whole corpus has few documents we want to update the vector length of all documents
+		if ($intCount <= 200)
+		{
+			$arrRandomIds = $objDatabase->query("SELECT id FROM tl_search")->fetchEach('id');
+		}
+
+		// Otherwise we select approximately 100 random documents that get updated
+		else
+		{
+			$arrRandomIds = array();
+
+			while (\count($arrRandomIds) < ($intMaxId - $intMinId) / $intCount * 100)
+			{
+				$arrRandomIds[random_int($intMinId, $intMaxId)] = true;
+			}
+
+			$arrRandomIds = array_keys($arrRandomIds);
+		}
+
+		$arrDocumentIds = array_merge(array($intInsertId), $arrRandomIds);
+
+		// Set or update vector length
+		$objDatabase->query("
+			UPDATE tl_search
+			INNER JOIN (
+				SELECT
+					tl_search_index.pid,
+					SQRT(SUM(POW(
+						(1 + LOG(relevance)) * LOG((
+							" . ($objDatabase->query("SELECT COUNT(*) as count FROM tl_search")->count + 1) . "
+						) / GREATEST(1, documentFrequency)),
+						2
+					))) as vectorLength
+				FROM tl_search_index
+				JOIN tl_search_term
+					ON tl_search_index.termId = tl_search_term.id
+				WHERE tl_search_index.pid IN (" . implode(',', array_map('intval', $arrDocumentIds)) . ")
+				GROUP BY tl_search_index.pid
+			) si ON si.pid = tl_search.id
+			SET tl_search.vectorLength = si.vectorLength
+		");
+
+		$objDatabase->query("UNLOCK TABLES");
 
 		return true;
 	}
@@ -266,7 +372,7 @@ class Search
 	/**
 	 * @return string[]
 	 */
-	private static function splitIntoWords(string $strText, string $strLocale)
+	public static function splitIntoWords(string $strText, string $strLocale): array
 	{
 		$iterator = \IntlRuleBasedBreakIterator::createWordInstance($strLocale);
 		$iterator->setText($strText);
@@ -298,12 +404,35 @@ class Search
 	 * @return Result The database result object
 	 *
 	 * @throws \Exception If the cleaned keyword string is empty
+	 *
+	 * @deprecated Deprecated since Contao 4.12, to be removed in Contao 5.
+	 *             Use the Search::query() method instead.
 	 */
 	public static function searchFor($strKeywords, $blnOrSearch=false, $arrPid=array(), $intRows=0, $intOffset=0, $blnFuzzy=false, $intMinlength=0)
 	{
+		trigger_deprecation('contao/core-bundle', '4.12', 'Using "%s()" has been deprecated and will no longer work in Contao 5.0. Use "Contao\Search::query()" instead.', __METHOD__);
+
+		$objSearchResult = static::query((string) $strKeywords, (bool) $blnOrSearch, \is_array($arrPid) ? $arrPid : array(), (bool) $blnFuzzy, (int) $intMinlength);
+
+		return new Result($objSearchResult->getResults($intRows ?: PHP_INT_MAX, $intOffset), 'SELECT * FROM tl_search');
+	}
+
+	/**
+	 * Search the index and return the result object
+	 *
+	 * @param string  $strKeywords  The keyword string
+	 * @param boolean $blnOrSearch  If true, the result can contain any keyword
+	 * @param array   $arrPid       An optional array of page IDs to limit the result to
+	 * @param boolean $blnFuzzy     If true, the search will be fuzzy
+	 * @param integer $intMinlength Ignore keywords deceeding the minimum length
+	 *
+	 * @throws \Exception If the cleaned keyword string is empty
+	 */
+	public static function query(string $strKeywords, bool $blnOrSearch=false, array $arrPid=array(), bool $blnFuzzy=false, int $intMinlength=0): SearchResult
+	{
 		// Clean the keywords
 		$strKeywords = StringUtil::decodeEntities($strKeywords);
-		$strKeywords = Utf8::strtolower($strKeywords);
+		$strKeywords = mb_strtolower($strKeywords);
 
 		// Check keyword string
 		if (!\strlen($strKeywords))
@@ -316,6 +445,7 @@ class Search
 		preg_match_all('/"[^"]+"|[+-]?[^ ]+\*?/', $strKeywords, $arrChunks);
 
 		$arrPhrases = array();
+		$arrPhrasesRegExp = array();
 		$arrKeywords = array();
 		$arrWildcards = array();
 		$arrIncluded = array();
@@ -335,7 +465,8 @@ class Search
 				case '"':
 					if ($strKeyword = trim(substr($strKeyword, 1, -1)))
 					{
-						$arrPhrases[] = str_replace(' ', '[^[:alnum:]]+', preg_quote($strKeyword));
+						$arrPhrases[] = $strKeyword;
+						$arrPhrasesRegExp[] = str_replace(' ', '[^[:alnum:]]+', preg_quote($strKeyword));
 					}
 					break;
 
@@ -395,179 +526,182 @@ class Search
 			$arrKeywords = array();
 		}
 
-		// Count keywords
-		$intPhrases = \count($arrPhrases);
-		$intWildcards = \count($arrWildcards);
-		$intIncluded = \count($arrIncluded);
-		$intExcluded = \count($arrExcluded);
+		$strQuery = "SELECT id, protected, `groups`, similarity / vectorLength AS relevance FROM (SELECT tl_search_index.pid AS sid";
 
-		$intKeywords = 0;
 		$arrValues = array();
+		$arrAllKeywords = array();
+		$arrMatches = array();
+		$arrRequiredMatches = array();
+		$arrExcludedMatches = array();
 
-		// Remember found words so we can highlight them later
-		$strQuery = "SELECT * FROM (SELECT tl_search_index.pid AS sid, GROUP_CONCAT(tl_search_index.word) AS matches";
-
-		// Get the number of wildcard matches if wildcards and keywords are mixed
-		if (!$blnOrSearch && $intWildcards && (\count($arrKeywords) || $intIncluded || $intPhrases))
+		// Get wildcards
+		foreach ($arrWildcards as $strKeyword)
 		{
-			$strQuery .= ", (SELECT COUNT(*) FROM tl_search_index WHERE (" . implode(' OR ', array_fill(0, $intWildcards, 'word LIKE ?')) . ") AND pid=sid) AS wildcards";
-			$arrValues = array_merge($arrValues, $arrWildcards);
+			$arrMatches[] = \count($arrAllKeywords);
+			$arrAllKeywords[] = 'term LIKE ?';
+			$arrValues[] = $strKeyword;
 		}
 
-		// Count the number of matches
-		$strQuery .= ", COUNT(*) AS count";
-
-		// Get the relevance
-		$strQuery .= ", SUM(relevance) AS relevance";
-
-		// Prepare keywords array
-		$arrAllKeywords = array();
-
 		// Get keywords
-		if (!empty($arrKeywords))
+		foreach ($arrKeywords as $strKeyword)
 		{
-			$arrAllKeywords[] = implode(' OR ', array_fill(0, \count($arrKeywords), 'word=?'));
-			$arrValues = array_merge($arrValues, $arrKeywords);
-			$intKeywords += \count($arrKeywords);
+			$arrMatches[] = \count($arrAllKeywords);
+			$arrAllKeywords[] = 'term=?';
+			$arrValues[] = $strKeyword;
 		}
 
 		// Get included keywords
-		if ($intIncluded)
+		foreach ($arrIncluded as $strKeyword)
 		{
-			$arrAllKeywords[] = implode(' OR ', array_fill(0, $intIncluded, 'word=?'));
-			$arrValues = array_merge($arrValues, $arrIncluded);
-			$intKeywords += $intIncluded;
+			$arrRequiredMatches[] = \count($arrAllKeywords);
+			$arrAllKeywords[] = 'term=?';
+			$arrValues[] = $strKeyword;
+		}
+
+		// Get excluded keywords
+		foreach ($arrExcluded as $strKeyword)
+		{
+			$arrExcludedMatches[] = \count($arrAllKeywords);
+			$arrAllKeywords[] = 'term=?';
+			$arrValues[] = $strKeyword;
 		}
 
 		// Get keywords from phrases
-		if ($intPhrases)
+		foreach ($arrPhrases as $strPhrase)
 		{
-			foreach ($arrPhrases as $strPhrase)
+			foreach (self::splitIntoWords($strPhrase, $GLOBALS['TL_LANGUAGE']) as $strKeyword)
 			{
-				$arrWords = self::splitIntoWords(str_replace('[^[:alnum:]]+', ' ', $strPhrase), $GLOBALS['TL_LANGUAGE']);
-				$arrAllKeywords[] = implode(' OR ', array_fill(0, \count($arrWords), 'word=?'));
-				$arrValues = array_merge($arrValues, $arrWords);
-				$intKeywords += \count($arrWords);
+				$arrMatches[] = \count($arrAllKeywords);
+				$arrAllKeywords[] = 'term=?';
+				$arrValues[] = $strKeyword;
 			}
 		}
 
-		// Get wildcards
-		if ($intWildcards)
+		// Get the relevance
+		$strQuery .= ", (0";
+
+		foreach ($arrAllKeywords as $index => $strKeywordExpression)
 		{
-			$arrAllKeywords[] = implode(' OR ', array_fill(0, $intWildcards, 'word LIKE ?'));
-			$arrValues = array_merge($arrValues, $arrWildcards);
+			if (\in_array($index, $arrExcludedMatches, true))
+			{
+				continue;
+			}
+
+			if (isset($arrWildcards[$index]))
+			{
+				$strQuery .= "+ ((1+LOG(SUM(match$index * tl_search_index.relevance))) * POW(LOG((@searchCount + 1) / @wildcardCount$index), 2) / " . (\count($arrAllKeywords) - \count($arrExcludedMatches)) . ")";
+			}
+			else
+			{
+				$strQuery .= "+ ((1+LOG(SUM(match$index * tl_search_index.relevance))) * POW(MIN(match$index * matchedTerm.idf), 2) / " . (\count($arrAllKeywords) - \count($arrExcludedMatches)) . ")";
+			}
 		}
 
-		$strQuery .= " FROM (SELECT word FROM tl_search_index WHERE (" . (implode(' OR ', $arrAllKeywords) ?: "0") . ") GROUP BY word) words JOIN tl_search_index ON tl_search_index.word = words.word WHERE 1";
+		$strQuery .= ") / sqrt(0";
+
+		foreach ($arrAllKeywords as $index => $strKeywordExpression)
+		{
+			if (\in_array($index, $arrExcludedMatches, true))
+			{
+				continue;
+			}
+
+			if (isset($arrWildcards[$index]))
+			{
+				$strQuery .= " + POW(LOG((@searchCount + 1) / @wildcardCount$index) / " . (\count($arrAllKeywords) - \count($arrExcludedMatches)) . ", 2)";
+			}
+			else
+			{
+				$strQuery .= "+ POW(MIN(match$index * matchedTerm.idf) / " . (\count($arrAllKeywords) - \count($arrExcludedMatches)) . ", 2)";
+			}
+		}
+
+		$strQuery .= ") AS similarity";
+		$strQuery .= " FROM (SELECT id, term";
+
+		// Calculate inverse document frequency of every matching term
+		$strQuery .= ", LOG((@searchCount + 1) / GREATEST(1, documentFrequency)) AS idf";
+
+		// Store the match of every keyword and wildcard in its own column match0, match1, ...
+		foreach ($arrAllKeywords as $index => $strKeywordExpression)
+		{
+			$strQuery .= ", IF($strKeywordExpression, 1, null) AS match$index";
+		}
+
+		$strQuery .= " FROM ( SELECT ";
+		$strQuery .= "@searchCount := (SELECT COUNT(*) FROM tl_search)";
+
+		foreach ($arrWildcards as $index => $strKeyword)
+		{
+			$strQuery .= ", @wildcardCount$index := (
+				SELECT COUNT(*) FROM (
+					SELECT DISTINCT pid FROM tl_search_term
+					JOIN tl_search_index ON tl_search_index.termId = tl_search_term.id
+					WHERE term LIKE ?
+				) distinctPids$index
+			)";
+
+			$arrValues[] = $strKeyword;
+		}
+
+		$strQuery .= ") variables, tl_search_term HAVING";
+
+		// Select all terms in the sub query that match any of the keywords or wildcards
+		if ($arrAllKeywords)
+		{
+			$strQuery .= " match" . implode(" = 1 OR match", array_keys($arrAllKeywords)) . " = 1";
+		}
+		else
+		{
+			$strQuery .= " 0";
+		}
+
+		$strQuery .= ") matchedTerm JOIN tl_search_index ON tl_search_index.termId = matchedTerm.id";
+		$strQuery .= " GROUP BY tl_search_index.pid";
+
+		$arrHaving = array();
+
+		// Check that all required keywords match
+		foreach ($blnOrSearch ? $arrRequiredMatches : array_merge($arrMatches, $arrRequiredMatches) as $intMatch)
+		{
+			$arrHaving[] = "COUNT(matchedTerm.match$intMatch) > 0";
+		}
+
+		// Check that none of the excluded keywords match
+		foreach ($arrExcludedMatches as $intMatch)
+		{
+			$arrHaving[] = "COUNT(matchedTerm.match$intMatch) = 0";
+		}
+
+		if (\count($arrHaving))
+		{
+			$strQuery .= " HAVING " . implode(" AND ", $arrHaving);
+		}
+
+		$strQuery .= ") matches LEFT JOIN tl_search ON(matches.sid=tl_search.id) WHERE 1";
 
 		// Get phrases
-		if ($intPhrases)
+		if (\count($arrPhrasesRegExp))
 		{
-			$strQuery .= " AND (" . implode(($blnOrSearch ? ' OR ' : ' AND '), array_fill(0, $intPhrases, 'tl_search_index.pid IN(SELECT id FROM tl_search WHERE text REGEXP ?)')) . ")";
-			$arrValues = array_merge($arrValues, $arrPhrases);
-		}
-
-		// Include keywords
-		if ($intIncluded)
-		{
-			$strQuery .= " AND tl_search_index.pid IN(SELECT pid FROM tl_search_index WHERE " . implode(' OR ', array_fill(0, $intIncluded, 'word=?')) . ")";
-			$arrValues = array_merge($arrValues, $arrIncluded);
-		}
-
-		// Exclude keywords
-		if ($intExcluded)
-		{
-			$strQuery .= " AND tl_search_index.pid NOT IN(SELECT pid FROM tl_search_index WHERE " . implode(' OR ', array_fill(0, $intExcluded, 'word=?')) . ")";
-			$arrValues = array_merge($arrValues, $arrExcluded);
+			$strQuery .= " AND (" . implode(($blnOrSearch ? ' OR ' : ' AND '), array_fill(0, \count($arrPhrasesRegExp), 'tl_search.text REGEXP ?')) . ')';
+			$arrValues = array_merge($arrValues, $arrPhrasesRegExp);
 		}
 
 		// Limit results to a particular set of pages
 		if (!empty($arrPid) && \is_array($arrPid))
 		{
-			$strQuery .= " AND tl_search_index.pid IN(SELECT id FROM tl_search WHERE pid IN(" . implode(',', array_map('\intval', $arrPid)) . "))";
+			$strQuery .= " AND tl_search.pid IN(" . implode(',', array_map('\intval', $arrPid)) . ")";
 		}
-
-		$strQuery .= " GROUP BY tl_search_index.pid";
 
 		// Sort by relevance
-		$strQuery .= " ORDER BY relevance DESC) matches LEFT JOIN tl_search ON(matches.sid=tl_search.id)";
-
-		// Make sure to find all words
-		if (!$blnOrSearch)
-		{
-			// Number of keywords without wildcards
-			$strQuery .= " WHERE matches.count >= " . $intKeywords;
-
-			// Dynamically add the number of wildcard matches
-			if ($intWildcards)
-			{
-				if ($intKeywords)
-				{
-					$strQuery .= " + IF(matches.wildcards>" . $intWildcards . ", matches.wildcards, " . $intWildcards . ")";
-				}
-				else
-				{
-					$strQuery .= " + " . $intWildcards;
-				}
-			}
-		}
+		$strQuery .= " ORDER BY relevance DESC";
 
 		// Return result
 		$objResultStmt = Database::getInstance()->prepare($strQuery);
-
-		if ($intRows > 0)
-		{
-			$objResultStmt->limit($intRows, $intOffset);
-		}
-
 		$objResult = $objResultStmt->execute($arrValues);
 		$arrResult = $objResult->fetchAllAssoc();
 
-		foreach ($arrResult as $k=>$v)
-		{
-			$arrHighlight = array();
-			$arrMatches = explode(',', $v['matches']);
-
-			foreach ($arrKeywords as $strKeyword)
-			{
-				if (\in_array($strKeyword, $arrMatches))
-				{
-					$arrHighlight[] = $strKeyword;
-				}
-			}
-
-			foreach ($arrIncluded as $strKeyword)
-			{
-				if (\in_array($strKeyword, $arrMatches))
-				{
-					$arrHighlight[] = $strKeyword;
-				}
-			}
-
-			// Highlight the words which matched the wildcard keywords
-			foreach ($arrWildcards as $strKeyword)
-			{
-				if ($matches = preg_grep('/' . str_replace('%', '.*', $strKeyword) . '/', $arrMatches))
-				{
-					$arrHighlight = array_merge($arrHighlight, $matches);
-				}
-			}
-
-			// Highlight phrases if all their words have matched
-			foreach ($arrPhrases as $strPhrase)
-			{
-				$strPhrase = str_replace('[^[:alnum:]]+', ' ', $strPhrase);
-
-				if (!array_diff(explode(' ', $strPhrase), $arrMatches))
-				{
-					$arrHighlight[] = $strPhrase;
-				}
-			}
-
-			$arrResult[$k]['matches'] = implode(',', $arrHighlight);
-		}
-
-		return new Result($arrResult, $objResult->query);
+		return new SearchResult($arrResult, array_merge($arrKeywords, $arrIncluded), $arrWildcards, $arrPhrases);
 	}
 
 	/**
@@ -584,12 +718,24 @@ class Search
 
 		while ($objResult->next())
 		{
+			// Decrement document frequency counts
+			$objDatabase
+				->prepare("
+					UPDATE tl_search_term
+					INNER JOIN tl_search_index ON tl_search_term.id = tl_search_index.termId AND tl_search_index.pid = ?
+					SET documentFrequency = GREATEST(1, documentFrequency) - 1
+				")
+				->execute($objResult->id);
+
 			$objDatabase->prepare("DELETE FROM tl_search WHERE id=?")
 						->execute($objResult->id);
 
 			$objDatabase->prepare("DELETE FROM tl_search_index WHERE pid=?")
 						->execute($objResult->id);
 		}
+
+		// Remove obsolete terms
+		$objDatabase->query("DELETE FROM tl_search_term WHERE documentFrequency = 0");
 	}
 
 	/**
@@ -612,7 +758,7 @@ class Search
 	 */
 	public static function getInstance()
 	{
-		@trigger_error('Using Search::getInstance() has been deprecated and will no longer work in Contao 5.0. The Search class is now static.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.0', 'Using "Contao\Search::getInstance()" has been deprecated and will no longer work in Contao 5.0. The "Contao\Search" class is now static.');
 
 		if (static::$objInstance === null)
 		{

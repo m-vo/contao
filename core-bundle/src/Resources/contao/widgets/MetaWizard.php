@@ -10,6 +10,9 @@
 
 namespace Contao;
 
+use Contao\CoreBundle\Intl\Locales;
+use Contao\CoreBundle\Util\LocaleUtil;
+
 /**
  * Provide methods to handle file meta information.
  *
@@ -41,7 +44,7 @@ class MetaWizard extends Widget
 	{
 		if ($strKey == 'metaFields')
 		{
-			if (!array_is_assoc($varValue))
+			if (!ArrayUtil::isAssoc($varValue))
 			{
 				$varValue = array_combine($varValue, array_fill(0, \count($varValue), ''));
 			}
@@ -80,6 +83,11 @@ class MetaWizard extends Widget
 		{
 			if ($k != 'language')
 			{
+				if (!empty($v['link']))
+				{
+					$v['link'] = StringUtil::specialcharsUrl($v['link']);
+				}
+
 				$varInput[$k] = array_map('trim', $v);
 			}
 			else
@@ -111,11 +119,13 @@ class MetaWizard extends Widget
 		$this->import(BackendUser::class, 'User');
 
 		// Only show the root page languages (see #7112, #7667)
-		$objRootLangs = $this->Database->query("SELECT REPLACE(language, '-', '_') AS language FROM tl_page WHERE type='root'");
+		$objRootLangs = $this->Database->query("SELECT language FROM tl_page WHERE type='root'");
 		$existing = $objRootLangs->fetchEach('language');
 
 		foreach ($existing as $lang)
 		{
+			$lang = LocaleUtil::formatAsLocale($lang);
+
 			if (!isset($this->varValue[$lang]))
 			{
 				$this->varValue[$lang] = array();
@@ -128,12 +138,11 @@ class MetaWizard extends Widget
 			return '<p class="tl_info">' . $GLOBALS['TL_LANG']['MSC']['metaNoLanguages'] . '</p>';
 		}
 
-		$languages = $this->getLanguages(true);
-
 		// Add the existing entries
 		if (!empty($this->varValue))
 		{
 			$return = '<ul id="ctrl_' . $this->strId . '" class="tl_metawizard dcapicker">';
+			$languages = System::getContainer()->get(Locales::class)->getDisplayNames(array_keys($this->varValue));
 
 			// Add the input fields
 			foreach ($this->varValue as $lang=>$meta)
@@ -148,11 +157,11 @@ class MetaWizard extends Widget
 
 					if (isset($fieldConfig['type']) && 'textarea' === $fieldConfig['type'])
 					{
-						$return .= '<textarea name="' . $this->strId . '[' . $lang . '][' . $field . ']" id="ctrl_' . $this->strId . '_' . $field . '_' . $count . '" class="tl_textarea"' . (!empty($fieldConfig['attributes']) ? ' ' . $fieldConfig['attributes'] : '') . '>' . $meta[$field] . '</textarea>';
+						$return .= '<textarea name="' . $this->strId . '[' . $lang . '][' . $field . ']" id="ctrl_' . $this->strId . '_' . $field . '_' . $count . '" class="tl_textarea"' . (!empty($fieldConfig['attributes']) ? ' ' . $fieldConfig['attributes'] : '') . '>' . ($meta[$field] ?? '') . '</textarea>';
 					}
 					else
 					{
-						$return .= '<input type="text" name="' . $this->strId . '[' . $lang . '][' . $field . ']" id="ctrl_' . $this->strId . '_' . $field . '_' . $count . '" class="tl_text" value="' . StringUtil::specialchars($meta[$field]) . '"' . (!empty($fieldConfig['attributes']) ? ' ' . $fieldConfig['attributes'] : '') . '>';
+						$return .= '<input type="text" name="' . $this->strId . '[' . $lang . '][' . $field . ']" id="ctrl_' . $this->strId . '_' . $field . '_' . $count . '" class="tl_text" value="' . StringUtil::specialchars($meta[$field] ?? '') . '"' . (!empty($fieldConfig['attributes']) ? ' ' . $fieldConfig['attributes'] : '') . '>';
 					}
 
 					// DCA picker
@@ -173,19 +182,6 @@ class MetaWizard extends Widget
 			$return .= '
   </ul>';
 		}
-
-		$options = array('<option value="">-</option>');
-
-		// Add the remaining languages
-		foreach ($languages as $k=>$v)
-		{
-			$options[] = '<option value="' . $k . '"' . (isset($this->varValue[$k]) ? ' disabled' : '') . '>' . $v . '</option>';
-		}
-
-		$return .= '
-  <div class="tl_metawizard_new">
-    <select name="' . $this->strId . '[language]" class="tl_select" onchange="Backend.toggleAddLanguageButton(this)">' . implode('', $options) . '</select> <input type="button" class="tl_submit" disabled value="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['aw_new']) . '" onclick="Backend.metaWizard(this, \'ctrl_' . $this->strId . '\')">
-  </div>';
 
 		return $return;
 	}

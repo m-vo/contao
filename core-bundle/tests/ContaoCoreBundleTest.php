@@ -14,17 +14,22 @@ namespace Contao\CoreBundle\Tests;
 
 use Contao\CoreBundle\ContaoCoreBundle;
 use Contao\CoreBundle\DependencyInjection\Compiler\AddAssetsPackagesPass;
+use Contao\CoreBundle\DependencyInjection\Compiler\AddAvailableTransportsPass;
 use Contao\CoreBundle\DependencyInjection\Compiler\AddCronJobsPass;
+use Contao\CoreBundle\DependencyInjection\Compiler\AddNativeTransportFactoryPass;
 use Contao\CoreBundle\DependencyInjection\Compiler\AddPackagesPass;
 use Contao\CoreBundle\DependencyInjection\Compiler\AddResourcesPathsPass;
 use Contao\CoreBundle\DependencyInjection\Compiler\AddSessionBagsPass;
 use Contao\CoreBundle\DependencyInjection\Compiler\CrawlerPass;
 use Contao\CoreBundle\DependencyInjection\Compiler\DataContainerCallbackPass;
+use Contao\CoreBundle\DependencyInjection\Compiler\IntlInstalledLocalesAndCountriesPass;
 use Contao\CoreBundle\DependencyInjection\Compiler\MakeServicesPublicPass;
 use Contao\CoreBundle\DependencyInjection\Compiler\PickerProviderPass;
 use Contao\CoreBundle\DependencyInjection\Compiler\RegisterFragmentsPass;
 use Contao\CoreBundle\DependencyInjection\Compiler\RegisterHookListenersPass;
+use Contao\CoreBundle\DependencyInjection\Compiler\RegisterPagesPass;
 use Contao\CoreBundle\DependencyInjection\Compiler\RemembermeServicesPass;
+use Contao\CoreBundle\DependencyInjection\Compiler\RewireTwigPathsPass;
 use Contao\CoreBundle\DependencyInjection\Compiler\SearchIndexerPass;
 use Contao\CoreBundle\DependencyInjection\Compiler\TaggedMigrationsPass;
 use Contao\CoreBundle\DependencyInjection\Compiler\TranslationDataCollectorPass;
@@ -37,6 +42,7 @@ use Contao\CoreBundle\Event\PreviewUrlCreateEvent;
 use Contao\CoreBundle\Event\RobotsTxtEvent;
 use Contao\CoreBundle\Event\SlugValidCharactersEvent;
 use Symfony\Bundle\SecurityBundle\DependencyInjection\SecurityExtension;
+use Symfony\Cmf\Component\Routing\DependencyInjection\Compiler\RegisterRouteEnhancersPass;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\EventDispatcher\DependencyInjection\AddEventAliasesPass;
@@ -44,7 +50,7 @@ use Symfony\Component\HttpKernel\DependencyInjection\FragmentRendererPass;
 
 class ContaoCoreBundleTest extends TestCase
 {
-    public function testAddsTheCompilerPaths(): void
+    public function testAddsTheCompilerPasses(): void
     {
         $passes = [
             AddEventAliasesPass::class,
@@ -55,6 +61,7 @@ class ContaoCoreBundleTest extends TestCase
             AddResourcesPathsPass::class,
             TaggedMigrationsPass::class,
             PickerProviderPass::class,
+            RegisterPagesPass::class,
             RegisterFragmentsPass::class,
             RegisterFragmentsPass::class,
             FragmentRendererPass::class,
@@ -65,17 +72,18 @@ class ContaoCoreBundleTest extends TestCase
             SearchIndexerPass::class,
             CrawlerPass::class,
             AddCronJobsPass::class,
+            AddAvailableTransportsPass::class,
+            RegisterRouteEnhancersPass::class,
+            RewireTwigPathsPass::class,
+            AddNativeTransportFactoryPass::class,
+            IntlInstalledLocalesAndCountriesPass::class,
         ];
 
         $security = $this->createMock(SecurityExtension::class);
         $security
             ->expects($this->once())
             ->method('addSecurityListenerFactory')
-            ->with($this->callback(
-                static function ($param) {
-                    return $param instanceof ContaoLoginFactory;
-                }
-            ))
+            ->with($this->callback(static fn ($param) => $param instanceof ContaoLoginFactory))
         ;
 
         $container = $this->createMock(ContainerBuilder::class);

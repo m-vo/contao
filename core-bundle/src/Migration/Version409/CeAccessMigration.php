@@ -22,15 +22,8 @@ use Doctrine\DBAL\Connection;
  */
 class CeAccessMigration extends AbstractMigration
 {
-    /**
-     * @var Connection
-     */
-    private $connection;
-
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
+    private Connection $connection;
+    private ContaoFramework $framework;
 
     public function __construct(Connection $connection, ContaoFramework $framework)
     {
@@ -40,7 +33,7 @@ class CeAccessMigration extends AbstractMigration
 
     public function shouldRun(): bool
     {
-        $schemaManager = $this->connection->getSchemaManager();
+        $schemaManager = $this->connection->createSchemaManager();
 
         if (!$schemaManager->tablesExist(['tl_user_group'])) {
             return false;
@@ -55,7 +48,7 @@ class CeAccessMigration extends AbstractMigration
     {
         $this->framework->initialize();
 
-        $this->connection->query('
+        $this->connection->executeStatement('
             ALTER TABLE
                 tl_user_group
             ADD
@@ -72,7 +65,7 @@ class CeAccessMigration extends AbstractMigration
                 fields = :fields
         ');
 
-        $stmt->execute([
+        $stmt->executeStatement([
             ':elements' => serialize(array_keys(array_merge(...array_values($GLOBALS['TL_CTE'])))),
             ':fields' => serialize(array_keys($GLOBALS['TL_FFL'])),
         ]);

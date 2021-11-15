@@ -15,7 +15,8 @@ namespace Contao\CoreBundle\Monolog;
 use Contao\StringUtil;
 use Contao\System;
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Driver\Statement;
+use Doctrine\DBAL\Statement;
+use Monolog\Formatter\FormatterInterface;
 use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\AbstractProcessingHandler;
 use Symfony\Component\DependencyInjection\ContainerAwareInterface;
@@ -25,15 +26,8 @@ class ContaoTableHandler extends AbstractProcessingHandler implements ContainerA
 {
     use ContainerAwareTrait;
 
-    /**
-     * @var string
-     */
-    private $dbalServiceName = 'doctrine.dbal.default_connection';
-
-    /**
-     * @var Statement
-     */
-    private $statement;
+    private string $dbalServiceName = 'doctrine.dbal.default_connection';
+    private ?Statement $statement = null;
 
     public function getDbalServiceName(): string
     {
@@ -90,7 +84,7 @@ class ContaoTableHandler extends AbstractProcessingHandler implements ContainerA
         ]);
     }
 
-    protected function getDefaultFormatter(): LineFormatter
+    protected function getDefaultFormatter(): FormatterInterface
     {
         return new LineFormatter('%message%');
     }
@@ -137,7 +131,7 @@ class ContaoTableHandler extends AbstractProcessingHandler implements ContainerA
             return;
         }
 
-        @trigger_error('Using the "addLogEntry" hook has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+        trigger_deprecation('contao/core-bundle', '4.0', 'Using the "addLogEntry" hook has been deprecated and will no longer work in Contao 5.0.');
 
         /** @var System $system */
         $system = $framework->getAdapter(System::class);

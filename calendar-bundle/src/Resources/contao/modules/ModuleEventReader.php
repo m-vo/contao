@@ -13,7 +13,10 @@ namespace Contao;
 use Contao\CoreBundle\Exception\InternalServerErrorException;
 use Contao\CoreBundle\Exception\PageNotFoundException;
 use Contao\CoreBundle\Exception\RedirectResponseException;
-use Patchwork\Utf8;
+use Contao\CoreBundle\Image\Studio\Studio;
+use Contao\CoreBundle\Routing\ResponseContext\HtmlHeadBag\HtmlHeadBag;
+use Contao\CoreBundle\Routing\ResponseContext\ResponseContextAccessor;
+use Contao\CoreBundle\String\HtmlDecoder;
 
 /**
  * Front end module "event reader".
@@ -47,7 +50,7 @@ class ModuleEventReader extends Events
 		if ($request && System::getContainer()->get('contao.routing.scope_matcher')->isBackendRequest($request))
 		{
 			$objTemplate = new BackendTemplate('be_wildcard');
-			$objTemplate->wildcard = '### ' . Utf8::strtoupper($GLOBALS['TL_LANG']['FMD']['eventreader'][0]) . ' ###';
+			$objTemplate->wildcard = '### ' . $GLOBALS['TL_LANG']['FMD']['eventreader'][0] . ' ###';
 			$objTemplate->title = $this->headline;
 			$objTemplate->id = $this->id;
 			$objTemplate->link = $this->name;
@@ -72,7 +75,7 @@ class ModuleEventReader extends Events
 
 		if (empty($this->cal_calendar) || !\is_array($this->cal_calendar))
 		{
-			throw new InternalServerErrorException('The event reader ID ' . $this->id . ' has no calendars specified.', $this->id);
+			throw new InternalServerErrorException('The event reader ID ' . $this->id . ' has no calendars specified.');
 		}
 
 		return parent::generate();
@@ -126,24 +129,37 @@ class ModuleEventReader extends Events
 				throw new InternalServerErrorException('Empty target URL');
 		}
 
-		// Overwrite the page title (see #2853, #4955 and #87)
-		if ($objEvent->pageTitle)
-		{
-			$objPage->pageTitle = $objEvent->pageTitle;
-		}
-		elseif ($objEvent->title)
-		{
-			$objPage->pageTitle = strip_tags(StringUtil::stripInsertTags($objEvent->title));
-		}
+		// Overwrite the page meta data (see #2853, #4955 and #87)
+		$responseContext = System::getContainer()->get(ResponseContextAccessor::class)->getResponseContext();
 
-		// Overwrite the page description
-		if ($objEvent->description)
+		if ($responseContext && $responseContext->has(HtmlHeadBag::class))
 		{
-			$objPage->description = $objEvent->description;
-		}
-		elseif ($objEvent->teaser)
-		{
-			$objPage->description = $this->prepareMetaDescription($objEvent->teaser);
+			/** @var HtmlHeadBag $htmlHeadBag */
+			$htmlHeadBag = $responseContext->get(HtmlHeadBag::class);
+			$htmlDecoder = System::getContainer()->get(HtmlDecoder::class);
+
+			if ($objEvent->pageTitle)
+			{
+				$htmlHeadBag->setTitle($objEvent->pageTitle); // Already stored decoded
+			}
+			elseif ($objEvent->title)
+			{
+				$htmlHeadBag->setTitle($htmlDecoder->inputEncodedToPlainText($objEvent->title));
+			}
+
+			if ($objEvent->description)
+			{
+				$htmlHeadBag->setMetaDescription($htmlDecoder->inputEncodedToPlainText($objEvent->description));
+			}
+			elseif ($objEvent->teaser)
+			{
+				$htmlHeadBag->setMetaDescription($htmlDecoder->htmlToPlainText($objEvent->teaser));
+			}
+
+			if ($objEvent->robots)
+			{
+				$htmlHeadBag->setMetaRobots($objEvent->robots);
+			}
 		}
 
 		$intStartTime = $objEvent->startTime;
@@ -233,9 +249,11 @@ class ModuleEventReader extends Events
 		$objTemplate->until = $until;
 		$objTemplate->locationLabel = $GLOBALS['TL_LANG']['MSC']['location'];
 		$objTemplate->calendar = $objEvent->getRelated('pid');
+		$objTemplate->count = 0; // see #74
 		$objTemplate->details = '';
 		$objTemplate->hasDetails = false;
 		$objTemplate->hasTeaser = false;
+		$objTemplate->hasReader = true;
 
 		// Clean the RTE output
 		if ($objEvent->teaser)
@@ -249,6 +267,7 @@ class ModuleEventReader extends Events
 		if ($objEvent->source != 'default')
 		{
 			$objTemplate->hasDetails = true;
+			$objTemplate->hasReader = false;
 		}
 
 		// Compile the event text
@@ -279,30 +298,36 @@ class ModuleEventReader extends Events
 		}
 
 		$objTemplate->addImage = false;
+		$objTemplate->addBefore = false;
 
 		// Add an image
-		if ($objEvent->addImage && $objEvent->singleSRC)
+		if ($objEvent->addImage)
 		{
-			$objModel = FilesModel::findByUuid($objEvent->singleSRC);
+			$imgSize = $objEvent->size ?: null;
 
-			if ($objModel !== null && is_file(System::getContainer()->getParameter('kernel.project_dir') . '/' . $objModel->path))
+			// Override the default image size
+			if ($this->imgSize)
 			{
-				// Do not override the field now that we have a model registry (see #6303)
-				$arrEvent = $objEvent->row();
+				$size = StringUtil::deserialize($this->imgSize);
 
-				// Override the default image size
-				if ($this->imgSize)
+				if ($size[0] > 0 || $size[1] > 0 || is_numeric($size[2]) || ($size[2][0] ?? null) === '_')
 				{
-					$size = StringUtil::deserialize($this->imgSize);
-
-					if ($size[0] > 0 || $size[1] > 0 || is_numeric($size[2]) || ($size[2][0] ?? null) === '_')
-					{
-						$arrEvent['size'] = $this->imgSize;
-					}
+					$imgSize = $this->imgSize;
 				}
+			}
 
-				$arrEvent['singleSRC'] = $objModel->path;
-				$this->addImageToTemplate($objTemplate, $arrEvent, null, null, $objModel);
+			$figure = System::getContainer()
+				->get(Studio::class)
+				->createFigureBuilder()
+				->from($objEvent->singleSRC)
+				->setSize($imgSize)
+				->setMetadata($objEvent->getOverwriteMetadata())
+				->enableLightbox((bool) $objEvent->fullsize)
+				->buildIfResourceExists();
+
+			if (null !== $figure)
+			{
+				$figure->applyLegacyTemplateData($objTemplate, $objEvent->imagemargin, $objEvent->floating);
 			}
 		}
 
@@ -388,6 +413,19 @@ class ModuleEventReader extends Events
 			}
 
 			return $dates;
+		};
+
+		// schema.org information
+		$objTemplate->getSchemaOrgData = static function () use ($objTemplate, $objEvent): array
+		{
+			$jsonLd = Events::getSchemaOrgData($objEvent);
+
+			if ($objTemplate->addImage && $objTemplate->figure)
+			{
+				$jsonLd['image'] = $objTemplate->figure->getSchemaOrgData();
+			}
+
+			return $jsonLd;
 		};
 
 		$this->Template->event = $objTemplate->parse();

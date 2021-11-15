@@ -42,12 +42,12 @@
         <target>Zobrazit soubor v prohlížeči namísto stáhnutí do počítače.</target>
       </trans-unit>
       <trans-unit id="tl_content.overwriteMeta.0">
-        <source>Overwrite meta data</source>
+        <source>Overwrite metadata</source>
         <target>Přepsat meta data</target>
       </trans-unit>
       <trans-unit id="tl_content.overwriteMeta.1">
-        <source>Overwrite the meta data from the file manager.</source>
-        <target>Přepsat meta informace obrázku z Manažera souborů</target>
+        <source>Overwrite the metadata from the file manager.</source>
+        <target>Přepsat meta informace z Manažera souborů.</target>
       </trans-unit>
       <trans-unit id="tl_content.singleSRC.0">
         <source>Source file</source>
@@ -289,6 +289,22 @@
         <source>Note that the code will not be executed. Use F11 to toggle the fullscreen mode if you are using the code editor.</source>
         <target>Zadejte kód</target>
       </trans-unit>
+      <trans-unit id="tl_content.markdownSource.0">
+        <source>Markdown source</source>
+        <target>Zdroj markdownu</target>
+      </trans-unit>
+      <trans-unit id="tl_content.markdownSource.1">
+        <source>Please choose the Markdown source.</source>
+        <target>Zvolte zdroj markdownu</target>
+      </trans-unit>
+      <trans-unit id="tl_content.markdownSource.sourceText">
+        <source>Text</source>
+        <target>Text</target>
+      </trans-unit>
+      <trans-unit id="tl_content.markdownSource.sourceFile">
+        <source>File</source>
+        <target>Soubor</target>
+      </trans-unit>
       <trans-unit id="tl_content.linkTitle.0">
         <source>Link text</source>
         <target>Název odkazu</target>
@@ -361,14 +377,6 @@
         <source>The number of items per page. Set to 0 to disable pagination.</source>
         <target>Počet záznamů na stránku. Zadejte 0, pokud chcete vypnout zalamování stránky.</target>
       </trans-unit>
-      <trans-unit id="tl_content.numberOfItems.0">
-        <source>Total number of images</source>
-        <target>Celkový počet obrazků</target>
-      </trans-unit>
-      <trans-unit id="tl_content.numberOfItems.1">
-        <source>Here you can limit the total number of images. Set to 0 to show all.</source>
-        <target>Zde můžete obezit celkový počet obrázků. Nastavte na 0 pro zobrazení všech</target>
-      </trans-unit>
       <trans-unit id="tl_content.sortBy.0">
         <source>Order by</source>
         <target>Řadit dle</target>
@@ -378,11 +386,11 @@
         <target>Zvolte prosím pořadí třídění.</target>
       </trans-unit>
       <trans-unit id="tl_content.metaIgnore.0">
-        <source>Ignore files without meta data</source>
+        <source>Ignore files without metadata</source>
         <target>Ignorovat soubory bez meta údajů</target>
       </trans-unit>
       <trans-unit id="tl_content.metaIgnore.1">
-        <source>Do not show files without meta data matching the page language.</source>
+        <source>Do not show files without metadata matching the page language.</source>
         <target>Nezobrazovat soubory bez meta údajů odpovídajících jazyku stránky.</target>
       </trans-unit>
       <trans-unit id="tl_content.galleryTpl.0">
@@ -778,8 +786,8 @@
         <target>Přehrát bez celomonitorového módu</target>
       </trans-unit>
       <trans-unit id="tl_content.player_preload.auto">
-        <source>Auto (preload the entiry video)</source>
-        <target>Automatické přehrání</target>
+        <source>Auto (preload the entire video)</source>
+        <target>Automatické přehrání (přednačtení zadaného videa)</target>
       </trans-unit>
       <trans-unit id="tl_content.player_preload.metadata">
         <source>Metadata (preload the metadata only)</source>
@@ -819,10 +827,7 @@
       </trans-unit>
       <trans-unit id="tl_content.youtube_rel">
         <source>Limit related videos to the same channel</source>
-      </trans-unit>
-      <trans-unit id="tl_content.youtube_showinfo">
-        <source>Hide the top bar in the preview</source>
-        <target>Skrýt horní lištu v náhledu</target>
+        <target>Omezit zobrazení videí ze stejného kanálu.</target>
       </trans-unit>
       <trans-unit id="tl_content.youtube_nocookie">
         <source>Use the youtube-nocookie.com domain</source>

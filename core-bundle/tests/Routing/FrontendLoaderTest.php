@@ -15,13 +15,26 @@ namespace Contao\CoreBundle\Tests\Routing;
 use Contao\CoreBundle\ContaoCoreBundle;
 use Contao\CoreBundle\Routing\FrontendLoader;
 use Contao\CoreBundle\Tests\TestCase;
+use Symfony\Bridge\PhpUnit\ExpectDeprecationTrait;
 use Symfony\Bundle\FrameworkBundle\Routing\Router;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\Routing\Exception\MissingMandatoryParametersException;
 use Symfony\Component\Routing\RouteCollection;
 
+/**
+ * @group legacy
+ */
 class FrontendLoaderTest extends TestCase
 {
+    use ExpectDeprecationTrait;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->expectDeprecation('%sUsing the "%sFrontendLoader" class has been deprecated%s');
+    }
+
     public function testSupportsTheContaoFrontEndRoute(): void
     {
         $loader = new FrontendLoader(false);

@@ -22,15 +22,8 @@ use Doctrine\DBAL\Connection;
  */
 class Version410Update extends AbstractMigration
 {
-    /**
-     * @var Connection
-     */
-    private $connection;
-
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
+    private Connection $connection;
+    private ContaoFramework $framework;
 
     public function __construct(Connection $connection, ContaoFramework $framework)
     {
@@ -45,7 +38,7 @@ class Version410Update extends AbstractMigration
 
     public function shouldRun(): bool
     {
-        $schemaManager = $this->connection->getSchemaManager();
+        $schemaManager = $this->connection->createSchemaManager();
 
         if (!$schemaManager->tablesExist(['tl_user', 'tl_user_group', 'tl_image_size'])) {
             return false;
@@ -60,7 +53,7 @@ class Version410Update extends AbstractMigration
     {
         $this->framework->initialize();
 
-        $crop = $GLOBALS['TL_CROP'];
+        $crop = $GLOBALS['TL_CROP'] ?? [];
 
         if (empty($crop)) {
             return $this->createResult(true);
@@ -76,7 +69,7 @@ class Version410Update extends AbstractMigration
             $options = array_merge(...$options);
         }
 
-        $rows = $this->connection->fetchAll('
+        $rows = $this->connection->fetchAllAssociative('
             SELECT
                 id
             FROM
@@ -88,14 +81,14 @@ class Version410Update extends AbstractMigration
         }
 
         // Add the database fields
-        $this->connection->query('
+        $this->connection->executeStatement('
             ALTER TABLE
                 tl_user
             ADD
                 imageSizes blob NULL
         ');
 
-        $this->connection->query('
+        $this->connection->executeStatement('
             ALTER TABLE
                 tl_user_group
             ADD
@@ -110,7 +103,7 @@ class Version410Update extends AbstractMigration
                 imageSizes = :options
         ');
 
-        $stmt->execute([':options' => serialize($options)]);
+        $stmt->executeStatement([':options' => serialize($options)]);
 
         return $this->createResult(true);
     }

@@ -7,6 +7,7 @@
       </trans-unit>
       <trans-unit id="tl_settings.adminEmail.1">
         <source>This e-mail address will be used to send and receive system messages.</source>
+        <target>Dit e-mailadres wordt gebruikt voor het verzenden en ontvangen van systeemberichten.</target>
       </trans-unit>
       <trans-unit id="tl_settings.dateFormat.0">
         <source>Date format</source>
@@ -72,22 +73,6 @@
         <source>Do not collapse elements in the back end preview.</source>
         <target>Bestands elementen en andere resources in het back-end niet samenvouwen.</target>
       </trans-unit>
-      <trans-unit id="tl_settings.doNotRedirectEmpty.0">
-        <source>Do not redirect empty URLs</source>
-        <target>Redirect geen lege URLs</target>
-      </trans-unit>
-      <trans-unit id="tl_settings.doNotRedirectEmpty.1">
-        <source>For an empty URL display the website instead of redirecting to the language root page (not recommended).</source>
-        <target>In geval van een lege URL toon de website in plaats van door te verwijzen naar de taal startpagina (niet aanbevolen).</target>
-      </trans-unit>
-      <trans-unit id="tl_settings.folderUrl.0">
-        <source>Enable folder URLs</source>
-        <target>Activeer map URLs</target>
-      </trans-unit>
-      <trans-unit id="tl_settings.folderUrl.1">
-        <source>Here you can enable folder-style page aliases like &lt;em&gt;docs/install/download.html&lt;/em&gt; instead of &lt;em&gt;docs-install-download.html&lt;/em&gt;.</source>
-        <target>Hier kunt u de map-stijl pagina aliassen mogelijk maken zoals &lt;em&gt; docs / install / download.html &lt;/em&gt; in plaats van &lt;em&gt; docs-install-download.xhtml &lt;/em&gt;.</target>
-      </trans-unit>
       <trans-unit id="tl_settings.allowedTags.0">
         <source>Allowed HTML tags</source>
         <target>Toegestane HTML tags</target>
@@ -95,6 +80,18 @@
       <trans-unit id="tl_settings.allowedTags.1">
         <source>Here you can enter a list of allowed HTML tags that will not be stripped.</source>
         <target>Geef een lijst op van toegestane HTML tags. Alle andere tags zullen verwijderd worden uit de gebruikersinvoer.</target>
+      </trans-unit>
+      <trans-unit id="tl_settings.allowedAttributes.0">
+        <source>Allowed HTML attributes</source>
+        <target>Toegestane HTML attributen</target>
+      </trans-unit>
+      <trans-unit id="tl_settings.allowedAttributes.1">
+        <source>List of allowed HTML attributes that will not be stripped. The tag or attribute name &lt;code&gt;*&lt;/code&gt; stands for all tags or attributes. Wildcards can be used for attributes with dashes like &lt;code&gt;data-*&lt;/code&gt;.</source>
+        <target>Lijst met toegestane HTML-kenmerken die niet worden verwijderd. De tag of attribuutnaam &lt;code&gt;*&lt;/code&gt; staat voor alle tags of attributen. Wildcards kunnen worden gebruikt voor attributen met streepjes zoals &lt;code&gt;data-*&lt;/code&gt;.</target>
+      </trans-unit>
+      <trans-unit id="tl_settings.allowedAttributesWarning">
+        <source>Allowing &lt;code&gt;*&lt;/code&gt; attributes can be exploited for XSS attacks. Only do this if all backend users are trusted!</source>
+        <target>Het toestaan van &lt;code&gt;*&lt;/code&gt; attributen kan worden misbruikt voor XSS-aanvallen. Doe dit alleen als alle backend-gebruikers vertrouwd zijn!</target>
       </trans-unit>
       <trans-unit id="tl_settings.disableRefererCheck.0">
         <source>Disable request tokens</source>
@@ -173,8 +170,8 @@
         <target>Standaard paginagroep</target>
       </trans-unit>
       <trans-unit id="tl_settings.defaultGroup.1">
-        <source>Here you can select a group as the default owner of a page.</source>
-        <target>Hier kunt u een groep kiezen als de standaard eigenaar van een pagina.</target>
+        <source>Here you can select a user group as the default owner of a page.</source>
+        <target>Hier kunt u een gebruikersgroep selecteren als de standaard eigenaar van een pagina.</target>
       </trans-unit>
       <trans-unit id="tl_settings.defaultChmod.0">
         <source>Default access rights</source>
@@ -196,10 +193,6 @@
         <source>Back end configuration</source>
         <target>Back-end configuratie</target>
       </trans-unit>
-      <trans-unit id="tl_settings.frontend_legend">
-        <source>Front end configuration</source>
-        <target>Front-end configuratie</target>
-      </trans-unit>
       <trans-unit id="tl_settings.security_legend">
         <source>Security settings</source>
         <target>Veiligheidsinstellingen</target>
@@ -219,6 +212,10 @@
       <trans-unit id="tl_settings.chmod_legend">
         <source>Default access rights</source>
         <target>Standaard toegangsrechten</target>
+      </trans-unit>
+      <trans-unit id="tl_settings.configuredInApp">
+        <source>This setting has been defined in the app configuration and cannot be changed here anymore.</source>
+        <target>Deze instelling is gedefinieerd in de app-configuratie en kan hier niet meer worden gewijzigd.</target>
       </trans-unit>
     </body>
   </file>

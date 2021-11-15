@@ -61,6 +61,38 @@
         <source>The website is currently not available. Please come back later.</source>
         <target>Le site est actuellement indisponible. Veuillez, s'il vous plaît, revenir plus tard.</target>
       </trans-unit>
+      <trans-unit id="XPT.missingRouteParameters.title">
+        <source>Unable to generate front end URL</source>
+        <target>Impossible de générer une URL de front office</target>
+      </trans-unit>
+      <trans-unit id="XPT.missingRouteParameters.matter">
+        <source>The URL could not be generated, because the route has mandatory parameters that are not given. Additional information (e.g. a news alias) must be provided.</source>
+        <target>L'URL n'a pas pu être générée, car la route comporte des paramètres obligatoires qui ne sont pas fournis. Des informations supplémentaires (par exemple un alias d'actualités) doivent être fournies.</target>
+      </trans-unit>
+      <trans-unit id="XPT.missingRouteParameters.explain">
+        <source>Symfony routes can have variable parameters, which are validated using regular expressions. The following configuration could not be resolved:</source>
+        <target>Les routes Symfony peuvent avoir des paramètres variables, qui sont validés à l'aide d'expressions régulières. La configuration suivante n'a pas pu être résolue:</target>
+      </trans-unit>
+      <trans-unit id="XPT.missingRouteParameters.path">
+        <source>Route path</source>
+        <target>Chemin de la route</target>
+      </trans-unit>
+      <trans-unit id="XPT.missingRouteParameters.parameterName">
+        <source>Name</source>
+        <target>Nom</target>
+      </trans-unit>
+      <trans-unit id="XPT.missingRouteParameters.parameterRequirement">
+        <source>Requirement (Regex)</source>
+        <target>Requirement (Regex)</target>
+      </trans-unit>
+      <trans-unit id="XPT.missingRouteParameters.parameterDefault">
+        <source>Default value</source>
+        <target>Valeur par défaut</target>
+      </trans-unit>
+      <trans-unit id="XPT.missingRouteParameters.parameterEmpty">
+        <source>empty</source>
+        <target>vide</target>
+      </trans-unit>
     </body>
   </file>
 </xliff>

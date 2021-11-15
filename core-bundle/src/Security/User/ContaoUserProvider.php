@@ -29,25 +29,10 @@ use Symfony\Component\Security\Core\User\UserProviderInterface;
 
 class ContaoUserProvider implements UserProviderInterface, PasswordUpgraderInterface
 {
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
-
-    /**
-     * @var SessionInterface
-     */
-    private $session;
-
-    /**
-     * @var string
-     */
-    private $userClass;
-
-    /**
-     * @var LoggerInterface|null
-     */
-    private $logger;
+    private ContaoFramework $framework;
+    private SessionInterface $session;
+    private string $userClass;
+    private ?LoggerInterface $logger;
 
     /**
      * @throws \RuntimeException
@@ -64,19 +49,30 @@ class ContaoUserProvider implements UserProviderInterface, PasswordUpgraderInter
         $this->logger = $logger;
     }
 
+    /**
+     * @deprecated Deprecated since Contao 4.13, to be removed in Contao 5.0;
+     *             use ContaoUserProvider::loadUserByIdentifier() instead
+     */
     public function loadUserByUsername($username): User
+    {
+        trigger_deprecation('contao/core-bundle', '4.13', 'Using "ContaoUserProvider::loadUserByUsername()" has been deprecated and will no longer work in Contao 5.0. Use "ContaoUserProvider::loadUserByIdentifier()" instead.');
+
+        return $this->loadUserByIdentifier($username);
+    }
+
+    public function loadUserByIdentifier(string $identifier): User
     {
         $this->framework->initialize();
 
         /** @var User $adapter */
         $adapter = $this->framework->getAdapter($this->userClass);
-        $user = $adapter->loadUserByUsername($username);
+        $user = $adapter->loadUserByIdentifier($identifier);
 
         if (is_a($user, $this->userClass)) {
             return $user;
         }
 
-        throw new UsernameNotFoundException(sprintf('Could not find user "%s"', $username));
+        throw new UsernameNotFoundException(sprintf('Could not find user "%s"', $identifier));
     }
 
     public function refreshUser(UserInterface $user)
@@ -85,7 +81,7 @@ class ContaoUserProvider implements UserProviderInterface, PasswordUpgraderInter
             throw new UnsupportedUserException(sprintf('Unsupported class "%s".', \get_class($user)));
         }
 
-        $user = $this->loadUserByUsername($user->getUsername());
+        $user = $this->loadUserByIdentifier($user->getUserIdentifier());
 
         $this->validateSessionLifetime($user);
         $this->triggerPostAuthenticateHook($user);
@@ -101,13 +97,13 @@ class ContaoUserProvider implements UserProviderInterface, PasswordUpgraderInter
     /**
      * @param User $user
      */
-    public function upgradePassword(UserInterface $user, string $newEncodedPassword): void
+    public function upgradePassword(UserInterface $user, string $newHashedPassword): void
     {
         if (!is_a($user, $this->userClass)) {
             throw new UnsupportedUserException(sprintf('Unsupported class "%s".', \get_class($user)));
         }
 
-        $user->password = $newEncodedPassword;
+        $user->password = $newHashedPassword;
         $user->save();
     }
 
@@ -146,7 +142,7 @@ class ContaoUserProvider implements UserProviderInterface, PasswordUpgraderInter
             return;
         }
 
-        @trigger_error('Using the "postAuthenticate" hook has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+        trigger_deprecation('contao/core-bundle', '4.5', 'Using the "postAuthenticate" hook has been deprecated and will no longer work in Contao 5.0.');
 
         /** @var System $system */
         $system = $this->framework->getAdapter(System::class);

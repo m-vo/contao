@@ -16,12 +16,12 @@ use Contao\CoreBundle\Security\Authentication\ContaoLoginAuthenticationListener;
 use Contao\CoreBundle\Tests\TestCase;
 use PHPUnit\Framework\MockObject\MockObject;
 use Scheb\TwoFactorBundle\Security\Authentication\Token\TwoFactorTokenInterface;
-use Symfony\Component\HttpFoundation\ParameterBag;
+use Symfony\Component\HttpFoundation\InputBag;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Security\Core\Authentication\AuthenticationManagerInterface;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
@@ -60,21 +60,6 @@ class ContaoLoginAuthenticationListenerTest extends TestCase
         yield 'no authentication without POST' => [false, 'tl_login', false];
         yield 'no authentication without form submit' => [true, null, false];
         yield 'no authentication with invalid form submit' => [true, 'tl_foobar', false];
-    }
-
-    public function testThrowsExceptionIfUsernameIsNotAString(): void
-    {
-        $request = $this->mockRequest();
-        $request->request->set('FORM_SUBMIT', 'tl_login');
-        $request->request->set('username', ['foo']);
-        $request->request->set('password', 'foobar');
-
-        $authenticationManager = $this->mockAuthenticationManager(null);
-        $listener = $this->createListener($authenticationManager);
-
-        $this->expectException(BadRequestHttpException::class);
-
-        $listener($this->mockRequestEvent($request));
     }
 
     public function testTrimsTheUsername(): void
@@ -216,14 +201,14 @@ class ContaoLoginAuthenticationListenerTest extends TestCase
             ->willReturn($isPost)
         ;
 
-        $request->request = new ParameterBag();
+        $request->request = new InputBag();
 
         return $request;
     }
 
     private function mockRequestEvent(Request $request): RequestEvent
     {
-        return new RequestEvent($this->createMock(KernelInterface::class), $request, KernelInterface::MASTER_REQUEST);
+        return new RequestEvent($this->createMock(KernelInterface::class), $request, HttpKernelInterface::MAIN_REQUEST);
     }
 
     private function mockAuthenticationManager(?string $username, string $password = null): AuthenticationManagerInterface

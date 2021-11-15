@@ -24,13 +24,18 @@ use Contao\ManagerPlugin\Config\ConfigPluginInterface;
 use Contao\ManagerPlugin\PluginLoader;
 use Contao\TestCase\ContaoTestCase;
 use PHPUnit\Framework\MockObject\MockObject;
+use Symfony\Bridge\PhpUnit\ExpectDeprecationTrait;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\Console\Input\ArgvInput;
+use Symfony\Component\EventDispatcher\Event;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\Request;
+use Webmozart\PathUtil\Path;
 
 class ContaoKernelTest extends ContaoTestCase
 {
+    use ExpectDeprecationTrait;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -84,6 +89,35 @@ class ContaoKernelTest extends ContaoTestCase
         $filesystem->remove(__DIR__.'/../Fixtures/HttpKernel/WithMixedNamespace/var');
     }
 
+    public function testResetsTheBundleLoaderOnShutdown(): void
+    {
+        $bundleLoader = $this->createMock(BundleLoader::class);
+
+        $kernel = $this->getKernel($this->getTempDir());
+        $kernel->setBundleLoader($bundleLoader);
+        $kernel->boot();
+
+        $this->assertSame($bundleLoader, $kernel->getBundleLoader());
+
+        $kernel->shutdown();
+
+        $this->assertNotSame($bundleLoader, $kernel->getBundleLoader());
+    }
+
+    public function testDoesNotResetsTheBundleLoaderOnShutdownIfKernelIsNotBooted(): void
+    {
+        $bundleLoader = $this->createMock(BundleLoader::class);
+
+        $kernel = $this->getKernel($this->getTempDir());
+        $kernel->setBundleLoader($bundleLoader);
+
+        $this->assertSame($bundleLoader, $kernel->getBundleLoader());
+
+        $kernel->shutdown();
+
+        $this->assertSame($bundleLoader, $kernel->getBundleLoader());
+    }
+
     public function testRegisterBundles(): void
     {
         $bundleLoader = $this->createMock(BundleLoader::class);
@@ -134,25 +168,24 @@ class ContaoKernelTest extends ContaoTestCase
         $kernel->getProjectDir();
     }
 
-    public function testGetRootDir(): void
-    {
-        $kernel = $this->getKernel($this->getTempDir());
-
-        $this->assertSame($kernel->getProjectDir().'/app', $kernel->getRootDir());
-    }
-
     public function testGetCacheDir(): void
     {
         $kernel = $this->getKernel($this->getTempDir());
 
-        $this->assertSame($kernel->getProjectDir().'/var/cache/prod', $kernel->getCacheDir());
+        $this->assertSame(
+            Path::normalize($kernel->getProjectDir()).'/var/cache/prod',
+            Path::normalize($kernel->getCacheDir())
+        );
     }
 
     public function testGetLogDir(): void
     {
         $kernel = $this->getKernel($this->getTempDir());
 
-        $this->assertSame($kernel->getProjectDir().'/var/logs', $kernel->getLogDir());
+        $this->assertSame(
+            Path::normalize($kernel->getProjectDir()).'/var/logs',
+            Path::normalize($kernel->getLogDir())
+        );
     }
 
     public function testSetsDisabledPackagesInPluginLoader(): void
@@ -274,7 +307,7 @@ class ContaoKernelTest extends ContaoTestCase
         ContaoKernel::fromRequest($this->getTempDir(), Request::create('/'));
 
         $this->assertSame(['1.1.1.1', '2.2.2.2'], Request::getTrustedProxies());
-        $this->assertSame(Request::HEADER_X_FORWARDED_ALL ^ Request::HEADER_X_FORWARDED_HOST, Request::getTrustedHeaderSet());
+        $this->assertSame(Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_PORT | Request::HEADER_X_FORWARDED_PROTO, Request::getTrustedHeaderSet());
 
         unset($_SERVER['TRUSTED_PROXIES']);
     }
@@ -283,11 +316,13 @@ class ContaoKernelTest extends ContaoTestCase
     {
         $this->assertSame([], Request::getTrustedHosts());
 
-        $_SERVER['TRUSTED_HOSTS'] = '1.1.1.1,2.2.2.2';
+        $_SERVER['TRUSTED_PROXIES'] = '1.1.1.1,2.2.2.2';
+        $_SERVER['TRUSTED_HOSTS'] = '1.1.1.1,2.2.2.2,example.com';
 
         ContaoKernel::fromRequest($this->getTempDir(), Request::create('/'));
 
-        $this->assertSame(['{1.1.1.1}i', '{2.2.2.2}i'], Request::getTrustedHosts());
+        $this->assertSame(['{1.1.1.1}i', '{2.2.2.2}i', '{example.com}i'], Request::getTrustedHosts());
+        $this->assertSame(Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_PORT | Request::HEADER_X_FORWARDED_PROTO | Request::HEADER_X_FORWARDED_HOST, Request::getTrustedHeaderSet());
 
         unset($_SERVER['TRUSTED_HOSTS']);
     }
@@ -355,11 +390,16 @@ class ContaoKernelTest extends ContaoTestCase
     }
 
     /**
+     * @group legacy
      * @runInSeparateProcess
      * @preserveGlobalState disabled
      */
     public function testReturnsTheContaoCacheInProdMode(): void
     {
+        if (!class_exists(Event::class)) {
+            $this->expectDeprecation('%sLegacyEventDispatcherProxy is deprecated%s');
+        }
+
         unset($_SERVER['APP_ENV']);
 
         $tempDir = realpath($this->getTempDir());

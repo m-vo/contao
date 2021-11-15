@@ -38,8 +38,8 @@
         <target>Taal</target>
       </trans-unit>
       <trans-unit id="tl_page.language.1">
-        <source>Please enter the page language according to the ISO-639-1 standard (e.g. &quot;en&quot; for English or &quot;en-US&quot; for American English).</source>
-        <target>Geef de pagina taal op volgens de ISO-639-1 norm (b.v. &quot;en&quot; voor Engels of &quot;en-US&quot; voor Amerikaans Engels).</target>
+        <source>Please enter the page language according to the ISO-639 standard (e.g. &quot;en&quot; for English or &quot;en_US&quot; for American English).</source>
+        <target>Voer de paginataal in volgens de ISO-639-standaard (bijv. &quot;en&quot; voor Engels of &quot;en_US&quot; voor Amerikaans Engels).</target>
       </trans-unit>
       <trans-unit id="tl_page.robots.0">
         <source>Robots tag</source>
@@ -79,6 +79,7 @@
       </trans-unit>
       <trans-unit id="tl_page.redirectBack.1">
         <source>Redirect the member back to the last page visited instead of the redirect page.</source>
+        <target>Leid het lid terug naar de laatst bezochte pagina in plaats van de omleidingspagina.</target>
       </trans-unit>
       <trans-unit id="tl_page.fallback.0">
         <source>Language fallback</source>
@@ -87,6 +88,14 @@
       <trans-unit id="tl_page.fallback.1">
         <source>Show this page if there is none that matches the visitor's language.</source>
         <target>Toon deze pagina als er geen pagina is in de taal van de bezoeker.</target>
+      </trans-unit>
+      <trans-unit id="tl_page.disableLanguageRedirect.0">
+        <source>Disable language redirect</source>
+        <target>Taalomleiding uitschakelen</target>
+      </trans-unit>
+      <trans-unit id="tl_page.disableLanguageRedirect.1">
+        <source>Do not redirect visitors to this website root based on their preferred browser language.</source>
+        <target>Leid bezoekers niet door naar de root van deze website op basis van hun voorkeurstaal voor de browser.</target>
       </trans-unit>
       <trans-unit id="tl_page.favicon.0">
         <source>Favicon</source>
@@ -128,12 +137,21 @@
         <source>The assets URL applies to the &lt;em&gt;assets&lt;/em&gt; directory (page speed optimization).</source>
         <target>De plugin URL is van toepassing op alle bronnen in de &lt;em&gt;plugins&lt;/em&gt; directory (paginasnelheid optimalisatie).</target>
       </trans-unit>
+      <trans-unit id="tl_page.mailerTransport.0">
+        <source>Mailer transport</source>
+        <target>Mailer transport</target>
+      </trans-unit>
+      <trans-unit id="tl_page.mailerTransport.1">
+        <source>Here you can override the mailer transport used to send e-mails on this website.</source>
+        <target>Hier kunt u het mailertransport overschrijven dat wordt gebruikt om e-mails op deze website te verzenden.</target>
+      </trans-unit>
       <trans-unit id="tl_page.adminEmail.0">
         <source>E-mail address of the website administrator</source>
         <target>E-mail adres van de websitebeheerder</target>
       </trans-unit>
       <trans-unit id="tl_page.adminEmail.1">
         <source>This e-mail address will be used to send and receive system messages.</source>
+        <target>Dit e-mailadres wordt gebruikt voor het verzenden en ontvangen van systeemberichten.</target>
       </trans-unit>
       <trans-unit id="tl_page.dateFormat.0">
         <source>Date format</source>
@@ -167,29 +185,37 @@
         <source>Here you can select a custom character set for auto-generated aliases.</source>
         <target>Aangepaste tekenset voor automatisch gegenereerde aliassen selecteren.</target>
       </trans-unit>
-      <trans-unit id="tl_page.createSitemap.0">
-        <source>Create an XML sitemap</source>
-        <target>Maak een XML sitemap aan</target>
+      <trans-unit id="tl_page.useFolderUrl.0">
+        <source>Enable folder URLs</source>
+        <target>Activeer map URLs</target>
       </trans-unit>
-      <trans-unit id="tl_page.createSitemap.1">
-        <source>Create a Google XML sitemap in the &lt;em&gt;share/&lt;/em&gt; directory.</source>
-        <target>Maak een Google XML sitemap in de &lt;em&gt;share/&lt;/em&gt; directory.</target>
+      <trans-unit id="tl_page.useFolderUrl.1">
+        <source>Generate folder-style page aliases like &lt;em&gt;docs/install/download.html&lt;/em&gt; instead of &lt;em&gt;docs-install-download.html&lt;/em&gt;.</source>
+        <target>Genereer map-achtige pagina-aliassen zoals&lt;em&gt; docs / install / download.html&lt;/em&gt; in plaats van &lt;em&gt;docs-install-download.html&lt;/em&gt;.</target>
       </trans-unit>
-      <trans-unit id="tl_page.sitemapName.0">
-        <source>Sitemap file name</source>
-        <target>Bestandsnaam sitemap</target>
+      <trans-unit id="tl_page.urlPrefix.0">
+        <source>URL prefix</source>
+        <target>URL prefix</target>
       </trans-unit>
-      <trans-unit id="tl_page.sitemapName.1">
-        <source>Please enter the name of the sitemap file without extension.</source>
-        <target>Geef naam op voor het sitemap bestand zonder extensie.</target>
+      <trans-unit id="tl_page.urlPrefix.1">
+        <source>Enter a URL prefix (e.g. the language) that will be prepended to aliases for this root page.</source>
+        <target>Voer een URL-voorvoegsel in (bijv. de taal) dat wordt toegevoegd aan aliassen voor deze hoofdpagina.</target>
+      </trans-unit>
+      <trans-unit id="tl_page.urlSuffix.0">
+        <source>URL suffix</source>
+        <target>URL-achtervoegsel</target>
+      </trans-unit>
+      <trans-unit id="tl_page.urlSuffix.1">
+        <source>The URL suffix will be added to the URI string to simulate static documents.</source>
+        <target>De URL suffix wordt toegevoegd aan de URI-tekenreeks om statische documenten te simuleren.</target>
       </trans-unit>
       <trans-unit id="tl_page.useSSL.0">
-        <source>Use HTTPS</source>
-        <target>Gebruik HTTPS</target>
+        <source>Protocol</source>
+        <target>Protocol</target>
       </trans-unit>
       <trans-unit id="tl_page.useSSL.1">
-        <source>This website is available via HTTPS.</source>
-        <target>Deze website is beschikbaar via HTTPS.</target>
+        <source>Here you can select which protocol to use for the website.</source>
+        <target>Hier kunt u selecteren welk protocol u voor de website wilt gebruiken.</target>
       </trans-unit>
       <trans-unit id="tl_page.autoforward.0">
         <source>Forward to another page</source>
@@ -284,8 +310,8 @@
         <target>Groep</target>
       </trans-unit>
       <trans-unit id="tl_page.cgroup.1">
-        <source>Please select a group as the owner of the page.</source>
-        <target>Selecteer een groep als eigenaar van de huidige pagina.</target>
+        <source>Please select a user group as the owner of the page.</source>
+        <target>Selecteer een gebruikersgroep als de eigenaar van de pagina.</target>
       </trans-unit>
       <trans-unit id="tl_page.chmod.0">
         <source>Access rights</source>
@@ -328,12 +354,12 @@
         <target>Hier kunt u bepalen of de pagina moet worden getoond in de HTML sitemap.</target>
       </trans-unit>
       <trans-unit id="tl_page.hide.0">
-        <source>Hide from navigation</source>
-        <target>Verberg pagina in navigatiemenu</target>
+        <source>Hide in navigation</source>
+        <target>Verbergen in navigatie</target>
       </trans-unit>
       <trans-unit id="tl_page.hide.1">
-        <source>Hide the page from the navigation menu.</source>
-        <target>Indien u deze optie kiest zal de huidige pagina niet getoond worden in de website navigatie.</target>
+        <source>Hide the page in the navigation menu.</source>
+        <target>Verberg de pagina in het navigatiemenu</target>
       </trans-unit>
       <trans-unit id="tl_page.guests.0">
         <source>Show to guests only</source>
@@ -397,13 +423,14 @@
       </trans-unit>
       <trans-unit id="tl_page.twoFactorJumpTo.1">
         <source>Please choose the page to which members will be redirected to set up two-factor authentication.</source>
+        <target>Kies de pagina waarnaar leden worden doorgestuurd om tweefactorauthenticatie in te stellen.</target>
       </trans-unit>
       <trans-unit id="tl_page.title_legend">
         <source>Name and type</source>
         <target>Naam en type</target>
       </trans-unit>
       <trans-unit id="tl_page.meta_legend">
-        <source>Meta data</source>
+        <source>Metadata</source>
         <target>Meta data</target>
       </trans-unit>
       <trans-unit id="tl_page.system_legend">
@@ -414,9 +441,13 @@
         <source>Redirect settings</source>
         <target>Instellingen omsturen</target>
       </trans-unit>
-      <trans-unit id="tl_page.dns_legend">
-        <source>DNS settings</source>
-        <target>DNS settings</target>
+      <trans-unit id="tl_page.url_legend">
+        <source>URL settings</source>
+        <target>URL instellingen</target>
+      </trans-unit>
+      <trans-unit id="tl_page.language_legend">
+        <source>Language settings</source>
+        <target>Taal instellingen</target>
       </trans-unit>
       <trans-unit id="tl_page.website_legend">
         <source>Website settings</source>
@@ -425,10 +456,6 @@
       <trans-unit id="tl_page.global_legend">
         <source>Global settings</source>
         <target>Globale instellingen</target>
-      </trans-unit>
-      <trans-unit id="tl_page.alias_legend">
-        <source>Alias settings</source>
-        <target>Alias instellingen</target>
       </trans-unit>
       <trans-unit id="tl_page.sitemap_legend">
         <source>XML sitemap</source>
@@ -541,6 +568,10 @@
       <trans-unit id="tl_page.articles">
         <source>Edit the articles of page ID %s</source>
         <target>Bewerk artikelen van pagina ID %s</target>
+      </trans-unit>
+      <trans-unit id="tl_page.legacyRouting">
+        <source>Disable legacy routing mode to enable this configuration.</source>
+        <target>Schakel de oude routeringsmodus uit om deze configuratie in te schakelen.</target>
       </trans-unit>
       <trans-unit id="CACHE.0">
         <source>0 (do not cache)</source>

@@ -29,7 +29,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
-use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Http\Authentication\AuthenticationSuccessHandlerInterface;
 use Symfony\Component\Security\Http\Util\TargetPathTrait;
 
@@ -37,30 +36,11 @@ class AuthenticationSuccessHandler implements AuthenticationSuccessHandlerInterf
 {
     use TargetPathTrait;
 
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
-
-    /**
-     * @var TrustedDeviceManagerInterface
-     */
-    private $trustedDeviceManager;
-
-    /**
-     * @var FirewallMap
-     */
-    private $firewallMap;
-
-    /**
-     * @var LoggerInterface|null
-     */
-    private $logger;
-
-    /**
-     * @var User|UserInterface
-     */
-    private $user;
+    private ContaoFramework $framework;
+    private TrustedDeviceManagerInterface $trustedDeviceManager;
+    private FirewallMap $firewallMap;
+    private ?LoggerInterface $logger;
+    private ?User $user = null;
 
     /**
      * @internal Do not inherit from this class; decorate the "contao.security.authentication_success_handler" service instead
@@ -99,7 +79,7 @@ class AuthenticationSuccessHandler implements AuthenticationSuccessHandlerInterf
 
             // Used by the TwoFactorListener to redirect a user back to the authentication page
             if ($request->hasSession() && $request->isMethodSafe() && !$request->isXmlHttpRequest()) {
-                $this->saveTargetPath($request->getSession(), $token->getProviderKey(), $request->getUri());
+                $this->saveTargetPath($request->getSession(), $token->getFirewallName(), $request->getUri());
             }
 
             return $response;
@@ -129,8 +109,8 @@ class AuthenticationSuccessHandler implements AuthenticationSuccessHandlerInterf
 
         $this->triggerPostLoginHook();
 
-        if ($request->hasSession() && method_exists($token, 'getProviderKey')) {
-            $this->removeTargetPath($request->getSession(), $token->getProviderKey());
+        if ($request->hasSession() && method_exists($token, 'getFirewallName')) {
+            $this->removeTargetPath($request->getSession(), $token->getFirewallName());
         }
 
         return $response;
@@ -162,7 +142,7 @@ class AuthenticationSuccessHandler implements AuthenticationSuccessHandlerInterf
             return;
         }
 
-        @trigger_error('Using the "postLogin" hook has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+        trigger_deprecation('contao/core-bundle', '4.5', 'Using the "postLogin" hook has been deprecated and will no longer work in Contao 5.0.');
 
         /** @var System $system */
         $system = $this->framework->getAdapter(System::class);

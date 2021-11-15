@@ -16,26 +16,33 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 /**
  * Automatically starts the session if someone accesses $_SESSION.
+ *
+ * @internal
  */
 class LazySessionAccess implements \ArrayAccess, \Countable
 {
-    /**
-     * @var SessionInterface
-     */
-    private $session;
+    private SessionInterface $session;
+    private bool $hasPreviousSession;
 
-    public function __construct(SessionInterface $session)
+    public function __construct(SessionInterface $session, bool $hasPreviousSession = true)
     {
         $this->session = $session;
+        $this->hasPreviousSession = $hasPreviousSession;
     }
 
+    #[\ReturnTypeWillChange]
     public function offsetExists($offset): bool
     {
+        if (!$this->hasPreviousSession && !$this->session->isStarted()) {
+            return false;
+        }
+
         $this->startSession();
 
         return \array_key_exists($offset, $_SESSION);
     }
 
+    #[\ReturnTypeWillChange]
     public function &offsetGet($offset)
     {
         $this->startSession();
@@ -43,6 +50,7 @@ class LazySessionAccess implements \ArrayAccess, \Countable
         return $_SESSION[$offset];
     }
 
+    #[\ReturnTypeWillChange]
     public function offsetSet($offset, $value): void
     {
         $this->startSession();
@@ -50,6 +58,7 @@ class LazySessionAccess implements \ArrayAccess, \Countable
         $_SESSION[$offset] = $value;
     }
 
+    #[\ReturnTypeWillChange]
     public function offsetUnset($offset): void
     {
         $this->startSession();
@@ -57,8 +66,13 @@ class LazySessionAccess implements \ArrayAccess, \Countable
         unset($_SESSION[$offset]);
     }
 
+    #[\ReturnTypeWillChange]
     public function count(): int
     {
+        if (!$this->hasPreviousSession && !$this->session->isStarted()) {
+            return 0;
+        }
+
         $this->startSession();
 
         return \count($_SESSION);
@@ -69,10 +83,11 @@ class LazySessionAccess implements \ArrayAccess, \Countable
      */
     private function startSession(): void
     {
-        @trigger_error('Using $_SESSION has been deprecated and will no longer work in Contao 5.0. Use the Symfony session instead.', E_USER_DEPRECATED);
+        trigger_deprecation('contao/core-bundle', '4.5', 'Using "$_SESSION" has been deprecated and will no longer work in Contao 5.0. Use the Symfony session instead.');
 
         $this->session->start();
 
+        /** @phpstan-ignore-next-line */
         if ($_SESSION instanceof self) {
             throw new \RuntimeException('Unable to start the native session, $_SESSION was not replaced.');
         }

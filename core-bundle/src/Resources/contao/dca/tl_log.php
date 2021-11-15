@@ -8,6 +8,9 @@
  * @license LGPL-3.0-or-later
  */
 
+use Contao\Backend;
+use Contao\DataContainer;
+
 $GLOBALS['TL_DCA']['tl_log'] = array
 (
 	// Config
@@ -31,7 +34,7 @@ $GLOBALS['TL_DCA']['tl_log'] = array
 	(
 		'sorting' => array
 		(
-			'mode'                    => 2,
+			'mode'                    => DataContainer::MODE_SORTABLE,
 			'fields'                  => array('tstamp'),
 			'panelLayout'             => 'filter;sort,search,limit'
 		),
@@ -56,7 +59,7 @@ $GLOBALS['TL_DCA']['tl_log'] = array
 			(
 				'href'                => 'act=delete',
 				'icon'                => 'delete.svg',
-				'attributes'          => 'onclick="if(!confirm(\'' . $GLOBALS['TL_LANG']['MSC']['deleteConfirm'] . '\'))return false;Backend.getScrollOffset()"'
+				'attributes'          => 'onclick="if(!confirm(\'' . ($GLOBALS['TL_LANG']['MSC']['deleteConfirm'] ?? null) . '\'))return false;Backend.getScrollOffset()"'
 			),
 			'show' => array
 			(
@@ -77,7 +80,7 @@ $GLOBALS['TL_DCA']['tl_log'] = array
 		(
 			'filter'                  => true,
 			'sorting'                 => true,
-			'flag'                    => 6,
+			'flag'                    => DataContainer::SORT_DAY_DESC,
 			'sql'                     => "int(10) unsigned NOT NULL default 0"
 		),
 		'source' => array
@@ -126,7 +129,7 @@ $GLOBALS['TL_DCA']['tl_log'] = array
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
-class tl_log extends Contao\Backend
+class tl_log extends Backend
 {
 	/**
 	 * Colorize the log entries depending on their category

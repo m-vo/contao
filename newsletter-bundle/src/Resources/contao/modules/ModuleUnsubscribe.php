@@ -10,7 +10,7 @@
 
 namespace Contao;
 
-use Patchwork\Utf8;
+use Contao\CoreBundle\String\SimpleTokenParser;
 
 /**
  * Front end module "newsletter unsubscribe".
@@ -42,7 +42,7 @@ class ModuleUnsubscribe extends Module
 		if ($request && System::getContainer()->get('contao.routing.scope_matcher')->isBackendRequest($request))
 		{
 			$objTemplate = new BackendTemplate('be_wildcard');
-			$objTemplate->wildcard = '### ' . Utf8::strtoupper($GLOBALS['TL_LANG']['FMD']['unsubscribe'][0]) . ' ###';
+			$objTemplate->wildcard = '### ' . $GLOBALS['TL_LANG']['FMD']['unsubscribe'][0] . ' ###';
 			$objTemplate->title = $this->headline;
 			$objTemplate->id = $this->id;
 			$objTemplate->link = $this->name;
@@ -243,13 +243,13 @@ class ModuleUnsubscribe extends Module
 			{
 				$strHash = md5($objRemove->email);
 
-				// Add a blacklist entry (see #4999)
-				if (($objBlacklist = NewsletterBlacklistModel::findByHashAndPid($strHash, $objRemove->pid)) === null)
+				// Add a deny list entry (see #4999)
+				if (NewsletterDenyListModel::findByHashAndPid($strHash, $objRemove->pid) === null)
 				{
-					$objBlacklist = new NewsletterBlacklistModel();
-					$objBlacklist->pid = $objRemove->pid;
-					$objBlacklist->hash = $strHash;
-					$objBlacklist->save();
+					$objDenyList = new NewsletterDenyListModel();
+					$objDenyList->pid = $objRemove->pid;
+					$objDenyList->hash = $strHash;
+					$objDenyList->save();
 				}
 
 				$objRemove->delete();
@@ -280,7 +280,7 @@ class ModuleUnsubscribe extends Module
 		$objEmail->from = $GLOBALS['TL_ADMIN_EMAIL'];
 		$objEmail->fromName = $GLOBALS['TL_ADMIN_NAME'];
 		$objEmail->subject = sprintf($GLOBALS['TL_LANG']['MSC']['nl_subject'], Idna::decode(Environment::get('host')));
-		$objEmail->text = StringUtil::parseSimpleTokens($this->nl_unsubscribe, $arrData);
+		$objEmail->text = System::getContainer()->get(SimpleTokenParser::class)->parse($this->nl_unsubscribe, $arrData);
 		$objEmail->sendTo($strEmail);
 
 		// Redirect to the jumpTo page

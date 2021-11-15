@@ -9,9 +9,13 @@
 
     <?php $this->block('meta'); ?>
       <meta name="robots" content="<?= $this->robots ?>">
-      <meta name="description" content="<?= $this->description ?>">
+      <meta name="description" content="<?= Contao\StringUtil::substr($this->description, 320) ?>">
       <meta name="generator" content="Contao Open Source CMS">
     <?php $this->endblock(); ?>
+
+    <?php if ($this->canonical): ?>
+      <link rel="canonical" href="<?= $this->canonical ?>">
+    <?php endif; ?>
 
     <?= $this->viewport ?>
     <?= $this->framework ?>
@@ -21,7 +25,7 @@
   <?php $this->endblock(); ?>
 
 </head>
-<body id="top"<?php if ($this->class): ?> class="<?= $this->class ?>"<?php endif; ?><?php if ($this->onload): ?> onload="<?= $this->onload ?>"<?php endif; ?> itemscope itemtype="http://schema.org/WebPage">
+<body id="top"<?php if ($this->class): ?> class="<?= $this->class ?>"<?php endif; ?><?php if ($this->onload): ?> onload="<?= $this->onload ?>"<?php endif; ?>>
 
   <?php $this->block('body'); ?>
     <?php $this->sections('top'); ?>
@@ -93,5 +97,6 @@
   <?php $this->endblock(); ?>
 
   <?= $this->mootools ?>
+  <?= $this->jsonLdScripts ?>
 </body>
 </html>

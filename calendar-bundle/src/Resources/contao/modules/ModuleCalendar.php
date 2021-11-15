@@ -11,7 +11,6 @@
 namespace Contao;
 
 use Contao\CoreBundle\Exception\PageNotFoundException;
-use Patchwork\Utf8;
 
 /**
  * Front end module "calendar".
@@ -19,6 +18,7 @@ use Patchwork\Utf8;
  * @property int    $cal_startDay
  * @property array  $cal_calendar
  * @property string $cal_ctemplate
+ * @property string $cal_featured
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -54,7 +54,7 @@ class ModuleCalendar extends Events
 		if ($request && System::getContainer()->get('contao.routing.scope_matcher')->isBackendRequest($request))
 		{
 			$objTemplate = new BackendTemplate('be_wildcard');
-			$objTemplate->wildcard = '### ' . Utf8::strtoupper($GLOBALS['TL_LANG']['FMD']['calendar'][0]) . ' ###';
+			$objTemplate->wildcard = '### ' . $GLOBALS['TL_LANG']['FMD']['calendar'][0] . ' ###';
 			$objTemplate->title = $this->headline;
 			$objTemplate->id = $this->id;
 			$objTemplate->link = $this->name;
@@ -120,6 +120,18 @@ class ModuleCalendar extends Events
 
 		// Find the boundaries
 		$objMinMax = $this->Database->query("SELECT MIN(startTime) AS dateFrom, MAX(endTime) AS dateTo, MAX(repeatEnd) AS repeatUntil FROM tl_calendar_events WHERE pid IN(" . implode(',', array_map('\intval', $this->cal_calendar)) . ")" . (!BE_USER_LOGGED_IN ? " AND published='1' AND (start='' OR start<='$time') AND (stop='' OR stop>'$time')" : ""));
+		$dateFrom = $objMinMax->dateFrom;
+		$dateTo = $objMinMax->dateTo;
+		$repeatUntil = $objMinMax->repeatUntil;
+
+		if (isset($GLOBALS['TL_HOOKS']['findCalendarBoundaries']) && \is_array($GLOBALS['TL_HOOKS']['findCalendarBoundaries']))
+		{
+			foreach ($GLOBALS['TL_HOOKS']['findCalendarBoundaries'] as $callback)
+			{
+				$this->import($callback[0]);
+				$this->{$callback[0]}->{$callback[1]}($dateFrom, $dateTo, $repeatUntil, $this);
+			}
+		}
 
 		// Store year and month
 		$intYear = date('Y', $this->Date->tstamp);
@@ -136,7 +148,7 @@ class ModuleCalendar extends Events
 		$intPrevYm = (int) ($prevYear . str_pad($prevMonth, 2, 0, STR_PAD_LEFT));
 
 		// Only generate a link if there are events (see #4160)
-		if (($objMinMax->dateFrom !== null && $intPrevYm >= date('Ym', $objMinMax->dateFrom)) || $intPrevYm >= date('Ym'))
+		if (($dateFrom !== null && $intPrevYm >= date('Ym', $dateFrom)) || $intPrevYm >= date('Ym'))
 		{
 			$objTemplate->prevHref = $this->strUrl . '?month=' . $intPrevYm;
 			$objTemplate->prevTitle = StringUtil::specialchars($lblPrevious);
@@ -154,7 +166,7 @@ class ModuleCalendar extends Events
 		$intNextYm = $nextYear . str_pad($nextMonth, 2, 0, STR_PAD_LEFT);
 
 		// Only generate a link if there are events (see #4160)
-		if ($intNextYm <= date('Ym') || ($objMinMax->dateTo !== null && $intNextYm <= date('Ym', max($objMinMax->dateTo, $objMinMax->repeatUntil))))
+		if ($intNextYm <= date('Ym') || ($dateTo !== null && $intNextYm <= date('Ym', max($dateTo, $repeatUntil))))
 		{
 			$objTemplate->nextHref = $this->strUrl . '?month=' . $intNextYm;
 			$objTemplate->nextTitle = StringUtil::specialchars($lblNext);
@@ -228,9 +240,21 @@ class ModuleCalendar extends Events
 			$intFirstDayOffset += 7;
 		}
 
+		// Handle featured events
+		$blnFeatured = null;
+
+		if ($this->cal_featured == 'featured')
+		{
+			$blnFeatured = true;
+		}
+		elseif ($this->cal_featured == 'unfeatured')
+		{
+			$blnFeatured = false;
+		}
+
 		$intColumnCount = -1;
 		$intNumberOfRows = ceil(($intDaysInMonth + $intFirstDayOffset) / 7);
-		$arrAllEvents = $this->getAllEvents($this->cal_calendar, $this->Date->monthBegin, $this->Date->monthEnd);
+		$arrAllEvents = $this->getAllEvents($this->cal_calendar, $this->Date->monthBegin, $this->Date->monthEnd, $blnFeatured);
 		$arrDays = array();
 
 		// Compile days

@@ -105,8 +105,9 @@ class FaqPickerProviderTest extends ContaoTestCase
                 'fieldType' => 'radio',
                 'preserveRecord' => 'tl_faq.2',
                 'value' => '5',
+                'flags' => ['urlattr'],
             ],
-            $picker->getDcaAttributes(new PickerConfig('link', $extra, '{{faq_url::5}}'))
+            $picker->getDcaAttributes(new PickerConfig('link', $extra, '{{faq_url::5|urlattr}}'))
         );
 
         $this->assertSame(
@@ -243,11 +244,7 @@ class FaqPickerProviderTest extends ContaoTestCase
         $router = $this->createMock(RouterInterface::class);
         $router
             ->method('generate')
-            ->willReturnCallback(
-                static function (string $name, array $params): string {
-                    return $name.'?'.http_build_query($params);
-                }
-            )
+            ->willReturnCallback(static fn (string $name, array $params): string => $name.'?'.http_build_query($params))
         ;
 
         $translator = $this->createMock(TranslatorInterface::class);

@@ -49,6 +49,13 @@
         <source>Here you can add a custom meta title to overwrite the default page title.</source>
         <target>Hier kunt u een aangepaste metatitel toevoegen om de standaardpaginatitel te overschrijven.</target>
       </trans-unit>
+      <trans-unit id="tl_news.robots.0">
+        <source>Robots tag</source>
+        <target>Robots tag</target>
+      </trans-unit>
+      <trans-unit id="tl_news.robots.1">
+        <source>Here you can overwrite how search engines handle the news item.</source>
+      </trans-unit>
       <trans-unit id="tl_news.description.0">
         <source>Meta description</source>
         <target>Meta omschrijving</target>
@@ -246,7 +253,7 @@
         <target>Doelpagina</target>
       </trans-unit>
       <trans-unit id="tl_news.meta_legend">
-        <source>Meta data</source>
+        <source>Metadata</source>
         <target>Meta data</target>
       </trans-unit>
       <trans-unit id="tl_news.expert_legend">

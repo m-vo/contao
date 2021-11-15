@@ -8,6 +8,19 @@
  * @license LGPL-3.0-or-later
  */
 
+use Contao\Backend;
+use Contao\BackendUser;
+use Contao\CoreBundle\Exception\AccessDeniedException;
+use Contao\DataContainer;
+use Contao\Image;
+use Contao\Input;
+use Contao\Message;
+use Contao\StringUtil;
+use Contao\StyleSheets;
+use Contao\System;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Symfony\Component\String\UnicodeString;
+
 $GLOBALS['TL_DCA']['tl_style_sheet'] = array
 (
 	// Config
@@ -46,7 +59,7 @@ $GLOBALS['TL_DCA']['tl_style_sheet'] = array
 	(
 		'sorting' => array
 		(
-			'mode'                    => 4,
+			'mode'                    => DataContainer::MODE_PARENT,
 			'fields'                  => array('name'),
 			'panelLayout'             => 'filter;search,limit',
 			'headerFields'            => array('name', 'author', 'tstamp'),
@@ -95,7 +108,7 @@ $GLOBALS['TL_DCA']['tl_style_sheet'] = array
 			(
 				'href'                => 'act=delete',
 				'icon'                => 'delete.svg',
-				'attributes'          => 'onclick="if(!confirm(\'' . $GLOBALS['TL_LANG']['MSC']['deleteConfirm'] . '\'))return false;Backend.getScrollOffset()"'
+				'attributes'          => 'onclick="if(!confirm(\'' . ($GLOBALS['TL_LANG']['MSC']['deleteConfirm'] ?? null) . '\'))return false;Backend.getScrollOffset()"'
 			),
 			'show' => array
 			(
@@ -138,7 +151,7 @@ $GLOBALS['TL_DCA']['tl_style_sheet'] = array
 			'inputType'               => 'text',
 			'exclude'                 => true,
 			'search'                  => true,
-			'flag'                    => 1,
+			'flag'                    => DataContainer::SORT_INITIAL_LETTER_ASC,
 			'eval'                    => array('mandatory'=>true, 'unique'=>true, 'rgxp'=>'alnum', 'maxlength'=>64, 'spaceToUnderscore'=>true, 'tl_class'=>'w50'),
 			'save_callback' => array
 			(
@@ -196,7 +209,7 @@ $GLOBALS['TL_DCA']['tl_style_sheet'] = array
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
-class tl_style_sheet extends Contao\Backend
+class tl_style_sheet extends Backend
 {
 	/**
 	 * Import the back end user object
@@ -204,17 +217,17 @@ class tl_style_sheet extends Contao\Backend
 	public function __construct()
 	{
 		parent::__construct();
-		$this->import('Contao\BackendUser', 'User');
+		$this->import(BackendUser::class, 'User');
 	}
 
 	/**
 	 * Check permissions to edit the table
 	 *
-	 * @throws Contao\CoreBundle\Exception\AccessDeniedException
+	 * @throws AccessDeniedException
 	 */
 	public function checkPermission()
 	{
-		Contao\Message::addInfo($GLOBALS['TL_LANG']['MSC']['internalCssEditor']);
+		Message::addInfo($GLOBALS['TL_LANG']['MSC']['internalCssEditor']);
 
 		if ($this->User->isAdmin)
 		{
@@ -223,7 +236,7 @@ class tl_style_sheet extends Contao\Backend
 
 		if (!$this->User->hasAccess('css', 'themes'))
 		{
-			throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to access the style sheets module.');
+			throw new AccessDeniedException('Not enough permissions to access the style sheets module.');
 		}
 	}
 
@@ -232,8 +245,8 @@ class tl_style_sheet extends Contao\Backend
 	 */
 	public function updateStyleSheet()
 	{
-		/** @var Symfony\Component\HttpFoundation\Session\SessionInterface $objSession */
-		$objSession = Contao\System::getContainer()->get('session');
+		/** @var SessionInterface $objSession */
+		$objSession = System::getContainer()->get('session');
 
 		$session = $objSession->get('style_sheet_updater');
 
@@ -242,7 +255,7 @@ class tl_style_sheet extends Contao\Backend
 			return;
 		}
 
-		$this->import('Contao\StyleSheets', 'StyleSheets');
+		$this->import(StyleSheets::class, 'StyleSheets');
 
 		foreach ($session as $id)
 		{
@@ -269,13 +282,13 @@ class tl_style_sheet extends Contao\Backend
 		}
 
 		// Return if there is no ID
-		if (!$id || Contao\Input::get('act') == 'copy')
+		if (!$id || Input::get('act') == 'copy')
 		{
 			return;
 		}
 
-		/** @var Symfony\Component\HttpFoundation\Session\SessionInterface $objSession */
-		$objSession = Contao\System::getContainer()->get('session');
+		/** @var SessionInterface $objSession */
+		$objSession = System::getContainer()->get('session');
 
 		// Store the ID in the session
 		$session = $objSession->get('style_sheet_updater');
@@ -293,7 +306,7 @@ class tl_style_sheet extends Contao\Backend
 	public function listStyleSheet($row)
 	{
 		$cc = '';
-		$media = Contao\StringUtil::deserialize($row['media']);
+		$media = StringUtil::deserialize($row['media']);
 
 		if ($row['cc'])
 		{
@@ -322,7 +335,7 @@ class tl_style_sheet extends Contao\Backend
 	 */
 	public function romanizeName($varValue)
 	{
-		return Patchwork\Utf8::toAscii($varValue);
+		return (new UnicodeString($varValue))->ascii()->toString();
 	}
 
 	/**
@@ -356,6 +369,6 @@ class tl_style_sheet extends Contao\Backend
 	 */
 	public function editHeader($row, $href, $label, $title, $icon, $attributes)
 	{
-		return $this->User->canEditFieldsOf('tl_style_sheet') ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . Contao\StringUtil::specialchars($title) . '"' . $attributes . '>' . Contao\Image::getHtml($icon, $label) . '</a> ' : Contao\Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
+		return $this->User->canEditFieldsOf('tl_style_sheet') ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
 	}
 }

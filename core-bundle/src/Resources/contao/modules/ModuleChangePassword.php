@@ -10,8 +10,6 @@
 
 namespace Contao;
 
-use Patchwork\Utf8;
-
 /**
  * Front end module "change password".
  *
@@ -38,7 +36,7 @@ class ModuleChangePassword extends Module
 		if ($request && $container->get('contao.routing.scope_matcher')->isBackendRequest($request))
 		{
 			$objTemplate = new BackendTemplate('be_wildcard');
-			$objTemplate->wildcard = '### ' . Utf8::strtoupper($GLOBALS['TL_LANG']['FMD']['changePassword'][0]) . ' ###';
+			$objTemplate->wildcard = '### ' . $GLOBALS['TL_LANG']['FMD']['changePassword'][0] . ' ###';
 			$objTemplate->title = $this->headline;
 			$objTemplate->id = $this->id;
 			$objTemplate->link = $this->name;
@@ -61,18 +59,13 @@ class ModuleChangePassword extends Module
 	 */
 	protected function compile()
 	{
-		/** @var PageModel $objPage */
-		global $objPage;
-
 		$this->import(FrontendUser::class, 'User');
-
-		$GLOBALS['TL_LANGUAGE'] = $objPage->language;
 
 		System::loadLanguageFile('tl_member');
 		$this->loadDataContainer('tl_member');
 
 		// Call onload_callback (e.g. to check permissions)
-		if (\is_array($GLOBALS['TL_DCA']['tl_member']['config']['onload_callback']))
+		if (\is_array($GLOBALS['TL_DCA']['tl_member']['config']['onload_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA']['tl_member']['config']['onload_callback'] as $callback)
 			{
@@ -94,7 +87,7 @@ class ModuleChangePassword extends Module
 			'name'      => 'oldpassword',
 			'label'     => &$GLOBALS['TL_LANG']['MSC']['oldPassword'],
 			'inputType' => 'text',
-			'eval'      => array('mandatory'=>true, 'preserveTags'=>true, 'hideInput'=>true),
+			'eval'      => array('mandatory'=>true, 'preserveTags'=>true, 'hideInput'=>true, 'autocomplete'=>'current-password'),
 		);
 
 		// New password widget
@@ -118,17 +111,13 @@ class ModuleChangePassword extends Module
 		$objVersions->setEditUrl('contao/main.php?do=member&act=edit&id=%s&rt=1');
 		$objVersions->initialize();
 
-		/** @var FormTextField $objOldPassword */
-		$objOldPassword = null;
-
 		/** @var FormPassword $objNewPassword */
 		$objNewPassword = null;
 
 		// Initialize the widgets
 		foreach ($arrFields as $strKey=>$arrField)
 		{
-			/** @var Widget $strClass */
-			$strClass = $GLOBALS['TL_FFL'][$arrField['inputType']];
+			$strClass = $GLOBALS['TL_FFL'][$arrField['inputType']] ?? null;
 
 			// Continue if the class is not defined
 			if (!class_exists($strClass))
@@ -136,7 +125,7 @@ class ModuleChangePassword extends Module
 				continue;
 			}
 
-			$arrField['eval']['required'] = $arrField['eval']['mandatory'];
+			$arrField['eval']['required'] = $arrField['eval']['mandatory'] ?? null;
 
 			/** @var Widget $objWidget */
 			$objWidget = new $strClass($strClass::getAttributesFromDca($arrField, $arrField['name']));
@@ -164,13 +153,12 @@ class ModuleChangePassword extends Module
 				// Validate the old password
 				if ($strKey == 'oldPassword')
 				{
-					$encoder = System::getContainer()->get('security.encoder_factory')->getEncoder(FrontendUser::class);
+					$encoder = System::getContainer()->get('security.password_hasher_factory')->getEncoder(FrontendUser::class);
 
 					if (!$encoder->isPasswordValid($objMember->password, $objWidget->value, null))
 					{
 						$objWidget->value = '';
 						$objWidget->addError($GLOBALS['TL_LANG']['MSC']['oldPasswordWrong']);
-						sleep(2); // Wait 2 seconds while brute forcing :)
 					}
 				}
 
@@ -194,7 +182,7 @@ class ModuleChangePassword extends Module
 			$objMember->save();
 
 			// Create a new version
-			if ($GLOBALS['TL_DCA'][$strTable]['config']['enableVersioning'])
+			if ($GLOBALS['TL_DCA'][$strTable]['config']['enableVersioning'] ?? null)
 			{
 				$objVersions->create();
 			}

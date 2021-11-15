@@ -181,7 +181,7 @@ class ImageSize extends Widget
 		// Add an unknown option, so it is not lost when saving the record (see #920)
 		if (isset($this->unknownOption[2]))
 		{
-			$arrAllOptions[] = array('value'=>$this->unknownOption[2], 'label'=>$GLOBALS['TL_LANG']['MSC']['unknownOption']);
+			$arrAllOptions[] = array('value' => $this->unknownOption[2], 'label' => sprintf($GLOBALS['TL_LANG']['MSC']['unknownOption'], $this->unknownOption[2]));
 		}
 
 		foreach ($arrAllOptions as $strKey=>$arrOption)
@@ -190,9 +190,9 @@ class ImageSize extends Widget
 			{
 				$arrOptions[] = sprintf(
 					'<option value="%s"%s>%s</option>',
-					StringUtil::specialchars($arrOption['value']),
-					$this->optionSelected($arrOption['value'], $this->varValue[2]),
-					$arrOption['label']
+					StringUtil::specialchars($arrOption['value'] ?? ''),
+					$this->optionSelected($arrOption['value'] ?? null, $this->varValue[2] ?? null),
+					$arrOption['label'] ?? null
 				);
 			}
 			else
@@ -203,9 +203,9 @@ class ImageSize extends Widget
 				{
 					$arrOptgroups[] = sprintf(
 						'<option value="%s"%s>%s</option>',
-						StringUtil::specialchars($arrOptgroup['value']),
-						$this->optionSelected($arrOptgroup['value'], $this->varValue[2]),
-						$arrOptgroup['label']
+						StringUtil::specialchars($arrOptgroup['value'] ?? ''),
+						$this->optionSelected($arrOptgroup['value'] ?? null, $this->varValue[2] ?? null),
+						$arrOptgroup['label'] ?? null
 					);
 				}
 

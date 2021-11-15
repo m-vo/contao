@@ -27,12 +27,14 @@ abstract class AbstractContentElementController extends AbstractFragmentControll
 
         $this->addHeadlineToTemplate($template, $model->headline);
         $this->addCssAttributesToTemplate($template, 'ce_'.$type, $model->cssID, $classes);
+        $this->addPropertiesToTemplate($template, $request->attributes->get('templateProperties', []));
         $this->addSectionToTemplate($template, $section);
         $this->tagResponse(['contao.db.tl_content.'.$model->id]);
 
         $response = $this->getResponse($template, $model, $request);
 
         if (null === $response) {
+            trigger_deprecation('contao/core-bundle', '4.12', 'Returning null in %s::getResponse() is deprecated, return a Response instead.', static::class);
             $response = $template->getResponse();
         }
 

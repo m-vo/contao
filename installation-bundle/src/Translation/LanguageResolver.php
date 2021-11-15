@@ -13,18 +13,12 @@ declare(strict_types=1);
 namespace Contao\InstallationBundle\Translation;
 
 use Symfony\Component\HttpFoundation\RequestStack;
+use Webmozart\PathUtil\Path;
 
 class LanguageResolver
 {
-    /**
-     * @var RequestStack
-     */
-    private $requestStack;
-
-    /**
-     * @var string
-     */
-    private $translationsDir;
+    private RequestStack $requestStack;
+    private string $translationsDir;
 
     public function __construct(RequestStack $requestStack, string $translationsDir)
     {
@@ -38,7 +32,7 @@ class LanguageResolver
     public function getLocale(): string
     {
         foreach ($this->getAcceptedLocales() as $locale) {
-            if (file_exists($this->translationsDir.'/messages.'.$locale.'.xlf')) {
+            if (file_exists(Path::join($this->translationsDir, "messages.$locale.xlf"))) {
                 return $locale;
             }
         }

@@ -8,7 +8,25 @@
  * @license LGPL-3.0-or-later
  */
 
-Contao\System::loadLanguageFile('tl_content');
+use Contao\Backend;
+use Contao\BackendUser;
+use Contao\Config;
+use Contao\CoreBundle\Exception\AccessDeniedException;
+use Contao\DataContainer;
+use Contao\Date;
+use Contao\Image;
+use Contao\Input;
+use Contao\LayoutModel;
+use Contao\News;
+use Contao\NewsArchiveModel;
+use Contao\NewsModel;
+use Contao\PageModel;
+use Contao\StringUtil;
+use Contao\System;
+use Contao\Versions;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
+
+System::loadLanguageFile('tl_content');
 
 $GLOBALS['TL_DCA']['tl_news'] = array
 (
@@ -39,13 +57,17 @@ $GLOBALS['TL_DCA']['tl_news'] = array
 			array('tl_news', 'adjustTime'),
 			array('tl_news', 'scheduleUpdate')
 		),
+		'oninvalidate_cache_tags_callback' => array
+		(
+			array('tl_news', 'addSitemapCacheInvalidationTag'),
+		),
 		'sql' => array
 		(
 			'keys' => array
 			(
 				'id' => 'primary',
 				'alias' => 'index',
-				'pid,start,stop,published' => 'index'
+				'pid,published,featured,start,stop' => 'index'
 			)
 		)
 	),
@@ -55,7 +77,7 @@ $GLOBALS['TL_DCA']['tl_news'] = array
 	(
 		'sorting' => array
 		(
-			'mode'                    => 4,
+			'mode'                    => DataContainer::MODE_PARENT,
 			'fields'                  => array('date'),
 			'headerFields'            => array('title', 'jumpTo', 'tstamp', 'protected', 'allowComments'),
 			'panelLayout'             => 'filter;sort,search,limit',
@@ -97,7 +119,7 @@ $GLOBALS['TL_DCA']['tl_news'] = array
 			(
 				'href'                => 'act=delete',
 				'icon'                => 'delete.svg',
-				'attributes'          => 'onclick="if(!confirm(\'' . $GLOBALS['TL_LANG']['MSC']['deleteConfirm'] . '\'))return false;Backend.getScrollOffset()"'
+				'attributes'          => 'onclick="if(!confirm(\'' . ($GLOBALS['TL_LANG']['MSC']['deleteConfirm'] ?? null) . '\'))return false;Backend.getScrollOffset()"'
 			),
 			'toggle' => array
 			(
@@ -124,10 +146,10 @@ $GLOBALS['TL_DCA']['tl_news'] = array
 	'palettes' => array
 	(
 		'__selector__'                => array('source', 'addImage', 'addEnclosure', 'overwriteMeta'),
-		'default'                     => '{title_legend},headline,alias,author;{date_legend},date,time;{source_legend:hide},source;{meta_legend},pageTitle,description,serpPreview;{teaser_legend},subheadline,teaser;{image_legend},addImage;{enclosure_legend:hide},addEnclosure;{expert_legend:hide},cssClass,noComments,featured;{publish_legend},published,start,stop',
-		'internal'                    => '{title_legend},headline,alias,author;{date_legend},date,time;{source_legend},source,jumpTo;{teaser_legend},subheadline,teaser;{image_legend},addImage;{enclosure_legend:hide},addEnclosure;{expert_legend:hide},cssClass,noComments,featured;{publish_legend},published,start,stop',
-		'article'                     => '{title_legend},headline,alias,author;{date_legend},date,time;{source_legend},source,articleId;{teaser_legend},subheadline,teaser;{image_legend},addImage;{enclosure_legend:hide},addEnclosure;{expert_legend:hide},cssClass,noComments,featured;{publish_legend},published,start,stop',
-		'external'                    => '{title_legend},headline,alias,author;{date_legend},date,time;{source_legend},source,url,target;{teaser_legend},subheadline,teaser;{image_legend},addImage;{enclosure_legend:hide},addEnclosure;{expert_legend:hide},cssClass,noComments,featured;{publish_legend},published,start,stop'
+		'default'                     => '{title_legend},headline,featured,alias,author;{date_legend},date,time;{source_legend:hide},source;{meta_legend},pageTitle,robots,description,serpPreview;{teaser_legend},subheadline,teaser;{image_legend},addImage;{enclosure_legend:hide},addEnclosure;{expert_legend:hide},cssClass,noComments;{publish_legend},published,start,stop',
+		'internal'                    => '{title_legend},headline,featured,alias,author;{date_legend},date,time;{source_legend},source,jumpTo;{teaser_legend},subheadline,teaser;{image_legend},addImage;{enclosure_legend:hide},addEnclosure;{expert_legend:hide},cssClass,noComments;{publish_legend},published,start,stop',
+		'article'                     => '{title_legend},headline,featured,alias,author;{date_legend},date,time;{source_legend},source,articleId;{teaser_legend},subheadline,teaser;{image_legend},addImage;{enclosure_legend:hide},addEnclosure;{expert_legend:hide},cssClass,noComments;{publish_legend},published,start,stop',
+		'external'                    => '{title_legend},headline,featured,alias,author;{date_legend},date,time;{source_legend},source,url,target;{teaser_legend},subheadline,teaser;{image_legend},addImage;{enclosure_legend:hide},addEnclosure;{expert_legend:hide},cssClass,noComments;{publish_legend},published,start,stop'
 	),
 
 	// Subpalettes
@@ -160,17 +182,25 @@ $GLOBALS['TL_DCA']['tl_news'] = array
 			'exclude'                 => true,
 			'search'                  => true,
 			'sorting'                 => true,
-			'flag'                    => 1,
+			'flag'                    => DataContainer::SORT_INITIAL_LETTER_ASC,
 			'inputType'               => 'text',
 			'eval'                    => array('mandatory'=>true, 'maxlength'=>255, 'tl_class'=>'w50'),
 			'sql'                     => "varchar(255) NOT NULL default ''"
+		),
+		'featured' => array
+		(
+			'exclude'                 => true,
+			'filter'                  => true,
+			'inputType'               => 'checkbox',
+			'eval'                    => array('tl_class'=>'w50 m12'),
+			'sql'                     => "char(1) NOT NULL default ''"
 		),
 		'alias' => array
 		(
 			'exclude'                 => true,
 			'search'                  => true,
 			'inputType'               => 'text',
-			'eval'                    => array('rgxp'=>'alias', 'doNotCopy'=>true, 'unique'=>true, 'maxlength'=>255, 'tl_class'=>'w50 clr'),
+			'eval'                    => array('rgxp'=>'alias', 'doNotCopy'=>true, 'unique'=>true, 'maxlength'=>255, 'tl_class'=>'w50'),
 			'save_callback' => array
 			(
 				array('tl_news', 'generateAlias')
@@ -179,12 +209,12 @@ $GLOBALS['TL_DCA']['tl_news'] = array
 		),
 		'author' => array
 		(
-			'default'                 => Contao\BackendUser::getInstance()->id,
+			'default'                 => BackendUser::getInstance()->id,
 			'exclude'                 => true,
 			'search'                  => true,
 			'filter'                  => true,
 			'sorting'                 => true,
-			'flag'                    => 11,
+			'flag'                    => DataContainer::SORT_ASC,
 			'inputType'               => 'select',
 			'foreignKey'              => 'tl_user.name',
 			'eval'                    => array('doNotCopy'=>true, 'chosen'=>true, 'mandatory'=>true, 'includeBlankOption'=>true, 'tl_class'=>'w50'),
@@ -197,7 +227,7 @@ $GLOBALS['TL_DCA']['tl_news'] = array
 			'exclude'                 => true,
 			'filter'                  => true,
 			'sorting'                 => true,
-			'flag'                    => 8,
+			'flag'                    => DataContainer::SORT_MONTH_DESC,
 			'inputType'               => 'text',
 			'eval'                    => array('rgxp'=>'date', 'mandatory'=>true, 'doNotCopy'=>true, 'datepicker'=>true, 'tl_class'=>'w50 wizard'),
 			'load_callback' => array
@@ -225,6 +255,15 @@ $GLOBALS['TL_DCA']['tl_news'] = array
 			'inputType'               => 'text',
 			'eval'                    => array('maxlength'=>255, 'decodeEntities'=>true, 'tl_class'=>'w50'),
 			'sql'                     => "varchar(255) NOT NULL default ''"
+		),
+		'robots' => array
+		(
+			'exclude'                 => true,
+			'search'                  => true,
+			'inputType'               => 'select',
+			'options'                 => array('index,follow', 'index,nofollow', 'noindex,follow', 'noindex,nofollow'),
+			'eval'                    => array('tl_class'=>'w50', 'includeBlankOption' => true),
+			'sql'                     => "varchar(32) NOT NULL default ''"
 		),
 		'description' => array
 		(
@@ -278,7 +317,7 @@ $GLOBALS['TL_DCA']['tl_news'] = array
 			'label'                   => &$GLOBALS['TL_LANG']['tl_content']['singleSRC'],
 			'exclude'                 => true,
 			'inputType'               => 'fileTree',
-			'eval'                    => array('fieldType'=>'radio', 'filesOnly'=>true, 'extensions'=>Contao\Config::get('validImageTypes'), 'mandatory'=>true),
+			'eval'                    => array('fieldType'=>'radio', 'filesOnly'=>true, 'extensions'=>'%contao.image.valid_extensions%', 'mandatory'=>true),
 			'sql'                     => "binary(16) NULL"
 		),
 		'alt' => array
@@ -308,7 +347,7 @@ $GLOBALS['TL_DCA']['tl_news'] = array
 			'eval'                    => array('rgxp'=>'natural', 'includeBlankOption'=>true, 'nospace'=>true, 'helpwizard'=>true, 'tl_class'=>'w50'),
 			'options_callback' => static function ()
 			{
-				return Contao\System::getContainer()->get('contao.image.image_sizes')->getOptionsForUser(Contao\BackendUser::getInstance());
+				return System::getContainer()->get('contao.image.image_sizes')->getOptionsForUser(BackendUser::getInstance());
 			},
 			'sql'                     => "varchar(64) NOT NULL default ''"
 		),
@@ -327,7 +366,7 @@ $GLOBALS['TL_DCA']['tl_news'] = array
 			'exclude'                 => true,
 			'search'                  => true,
 			'inputType'               => 'text',
-			'eval'                    => array('rgxp'=>'url', 'decodeEntities'=>true, 'maxlength'=>255, 'dcaPicker'=>true, 'addWizardClass'=>false, 'tl_class'=>'w50'),
+			'eval'                    => array('rgxp'=>'url', 'decodeEntities'=>true, 'maxlength'=>255, 'dcaPicker'=>true, 'tl_class'=>'w50'),
 			'sql'                     => "varchar(255) NOT NULL default ''"
 		),
 		'fullsize' => array
@@ -368,12 +407,7 @@ $GLOBALS['TL_DCA']['tl_news'] = array
 		(
 			'exclude'                 => true,
 			'inputType'               => 'fileTree',
-			'eval'                    => array('multiple'=>true, 'fieldType'=>'checkbox', 'filesOnly'=>true, 'isDownloads'=>true, 'extensions'=>Contao\Config::get('allowedDownload'), 'mandatory'=>true, 'orderField'=>'orderEnclosure'),
-			'sql'                     => "blob NULL"
-		),
-		'orderEnclosure' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['MSC']['sortOrder'],
+			'eval'                    => array('multiple'=>true, 'fieldType'=>'checkbox', 'filesOnly'=>true, 'isDownloads'=>true, 'extensions'=>Config::get('allowedDownload'), 'mandatory'=>true),
 			'sql'                     => "blob NULL"
 		),
 		'source' => array
@@ -410,7 +444,7 @@ $GLOBALS['TL_DCA']['tl_news'] = array
 			'exclude'                 => true,
 			'search'                  => true,
 			'inputType'               => 'text',
-			'eval'                    => array('mandatory'=>true, 'rgxp'=>'url', 'decodeEntities'=>true, 'maxlength'=>255, 'dcaPicker'=>true, 'addWizardClass'=>false, 'tl_class'=>'w50'),
+			'eval'                    => array('mandatory'=>true, 'rgxp'=>'url', 'decodeEntities'=>true, 'maxlength'=>255, 'dcaPicker'=>true, 'tl_class'=>'w50'),
 			'sql'                     => "varchar(255) NOT NULL default ''"
 		),
 		'target' => array
@@ -433,22 +467,14 @@ $GLOBALS['TL_DCA']['tl_news'] = array
 			'exclude'                 => true,
 			'filter'                  => true,
 			'inputType'               => 'checkbox',
-			'eval'                    => array('tl_class'=>'w50 clr'),
-			'sql'                     => "char(1) NOT NULL default ''"
-		),
-		'featured' => array
-		(
-			'exclude'                 => true,
-			'filter'                  => true,
-			'inputType'               => 'checkbox',
-			'eval'                    => array('tl_class'=>'w50'),
+			'eval'                    => array('tl_class'=>'w50 m12'),
 			'sql'                     => "char(1) NOT NULL default ''"
 		),
 		'published' => array
 		(
 			'exclude'                 => true,
 			'filter'                  => true,
-			'flag'                    => 1,
+			'flag'                    => DataContainer::SORT_INITIAL_LETTER_ASC,
 			'inputType'               => 'checkbox',
 			'eval'                    => array('doNotCopy'=>true),
 			'sql'                     => "char(1) NOT NULL default ''"
@@ -473,11 +499,11 @@ $GLOBALS['TL_DCA']['tl_news'] = array
 /**
  * Provide miscellaneous methods that are used by the data configuration array.
  *
- * @property Contao\News $News
+ * @property News $News
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
-class tl_news extends Contao\Backend
+class tl_news extends Backend
 {
 	/**
 	 * Import the back end user object
@@ -485,23 +511,23 @@ class tl_news extends Contao\Backend
 	public function __construct()
 	{
 		parent::__construct();
-		$this->import('Contao\BackendUser', 'User');
+		$this->import(BackendUser::class, 'User');
 	}
 
 	/**
 	 * Check permissions to edit table tl_news
 	 *
-	 * @throws Contao\CoreBundle\Exception\AccessDeniedException
+	 * @throws AccessDeniedException
 	 */
 	public function checkPermission()
 	{
-		$bundles = Contao\System::getContainer()->getParameter('kernel.bundles');
+		$bundles = System::getContainer()->getParameter('kernel.bundles');
 
 		// HOOK: comments extension required
 		if (!isset($bundles['ContaoCommentsBundle']))
 		{
-			$key = array_search('allowComments', $GLOBALS['TL_DCA']['tl_news']['list']['sorting']['headerFields']);
-			unset($GLOBALS['TL_DCA']['tl_news']['list']['sorting']['headerFields'][$key]);
+			$key = array_search('allowComments', $GLOBALS['TL_DCA']['tl_news']['list']['sorting']['headerFields'] ?? array());
+			unset($GLOBALS['TL_DCA']['tl_news']['list']['sorting']['headerFields'][$key], $GLOBALS['TL_DCA']['tl_news']['fields']['noComments']);
 		}
 
 		if ($this->User->isAdmin)
@@ -519,50 +545,50 @@ class tl_news extends Contao\Backend
 			$root = $this->User->news;
 		}
 
-		$id = strlen(Contao\Input::get('id')) ? Contao\Input::get('id') : CURRENT_ID;
+		$id = strlen(Input::get('id')) ? Input::get('id') : CURRENT_ID;
 
 		// Check current action
-		switch (Contao\Input::get('act'))
+		switch (Input::get('act'))
 		{
 			case 'paste':
 			case 'select':
 				// Check CURRENT_ID here (see #247)
 				if (!in_array(CURRENT_ID, $root))
 				{
-					throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to access news archive ID ' . $id . '.');
+					throw new AccessDeniedException('Not enough permissions to access news archive ID ' . $id . '.');
 				}
 				break;
 
 			case 'create':
-				if (!Contao\Input::get('pid') || !in_array(Contao\Input::get('pid'), $root))
+				if (!Input::get('pid') || !in_array(Input::get('pid'), $root))
 				{
-					throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to create news items in news archive ID ' . Contao\Input::get('pid') . '.');
+					throw new AccessDeniedException('Not enough permissions to create news items in news archive ID ' . Input::get('pid') . '.');
 				}
 				break;
 
 			case 'cut':
 			case 'copy':
-				if (Contao\Input::get('act') == 'cut' && Contao\Input::get('mode') == 1)
+				if (Input::get('act') == 'cut' && Input::get('mode') == 1)
 				{
 					$objArchive = $this->Database->prepare("SELECT pid FROM tl_news WHERE id=?")
 												 ->limit(1)
-												 ->execute(Contao\Input::get('pid'));
+												 ->execute(Input::get('pid'));
 
 					if ($objArchive->numRows < 1)
 					{
-						throw new Contao\CoreBundle\Exception\AccessDeniedException('Invalid news item ID ' . Contao\Input::get('pid') . '.');
+						throw new AccessDeniedException('Invalid news item ID ' . Input::get('pid') . '.');
 					}
 
 					$pid = $objArchive->pid;
 				}
 				else
 				{
-					$pid = Contao\Input::get('pid');
+					$pid = Input::get('pid');
 				}
 
 				if (!in_array($pid, $root))
 				{
-					throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to ' . Contao\Input::get('act') . ' news item ID ' . $id . ' to news archive ID ' . $pid . '.');
+					throw new AccessDeniedException('Not enough permissions to ' . Input::get('act') . ' news item ID ' . $id . ' to news archive ID ' . $pid . '.');
 				}
 				// no break
 
@@ -577,12 +603,12 @@ class tl_news extends Contao\Backend
 
 				if ($objArchive->numRows < 1)
 				{
-					throw new Contao\CoreBundle\Exception\AccessDeniedException('Invalid news item ID ' . $id . '.');
+					throw new AccessDeniedException('Invalid news item ID ' . $id . '.');
 				}
 
 				if (!in_array($objArchive->pid, $root))
 				{
-					throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to ' . Contao\Input::get('act') . ' news item ID ' . $id . ' of news archive ID ' . $objArchive->pid . '.');
+					throw new AccessDeniedException('Not enough permissions to ' . Input::get('act') . ' news item ID ' . $id . ' of news archive ID ' . $objArchive->pid . '.');
 				}
 				break;
 
@@ -593,14 +619,14 @@ class tl_news extends Contao\Backend
 			case 'copyAll':
 				if (!in_array($id, $root))
 				{
-					throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to access news archive ID ' . $id . '.');
+					throw new AccessDeniedException('Not enough permissions to access news archive ID ' . $id . '.');
 				}
 
 				$objArchive = $this->Database->prepare("SELECT id FROM tl_news WHERE pid=?")
 											 ->execute($id);
 
-				/** @var Symfony\Component\HttpFoundation\Session\SessionInterface $objSession */
-				$objSession = Contao\System::getContainer()->get('session');
+				/** @var SessionInterface $objSession */
+				$objSession = System::getContainer()->get('session');
 
 				$session = $objSession->all();
 				$session['CURRENT']['IDS'] = array_intersect((array) $session['CURRENT']['IDS'], $objArchive->fetchEach('id'));
@@ -608,14 +634,14 @@ class tl_news extends Contao\Backend
 				break;
 
 			default:
-				if (Contao\Input::get('act'))
+				if (Input::get('act'))
 				{
-					throw new Contao\CoreBundle\Exception\AccessDeniedException('Invalid command "' . Contao\Input::get('act') . '".');
+					throw new AccessDeniedException('Invalid command "' . Input::get('act') . '".');
 				}
 
 				if (!in_array($id, $root))
 				{
-					throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to access news archive ID ' . $id . '.');
+					throw new AccessDeniedException('Not enough permissions to access news archive ID ' . $id . '.');
 				}
 				break;
 		}
@@ -624,14 +650,14 @@ class tl_news extends Contao\Backend
 	/**
 	 * Auto-generate the news alias if it has not been set yet
 	 *
-	 * @param mixed                $varValue
-	 * @param Contao\DataContainer $dc
+	 * @param mixed         $varValue
+	 * @param DataContainer $dc
 	 *
 	 * @return string
 	 *
 	 * @throws Exception
 	 */
-	public function generateAlias($varValue, Contao\DataContainer $dc)
+	public function generateAlias($varValue, DataContainer $dc)
 	{
 		$aliasExists = function (string $alias) use ($dc): bool
 		{
@@ -641,7 +667,7 @@ class tl_news extends Contao\Backend
 		// Generate alias if there is none
 		if (!$varValue)
 		{
-			$varValue = Contao\System::getContainer()->get('contao.slug')->generate($dc->activeRecord->headline, Contao\NewsArchiveModel::findByPk($dc->activeRecord->pid)->jumpTo, $aliasExists);
+			$varValue = System::getContainer()->get('contao.slug')->generate($dc->activeRecord->headline, NewsArchiveModel::findByPk($dc->activeRecord->pid)->jumpTo, $aliasExists);
 		}
 		elseif (preg_match('/^[1-9]\d*$/', $varValue))
 		{
@@ -682,31 +708,31 @@ class tl_news extends Contao\Backend
 	/**
 	 * Return the SERP URL
 	 *
-	 * @param Contao\NewsModel $model
+	 * @param NewsModel $model
 	 *
 	 * @return string
 	 */
-	public function getSerpUrl(Contao\NewsModel $model)
+	public function getSerpUrl(NewsModel $model)
 	{
-		return Contao\News::generateNewsUrl($model, false, true);
+		return News::generateNewsUrl($model, false, true);
 	}
 
 	/**
 	 * Return the title tag from the associated page layout
 	 *
-	 * @param Contao\NewsModel $model
+	 * @param NewsModel $model
 	 *
 	 * @return string
 	 */
-	public function getTitleTag(Contao\NewsModel $model)
+	public function getTitleTag(NewsModel $model)
 	{
-		/** @var Contao\NewsArchiveModel $archive */
+		/** @var NewsArchiveModel $archive */
 		if (!$archive = $model->getRelated('pid'))
 		{
 			return '';
 		}
 
-		/** @var Contao\PageModel $page */
+		/** @var PageModel $page */
 		if (!$page = $archive->getRelated('jumpTo'))
 		{
 			return '';
@@ -714,18 +740,31 @@ class tl_news extends Contao\Backend
 
 		$page->loadDetails();
 
-		/** @var Contao\LayoutModel $layout */
+		/** @var LayoutModel $layout */
 		if (!$layout = $page->getRelated('layout'))
 		{
 			return '';
 		}
 
-		global $objPage;
+		$origObjPage = $GLOBALS['objPage'] ?? null;
 
-		// Set the global page object so we can replace the insert tags
-		$objPage = $page;
+		// Override the global page object, so we can replace the insert tags
+		$GLOBALS['objPage'] = $page;
 
-		return self::replaceInsertTags(str_replace('{{page::pageTitle}}', '%s', $layout->titleTag ?: '{{page::pageTitle}} - {{page::rootPageTitle}}'));
+		$title = implode(
+			'%s',
+			array_map(
+				static function ($strVal)
+				{
+					return str_replace('%', '%%', self::replaceInsertTags($strVal));
+				},
+				explode('{{page::pageTitle}}', $layout->titleTag ?: '{{page::pageTitle}} - {{page::rootPageTitle}}', 2)
+			)
+		);
+
+		$GLOBALS['objPage'] = $origObjPage;
+
+		return $title;
 	}
 
 	/**
@@ -737,17 +776,17 @@ class tl_news extends Contao\Backend
 	 */
 	public function listNewsArticles($arrRow)
 	{
-		return '<div class="tl_content_left">' . $arrRow['headline'] . ' <span style="color:#999;padding-left:3px">[' . Contao\Date::parse(Contao\Config::get('datimFormat'), $arrRow['date']) . ']</span></div>';
+		return '<div class="tl_content_left">' . $arrRow['headline'] . ' <span style="color:#999;padding-left:3px">[' . Date::parse(Config::get('datimFormat'), $arrRow['date']) . ']</span></div>';
 	}
 
 	/**
 	 * Get all articles and return them as array
 	 *
-	 * @param Contao\DataContainer $dc
+	 * @param DataContainer $dc
 	 *
 	 * @return array
 	 */
-	public function getArticleAlias(Contao\DataContainer $dc)
+	public function getArticleAlias(DataContainer $dc)
 	{
 		$arrPids = array();
 		$arrAlias = array();
@@ -780,7 +819,7 @@ class tl_news extends Contao\Backend
 
 		if ($objAlias->numRows)
 		{
-			Contao\System::loadLanguageFile('tl_article');
+			System::loadLanguageFile('tl_article');
 
 			while ($objAlias->next())
 			{
@@ -794,11 +833,11 @@ class tl_news extends Contao\Backend
 	/**
 	 * Add the source options depending on the allowed fields (see #5498)
 	 *
-	 * @param Contao\DataContainer $dc
+	 * @param DataContainer $dc
 	 *
 	 * @return array
 	 */
-	public function getSourceOptions(Contao\DataContainer $dc)
+	public function getSourceOptions(DataContainer $dc)
 	{
 		if ($this->User->isAdmin)
 		{
@@ -838,9 +877,9 @@ class tl_news extends Contao\Backend
 	/**
 	 * Adjust start end end time of the event based on date, span, startTime and endTime
 	 *
-	 * @param Contao\DataContainer $dc
+	 * @param DataContainer $dc
 	 */
-	public function adjustTime(Contao\DataContainer $dc)
+	public function adjustTime(DataContainer $dc)
 	{
 		// Return if there is no active record (override all)
 		if (!$dc->activeRecord)
@@ -859,8 +898,8 @@ class tl_news extends Contao\Backend
 	 */
 	public function generateFeed()
 	{
-		/** @var Symfony\Component\HttpFoundation\Session\SessionInterface $objSession */
-		$objSession = Contao\System::getContainer()->get('session');
+		/** @var SessionInterface $objSession */
+		$objSession = System::getContainer()->get('session');
 
 		$session = $objSession->get('news_feed_updater');
 
@@ -869,7 +908,7 @@ class tl_news extends Contao\Backend
 			return;
 		}
 
-		$request = Contao\System::getContainer()->get('request_stack')->getCurrentRequest();
+		$request = System::getContainer()->get('request_stack')->getCurrentRequest();
 
 		if ($request)
 		{
@@ -877,15 +916,12 @@ class tl_news extends Contao\Backend
 			$request->attributes->set('_scope', 'frontend');
 		}
 
-		$this->import('Contao\News', 'News');
+		$this->import(News::class, 'News');
 
 		foreach ($session as $id)
 		{
 			$this->News->generateFeedsByArchive($id);
 		}
-
-		$this->import('Contao\Automator', 'Automator');
-		$this->Automator->generateSitemap();
 
 		if ($request)
 		{
@@ -903,18 +939,18 @@ class tl_news extends Contao\Backend
 	 * (delete/deleteAll). Since duplicated items are unpublished by default,
 	 * it is not necessary to schedule updates on copyAll as well.
 	 *
-	 * @param Contao\DataContainer $dc
+	 * @param DataContainer $dc
 	 */
-	public function scheduleUpdate(Contao\DataContainer $dc)
+	public function scheduleUpdate(DataContainer $dc)
 	{
 		// Return if there is no ID
-		if (!$dc->activeRecord || !$dc->activeRecord->pid || Contao\Input::get('act') == 'copy')
+		if (!$dc->activeRecord || !$dc->activeRecord->pid || Input::get('act') == 'copy')
 		{
 			return;
 		}
 
-		/** @var Symfony\Component\HttpFoundation\Session\SessionInterface $objSession */
-		$objSession = Contao\System::getContainer()->get('session');
+		/** @var SessionInterface $objSession */
+		$objSession = System::getContainer()->get('session');
 
 		// Store the ID in the session
 		$session = $objSession->get('news_feed_updater');
@@ -936,9 +972,9 @@ class tl_news extends Contao\Backend
 	 */
 	public function iconFeatured($row, $href, $label, $title, $icon, $attributes)
 	{
-		if (Contao\Input::get('fid'))
+		if (Input::get('fid'))
 		{
-			$this->toggleFeatured(Contao\Input::get('fid'), (Contao\Input::get('state') == 1), (@func_get_arg(12) ?: null));
+			$this->toggleFeatured(Input::get('fid'), (Input::get('state') == 1), (func_num_args() <= 12 ? null : func_get_arg(12)));
 			$this->redirect($this->getReferer());
 		}
 
@@ -955,23 +991,23 @@ class tl_news extends Contao\Backend
 			$icon = 'featured_.svg';
 		}
 
-		return '<a href="' . $this->addToUrl($href) . '" title="' . Contao\StringUtil::specialchars($title) . '"' . $attributes . '>' . Contao\Image::getHtml($icon, $label, 'data-state="' . ($row['featured'] ? 1 : 0) . '"') . '</a> ';
+		return '<a href="' . $this->addToUrl($href) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label, 'data-state="' . ($row['featured'] ? 1 : 0) . '"') . '</a> ';
 	}
 
 	/**
 	 * Feature/unfeature a news item
 	 *
-	 * @param integer              $intId
-	 * @param boolean              $blnVisible
-	 * @param Contao\DataContainer $dc
+	 * @param integer       $intId
+	 * @param boolean       $blnVisible
+	 * @param DataContainer $dc
 	 *
-	 * @throws Contao\CoreBundle\Exception\AccessDeniedException
+	 * @throws AccessDeniedException
 	 */
-	public function toggleFeatured($intId, $blnVisible, Contao\DataContainer $dc=null)
+	public function toggleFeatured($intId, $blnVisible, DataContainer $dc=null)
 	{
 		// Check permissions to edit
-		Contao\Input::setGet('id', $intId);
-		Contao\Input::setGet('act', 'feature');
+		Input::setGet('id', $intId);
+		Input::setGet('act', 'feature');
 
 		if ($dc)
 		{
@@ -979,7 +1015,7 @@ class tl_news extends Contao\Backend
 		}
 
 		// Trigger the onload_callback
-		if (is_array($GLOBALS['TL_DCA']['tl_news']['config']['onload_callback']))
+		if (is_array($GLOBALS['TL_DCA']['tl_news']['config']['onload_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA']['tl_news']['config']['onload_callback'] as $callback)
 			{
@@ -998,27 +1034,29 @@ class tl_news extends Contao\Backend
 		// Check permissions to feature
 		if (!$this->User->hasAccess('tl_news::featured', 'alexf'))
 		{
-			throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to feature/unfeature news item ID ' . $intId . '.');
+			throw new AccessDeniedException('Not enough permissions to feature/unfeature news item ID ' . $intId . '.');
+		}
+
+		$objRow = $this->Database->prepare("SELECT * FROM tl_news WHERE id=?")
+								 ->limit(1)
+								 ->execute($intId);
+
+		if ($objRow->numRows < 1)
+		{
+			throw new AccessDeniedException('Invalid news item ID ' . $intId . '.');
 		}
 
 		// Set the current record
 		if ($dc)
 		{
-			$objRow = $this->Database->prepare("SELECT * FROM tl_news WHERE id=?")
-									 ->limit(1)
-									 ->execute($intId);
-
-			if ($objRow->numRows)
-			{
-				$dc->activeRecord = $objRow;
-			}
+			$dc->activeRecord = $objRow;
 		}
 
-		$objVersions = new Contao\Versions('tl_news', $intId);
+		$objVersions = new Versions('tl_news', $intId);
 		$objVersions->initialize();
 
 		// Trigger the save_callback
-		if (is_array($GLOBALS['TL_DCA']['tl_news']['fields']['featured']['save_callback']))
+		if (is_array($GLOBALS['TL_DCA']['tl_news']['fields']['featured']['save_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA']['tl_news']['fields']['featured']['save_callback'] as $callback)
 			{
@@ -1037,7 +1075,7 @@ class tl_news extends Contao\Backend
 		$time = time();
 
 		// Update the database
-		$this->Database->prepare("UPDATE tl_news SET tstamp=" . time() . ", featured='" . ($blnVisible ? 1 : '') . "' WHERE id=?")
+		$this->Database->prepare("UPDATE tl_news SET tstamp=$time, featured='" . ($blnVisible ? 1 : '') . "' WHERE id=?")
 					   ->execute($intId);
 
 		if ($dc)
@@ -1047,7 +1085,7 @@ class tl_news extends Contao\Backend
 		}
 
 		// Trigger the onsubmit_callback
-		if (is_array($GLOBALS['TL_DCA']['tl_news']['config']['onsubmit_callback']))
+		if (is_array($GLOBALS['TL_DCA']['tl_news']['config']['onsubmit_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA']['tl_news']['config']['onsubmit_callback'] as $callback)
 			{
@@ -1064,6 +1102,11 @@ class tl_news extends Contao\Backend
 		}
 
 		$objVersions->create();
+
+		if ($dc)
+		{
+			$dc->invalidateCacheTags();
+		}
 	}
 
 	/**
@@ -1080,9 +1123,9 @@ class tl_news extends Contao\Backend
 	 */
 	public function toggleIcon($row, $href, $label, $title, $icon, $attributes)
 	{
-		if (Contao\Input::get('tid'))
+		if (Input::get('tid'))
 		{
-			$this->toggleVisibility(Contao\Input::get('tid'), (Contao\Input::get('state') == 1), (@func_get_arg(12) ?: null));
+			$this->toggleVisibility(Input::get('tid'), (Input::get('state') == 1), (func_num_args() <= 12 ? null : func_get_arg(12)));
 			$this->redirect($this->getReferer());
 		}
 
@@ -1099,21 +1142,21 @@ class tl_news extends Contao\Backend
 			$icon = 'invisible.svg';
 		}
 
-		return '<a href="' . $this->addToUrl($href) . '" title="' . Contao\StringUtil::specialchars($title) . '"' . $attributes . '>' . Contao\Image::getHtml($icon, $label, 'data-state="' . ($row['published'] ? 1 : 0) . '"') . '</a> ';
+		return '<a href="' . $this->addToUrl($href) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label, 'data-state="' . ($row['published'] ? 1 : 0) . '"') . '</a> ';
 	}
 
 	/**
 	 * Disable/enable a user group
 	 *
-	 * @param integer              $intId
-	 * @param boolean              $blnVisible
-	 * @param Contao\DataContainer $dc
+	 * @param integer       $intId
+	 * @param boolean       $blnVisible
+	 * @param DataContainer $dc
 	 */
-	public function toggleVisibility($intId, $blnVisible, Contao\DataContainer $dc=null)
+	public function toggleVisibility($intId, $blnVisible, DataContainer $dc=null)
 	{
 		// Set the ID and action
-		Contao\Input::setGet('id', $intId);
-		Contao\Input::setGet('act', 'toggle');
+		Input::setGet('id', $intId);
+		Input::setGet('act', 'toggle');
 
 		if ($dc)
 		{
@@ -1121,7 +1164,7 @@ class tl_news extends Contao\Backend
 		}
 
 		// Trigger the onload_callback
-		if (is_array($GLOBALS['TL_DCA']['tl_news']['config']['onload_callback']))
+		if (is_array($GLOBALS['TL_DCA']['tl_news']['config']['onload_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA']['tl_news']['config']['onload_callback'] as $callback)
 			{
@@ -1140,7 +1183,7 @@ class tl_news extends Contao\Backend
 		// Check the field access
 		if (!$this->User->hasAccess('tl_news::published', 'alexf'))
 		{
-			throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to publish/unpublish news item ID ' . $intId . '.');
+			throw new AccessDeniedException('Not enough permissions to publish/unpublish news item ID ' . $intId . '.');
 		}
 
 		$objRow = $this->Database->prepare("SELECT * FROM tl_news WHERE id=?")
@@ -1149,7 +1192,7 @@ class tl_news extends Contao\Backend
 
 		if ($objRow->numRows < 1)
 		{
-			throw new Contao\CoreBundle\Exception\AccessDeniedException('Invalid news item ID ' . $intId . '.');
+			throw new AccessDeniedException('Invalid news item ID ' . $intId . '.');
 		}
 
 		// Set the current record
@@ -1158,11 +1201,11 @@ class tl_news extends Contao\Backend
 			$dc->activeRecord = $objRow;
 		}
 
-		$objVersions = new Contao\Versions('tl_news', $intId);
+		$objVersions = new Versions('tl_news', $intId);
 		$objVersions->initialize();
 
 		// Trigger the save_callback
-		if (is_array($GLOBALS['TL_DCA']['tl_news']['fields']['published']['save_callback']))
+		if (is_array($GLOBALS['TL_DCA']['tl_news']['fields']['published']['save_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA']['tl_news']['fields']['published']['save_callback'] as $callback)
 			{
@@ -1191,7 +1234,7 @@ class tl_news extends Contao\Backend
 		}
 
 		// Trigger the onsubmit_callback
-		if (is_array($GLOBALS['TL_DCA']['tl_news']['config']['onsubmit_callback']))
+		if (is_array($GLOBALS['TL_DCA']['tl_news']['config']['onsubmit_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA']['tl_news']['config']['onsubmit_callback'] as $callback)
 			{
@@ -1216,5 +1259,23 @@ class tl_news extends Contao\Backend
 		{
 			$dc->invalidateCacheTags();
 		}
+	}
+
+	/**
+	 * @param DataContainer $dc
+	 *
+	 * @return array
+	 */
+	public function addSitemapCacheInvalidationTag($dc, array $tags)
+	{
+		$archiveModel = NewsArchiveModel::findByPk($dc->activeRecord->pid);
+		$pageModel = PageModel::findWithDetails($archiveModel->jumpTo);
+
+		if ($pageModel === null)
+		{
+			return $tags;
+		}
+
+		return array_merge($tags, array('contao.sitemap.' . $pageModel->rootId));
 	}
 }

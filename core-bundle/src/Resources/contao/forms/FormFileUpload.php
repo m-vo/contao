@@ -77,7 +77,7 @@ class FormFileUpload extends Widget implements \uploadable
 			case 'extensions':
 				if ($varValue)
 				{
-					$this->arrAttributes['accept'] = '.' . implode(',.', StringUtil::trimsplit(',', strtolower($varValue)));
+					$this->arrAttributes['accept'] = '.' . strtolower(implode(',.', \is_array($varValue) ? $varValue : StringUtil::trimsplit(',', $varValue)));
 				}
 				parent::__set($strKey, $varValue);
 				break;
@@ -243,7 +243,7 @@ class FormFileUpload extends Widget implements \uploadable
 					{
 						$offset = 1;
 
-						$arrAll = scan($projectDir . '/' . $strUploadFolder);
+						$arrAll = Folder::scan($projectDir . '/' . $strUploadFolder);
 						$arrFiles = preg_grep('/^' . preg_quote($objFile->filename, '/') . '.*\.' . preg_quote($objFile->extension, '/') . '/', $arrAll);
 
 						foreach ($arrFiles as $strFile)

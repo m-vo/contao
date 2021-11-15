@@ -10,7 +10,7 @@
 
 namespace Contao;
 
-use Patchwork\Utf8;
+use Contao\CoreBundle\Security\ContaoCorePermissions;
 
 /**
  * Front end module "custom navigation".
@@ -37,7 +37,7 @@ class ModuleCustomnav extends Module
 		if ($request && System::getContainer()->get('contao.routing.scope_matcher')->isBackendRequest($request))
 		{
 			$objTemplate = new BackendTemplate('be_wildcard');
-			$objTemplate->wildcard = '### ' . Utf8::strtoupper($GLOBALS['TL_LANG']['FMD']['customnav'][0]) . ' ###';
+			$objTemplate->wildcard = '### ' . $GLOBALS['TL_LANG']['FMD']['customnav'][0] . ' ###';
 			$objTemplate->title = $this->headline;
 			$objTemplate->id = $this->id;
 			$objTemplate->link = $this->name;
@@ -68,17 +68,9 @@ class ModuleCustomnav extends Module
 		global $objPage;
 
 		$items = array();
-		$groups = array();
-
-		// Get all groups of the current front end user
-		if (System::getContainer()->get('contao.security.token_checker')->hasFrontendUser())
-		{
-			$this->import(FrontendUser::class, 'User');
-			$groups = $this->User->groups;
-		}
 
 		// Get all active pages and also include root pages if the language is added to the URL (see #72)
-		$objPages = PageModel::findPublishedRegularWithoutGuestsByIds($this->pages, array('includeRoot'=>true));
+		$objPages = PageModel::findPublishedRegularByIds($this->pages, array('includeRoot'=>true));
 
 		// Return if there are no pages
 		if ($objPages === null)
@@ -86,40 +78,29 @@ class ModuleCustomnav extends Module
 			return;
 		}
 
-		$arrPages = array();
-
-		// Sort the array keys according to the given order
-		if ($this->orderPages)
-		{
-			$tmp = StringUtil::deserialize($this->orderPages);
-
-			if (!empty($tmp) && \is_array($tmp))
-			{
-				$arrPages = array_map(static function () {}, array_flip($tmp));
-			}
-		}
-
-		// Add the items to the pre-sorted array
-		while ($objPages->next())
-		{
-			$arrPages[$objPages->id] = $objPages->current();
-		}
-
-		$arrPages = array_values(array_filter($arrPages));
-
 		$objTemplate = new FrontendTemplate($this->navigationTpl ?: 'nav_default');
 		$objTemplate->type = static::class;
 		$objTemplate->cssID = $this->cssID; // see #4897 and 6129
 		$objTemplate->level = 'level_1';
 		$objTemplate->module = $this; // see #155
 
-		/** @var PageModel[] $arrPages */
-		foreach ($arrPages as $objModel)
-		{
-			$_groups = StringUtil::deserialize($objModel->groups);
+		$security = System::getContainer()->get('security.helper');
+		$isMember = $security->isGranted('ROLE_MEMBER');
 
-			// Do not show protected pages unless a front end user is logged in
-			if (!$objModel->protected || $this->showProtected || (\is_array($_groups) && \is_array($groups) && \count(array_intersect($_groups, $groups))))
+		/** @var PageModel[] $objPages */
+		foreach ($objPages as $objModel)
+		{
+			$objModel->loadDetails();
+
+			// Hide the page if it is not protected and only visible to guests (backwards compatibility)
+			if ($objModel->guests && !$objModel->protected && $isMember)
+			{
+				trigger_deprecation('contao/core-bundle', '4.12', 'Using the "show to guests only" feature has been deprecated an will no longer work in Contao 5.0. Use the "protect page" function instead.');
+				continue;
+			}
+
+			// PageModel->groups is an array after calling loadDetails()
+			if (!$objModel->protected || $this->showProtected || $security->isGranted(ContaoCorePermissions::MEMBER_IN_GROUPS, $objModel->groups))
 			{
 				// Get href
 				switch ($objModel->type)
@@ -249,10 +230,13 @@ class ModuleCustomnav extends Module
 			}
 		}
 
-		// Add classes first and last
-		$items[0]['class'] = trim($items[0]['class'] . ' first');
-		$last = \count($items) - 1;
-		$items[$last]['class'] = trim($items[$last]['class'] . ' last');
+		// Add classes first and last if there are items
+		if (!empty($items))
+		{
+			$items[0]['class'] = trim($items[0]['class'] . ' first');
+			$last = \count($items) - 1;
+			$items[$last]['class'] = trim($items[$last]['class'] . ' last');
+		}
 
 		$objTemplate->items = $items;
 

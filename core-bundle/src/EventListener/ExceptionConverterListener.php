@@ -51,6 +51,7 @@ class ExceptionConverterListener
         PageNotFoundException::class => 'NotFoundHttpException',
         ServiceUnavailableException::class => 'ServiceUnavailableHttpException',
         ContaoServiceUnavailableException::class => 'ServiceUnavailableHttpException',
+        \UnusedArgumentsException::class => 'NotFoundHttpException',
     ];
 
     /**
@@ -97,7 +98,7 @@ class ExceptionConverterListener
                 return new NotFoundHttpException($exception->getMessage(), $exception);
 
             case 'ServiceUnavailableHttpException':
-                return new ServiceUnavailableHttpException(null, $exception->getMessage(), $exception);
+                return new ServiceUnavailableHttpException('', $exception->getMessage(), $exception);
 
             case 'UnauthorizedHttpException':
                 return new UnauthorizedHttpException('', $exception->getMessage(), $exception);

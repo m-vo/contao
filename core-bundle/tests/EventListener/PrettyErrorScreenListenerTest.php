@@ -23,7 +23,6 @@ use Contao\CoreBundle\Exception\PageNotFoundException;
 use Contao\CoreBundle\Fixtures\Exception\PageErrorResponseException;
 use Contao\CoreBundle\Tests\TestCase;
 use Lexik\Bundle\MaintenanceBundle\Exception\ServiceUnavailableException;
-use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -152,7 +151,7 @@ class PrettyErrorScreenListenerTest extends TestCase
 
     public function testRendersServiceUnavailableHttpExceptions(): void
     {
-        $exception = new ServiceUnavailableHttpException(null, null, new ServiceUnavailableException());
+        $exception = new ServiceUnavailableHttpException(null, '', new ServiceUnavailableException());
         $event = $this->getResponseEvent($exception, $this->getRequest('frontend'));
 
         $listener = $this->getListener();
@@ -164,7 +163,7 @@ class PrettyErrorScreenListenerTest extends TestCase
 
     public function testDoesNotRenderExceptionsIfDisabled(): void
     {
-        $exception = new ServiceUnavailableHttpException(null, null, new ServiceUnavailableException());
+        $exception = new ServiceUnavailableHttpException(null, '', new ServiceUnavailableException());
         $event = $this->getResponseEvent($exception, $this->getRequest('frontend'));
 
         $twig = $this->createMock(Environment::class);
@@ -195,7 +194,7 @@ class PrettyErrorScreenListenerTest extends TestCase
             ->willReturn(true)
         ;
 
-        $exception = new ServiceUnavailableHttpException(null, null, new ServiceUnavailableException());
+        $exception = new ServiceUnavailableHttpException(null, '', new ServiceUnavailableException());
         $event = $this->getResponseEvent($exception, null, true);
 
         $listener = new PrettyErrorScreenListener(true, $twig, $framework, $security);
@@ -225,10 +224,12 @@ class PrettyErrorScreenListenerTest extends TestCase
         $twig
             ->method('render')
             ->willReturnCallback(
-                static function () use (&$count): void {
+                static function () use (&$count): string {
                     if (0 === $count++) {
                         throw new Error('foo');
                     }
+
+                    return '';
                 }
             )
         ;
@@ -308,9 +309,6 @@ class PrettyErrorScreenListenerTest extends TestCase
         $this->assertSame(500, $event->getResponse()->getStatusCode());
     }
 
-    /**
-     * @param Environment&MockObject $twig
-     */
     private function getListener(bool $isBackendUser = false, bool $expectLogging = false, Environment $twig = null): PrettyErrorScreenListener
     {
         if (null === $twig) {
@@ -347,7 +345,7 @@ class PrettyErrorScreenListenerTest extends TestCase
             $request = $this->getRequest();
         }
 
-        $type = $isSubRequest ? HttpKernelInterface::SUB_REQUEST : HttpKernelInterface::MASTER_REQUEST;
+        $type = $isSubRequest ? HttpKernelInterface::SUB_REQUEST : HttpKernelInterface::MAIN_REQUEST;
 
         return new ExceptionEvent($kernel, $request, $type, $exception);
     }

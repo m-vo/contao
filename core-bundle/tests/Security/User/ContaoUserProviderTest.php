@@ -21,6 +21,7 @@ use Contao\FrontendUser;
 use Contao\System;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
+use Symfony\Bridge\PhpUnit\ExpectDeprecationTrait;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\HttpFoundation\Session\Storage\MetadataBag;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
@@ -29,21 +30,23 @@ use Symfony\Component\Security\Core\User\UserInterface;
 
 class ContaoUserProviderTest extends TestCase
 {
+    use ExpectDeprecationTrait;
+
     public function testLoadsUsersByUsername(): void
     {
         $user = $this->createMock(BackendUser::class);
-        $adapter = $this->mockConfiguredAdapter(['loadUserByUsername' => $user]);
+        $adapter = $this->mockConfiguredAdapter(['loadUserByIdentifier' => $user]);
         $framework = $this->mockContaoFramework([BackendUser::class => $adapter]);
 
         $provider = $this->getProvider($framework);
 
-        $this->assertSame($user, $provider->loadUserByUsername('foobar'));
+        $this->assertSame($user, $provider->loadUserByIdentifier('foobar'));
     }
 
     public function testFailsToLoadAUserIfTheUsernameDoesNotExist(): void
     {
         $user = $this->createMock(UserInterface::class);
-        $adapter = $this->mockConfiguredAdapter(['loadUserByUsername' => $user]);
+        $adapter = $this->mockConfiguredAdapter(['loadUserByIdentifier' => $user]);
         $framework = $this->mockContaoFramework([BackendUser::class => $adapter]);
 
         $provider = $this->getProvider($framework);
@@ -51,7 +54,7 @@ class ContaoUserProviderTest extends TestCase
         $this->expectException(UsernameNotFoundException::class);
         $this->expectExceptionMessage('Could not find user "foobar"');
 
-        $provider->loadUserByUsername('foobar');
+        $provider->loadUserByIdentifier('foobar');
     }
 
     public function testRefreshesTheUser(): void
@@ -60,7 +63,7 @@ class ContaoUserProviderTest extends TestCase
         $user = $this->mockClassWithProperties(BackendUser::class);
         $user->username = 'foobar';
 
-        $adapter = $this->mockConfiguredAdapter(['loadUserByUsername' => $user]);
+        $adapter = $this->mockConfiguredAdapter(['loadUserByIdentifier' => $user]);
         $framework = $this->mockContaoFramework([BackendUser::class => $adapter]);
 
         $provider = $this->getProvider($framework);
@@ -74,7 +77,7 @@ class ContaoUserProviderTest extends TestCase
         $user = $this->mockClassWithProperties(BackendUser::class);
         $user->username = 'foobar';
 
-        $userAdapter = $this->mockConfiguredAdapter(['loadUserByUsername' => $user]);
+        $userAdapter = $this->mockConfiguredAdapter(['loadUserByIdentifier' => $user]);
 
         $configAdapter = $this->mockAdapter(['get']);
         $configAdapter
@@ -128,7 +131,7 @@ class ContaoUserProviderTest extends TestCase
         $user = $this->mockClassWithProperties(BackendUser::class);
         $user->username = 'foobar';
 
-        $userAdapter = $this->mockConfiguredAdapter(['loadUserByUsername' => $user]);
+        $userAdapter = $this->mockConfiguredAdapter(['loadUserByIdentifier' => $user]);
 
         $configAdapter = $this->mockAdapter(['get']);
         $configAdapter
@@ -225,6 +228,9 @@ class ContaoUserProviderTest extends TestCase
         $this->assertSame('newsuperhash', $user->password);
     }
 
+    /**
+     * @psalm-suppress InvalidArgument
+     */
     public function testFailsToUpgradePasswordsOfUnsupportedUsers(): void
     {
         $user = $this->createMock(UserInterface::class);
@@ -233,16 +239,17 @@ class ContaoUserProviderTest extends TestCase
         $this->expectException(UnsupportedUserException::class);
         $this->expectExceptionMessage(sprintf('Unsupported class "%s".', \get_class($user)));
 
+        /** @phpstan-ignore-next-line */
         $provider->upgradePassword($user, 'newsuperhash');
     }
 
     /**
      * @group legacy
-     *
-     * @expectedDeprecation Using the "postAuthenticate" hook has been deprecated %s.
      */
     public function testTriggersThePostAuthenticateHook(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.5: Using the "postAuthenticate" hook has been deprecated %s.');
+
         /** @var BackendUser&MockObject $user */
         $user = $this->mockClassWithProperties(BackendUser::class);
         $user->username = 'foobar';
@@ -256,7 +263,7 @@ class ContaoUserProviderTest extends TestCase
         ;
 
         $framework = $this->mockContaoFramework([
-            BackendUser::class => $this->mockConfiguredAdapter(['loadUserByUsername' => $user]),
+            BackendUser::class => $this->mockConfiguredAdapter(['loadUserByIdentifier' => $user]),
             System::class => $systemAdapter,
         ]);
 
@@ -279,9 +286,6 @@ class ContaoUserProviderTest extends TestCase
         // Dummy method to test the postAuthenticate hook
     }
 
-    /**
-     * @param ContaoFramework&MockObject $framework
-     */
     private function getProvider(ContaoFramework $framework = null, string $userClass = BackendUser::class): ContaoUserProvider
     {
         if (null === $framework) {

@@ -35,6 +35,17 @@ class CheckBoxWizard extends Widget
 	protected $strTemplate = 'be_widget_chk';
 
 	/**
+	 * @param array $arrAttributes
+	 */
+	public function __construct($arrAttributes=null)
+	{
+		parent::__construct($arrAttributes);
+
+		$this->preserveTags = true;
+		$this->decodeEntities = true;
+	}
+
+	/**
 	 * Add specific attributes
 	 *
 	 * @param string $strKey
@@ -113,7 +124,7 @@ class CheckBoxWizard extends Widget
 			// Move selected and sorted options to the top
 			foreach ($this->arrOptions as $i=>$arrOption)
 			{
-				if (($intPos = array_search($arrOption['value'], $this->varValue)) !== false)
+				if (($intPos = array_search($arrOption['value'] ?? null, $this->varValue)) !== false)
 				{
 					$arrOptions[$intPos] = $arrOption;
 					unset($arrTemp[$i]);
@@ -133,7 +144,7 @@ class CheckBoxWizard extends Widget
 		{
 			foreach ($this->unknownOption as $val)
 			{
-				$arrAllOptions[] = array('value' => $val, 'label' => $GLOBALS['TL_LANG']['MSC']['unknownOption']);
+				$arrAllOptions[] = array('value' => $val, 'label' => sprintf($GLOBALS['TL_LANG']['MSC']['unknownOption'], $val));
 			}
 		}
 
@@ -181,12 +192,12 @@ class CheckBoxWizard extends Widget
 			'<span><input type="checkbox" name="%s" id="opt_%s" class="tl_checkbox" value="%s"%s%s onfocus="Backend.getScrollOffset()"> %s<label for="opt_%s">%s</label></span>',
 			$this->strName . ($this->multiple ? '[]' : ''),
 			$this->strId . '_' . $i,
-			($this->multiple ? StringUtil::specialchars($arrOption['value']) : 1),
-			(((\is_array($this->varValue) && \in_array($arrOption['value'], $this->varValue)) || $this->varValue == $arrOption['value']) ? ' checked="checked"' : ''),
+			($this->multiple ? StringUtil::specialchars($arrOption['value'] ?? '') : 1),
+			(((\is_array($this->varValue) && \in_array($arrOption['value'] ?? null, $this->varValue)) || $this->varValue == ($arrOption['value'] ?? null)) ? ' checked="checked"' : ''),
 			$this->getAttributes(),
 			$strButtons,
 			$this->strId . '_' . $i,
-			$arrOption['label']
+			$arrOption['label'] ?? null
 		);
 	}
 }

@@ -35,15 +35,8 @@ class BrokenLinkCheckerSubscriber implements EscargotSubscriberInterface, Escarg
 
     public const TAG_SKIP = 'skip-broken-link-checker';
 
-    /**
-     * @var TranslatorInterface
-     */
-    private $translator;
-
-    /**
-     * @var array
-     */
-    private $stats = ['ok' => 0, 'error' => 0];
+    private TranslatorInterface $translator;
+    private array $stats = ['ok' => 0, 'error' => 0];
 
     public function __construct(TranslatorInterface $translator)
     {
@@ -90,8 +83,10 @@ class BrokenLinkCheckerSubscriber implements EscargotSubscriberInterface, Escarg
 
     public function needsContent(CrawlUri $crawlUri, ResponseInterface $response, ChunkInterface $chunk): string
     {
-        if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 400) {
-            $this->logError($crawlUri, 'HTTP Status Code: '.$response->getStatusCode());
+        $statusCode = $response->getStatusCode();
+
+        if ($statusCode < 200 || $statusCode >= 400) {
+            $this->logError($crawlUri, 'HTTP Status Code: '.$statusCode);
 
             return SubscriberInterface::DECISION_NEGATIVE;
         }

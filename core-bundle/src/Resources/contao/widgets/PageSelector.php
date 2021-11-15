@@ -260,7 +260,7 @@ class PageSelector extends Widget
 		$this->loadDataContainer($this->strTable);
 
 		// Load current values
-		switch ($GLOBALS['TL_DCA'][$this->strTable]['config']['dataContainer'])
+		switch ($GLOBALS['TL_DCA'][$this->strTable]['config']['dataContainer'] ?? null)
 		{
 			case 'File':
 				if (Config::get($this->strField))
@@ -380,7 +380,7 @@ class PageSelector extends Widget
 		// Add the current page
 		if (!empty($childs))
 		{
-			$return .= Image::getHtml($this->getPageStatusIcon($objPage), '', $folderAttribute) . ' <a href="' . Backend::addToUrl('pn=' . $objPage->id) . '" title="' . StringUtil::specialchars($objPage->title . ' (' . $objPage->alias . Config::get('urlSuffix') . ')') . '">' . (($objPage->type == 'root') ? '<strong>' : '') . $objPage->title . (($objPage->type == 'root') ? '</strong>' : '') . '</a></div> <div class="tl_right">';
+			$return .= Image::getHtml($this->getPageStatusIcon($objPage), '', $folderAttribute) . ' <a href="' . Backend::addToUrl('pn=' . $objPage->id) . '" title="' . StringUtil::specialchars($objPage->title . ' (' . $objPage->alias . ')') . '">' . (($objPage->type == 'root') ? '<strong>' : '') . $objPage->title . (($objPage->type == 'root') ? '</strong>' : '') . '</a></div> <div class="tl_right">';
 		}
 		else
 		{

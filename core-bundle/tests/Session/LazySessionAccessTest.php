@@ -15,18 +15,21 @@ namespace Contao\CoreBundle\Tests\Session;
 use Contao\CoreBundle\Session\LazySessionAccess;
 use Contao\CoreBundle\Session\MockNativeSessionStorage;
 use PHPUnit\Framework\TestCase;
+use Symfony\Bridge\PhpUnit\ExpectDeprecationTrait;
 use Symfony\Component\HttpFoundation\Session\Attribute\AttributeBag;
 use Symfony\Component\HttpFoundation\Session\Session;
 
 class LazySessionAccessTest extends TestCase
 {
+    use ExpectDeprecationTrait;
+
     /**
      * @group legacy
-     *
-     * @expectedDeprecation Using $_SESSION has been deprecated %s.
      */
     public function testStartsSessionOnOffsetExists(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.5: Using "$_SESSION" has been deprecated %s.');
+
         $beBag = new AttributeBag();
         $beBag->setName('contao_backend');
 
@@ -46,13 +49,32 @@ class LazySessionAccessTest extends TestCase
         $this->assertSame($feBag, $_SESSION['FE_DATA']);
     }
 
+    public function testDoesNotStartSessionOnOffsetExistsWithoutPreviousSession(): void
+    {
+        $beBag = new AttributeBag();
+        $beBag->setName('contao_backend');
+
+        $feBag = new AttributeBag();
+        $feBag->setName('contao_frontend');
+
+        $session = new Session(new MockNativeSessionStorage());
+        $session->registerBag($beBag);
+        $session->registerBag($feBag);
+
+        $_SESSION = new LazySessionAccess($session, false);
+
+        $this->assertFalse($session->isStarted());
+        $this->assertFalse(isset($_SESSION['foobar']['nested']));
+        $this->assertFalse($session->isStarted());
+    }
+
     /**
      * @group legacy
-     *
-     * @expectedDeprecation Using $_SESSION has been deprecated %s.
      */
     public function testStartsSessionOnOffsetGet(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.5: Using "$_SESSION" has been deprecated %s.');
+
         $beBag = new AttributeBag();
         $beBag->setName('contao_backend');
 
@@ -74,11 +96,11 @@ class LazySessionAccessTest extends TestCase
 
     /**
      * @group legacy
-     *
-     * @expectedDeprecation Using $_SESSION has been deprecated %s.
      */
     public function testStartsSessionOnOffsetSet(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.5: Using "$_SESSION" has been deprecated %s.');
+
         $beBag = new AttributeBag();
         $beBag->setName('contao_backend');
 
@@ -103,11 +125,11 @@ class LazySessionAccessTest extends TestCase
 
     /**
      * @group legacy
-     *
-     * @expectedDeprecation Using $_SESSION has been deprecated %s.
      */
     public function testStartsSessionOnOffsetUnset(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.5: Using "$_SESSION" has been deprecated %s.');
+
         $beBag = new AttributeBag();
         $beBag->setName('contao_backend');
 
@@ -131,11 +153,11 @@ class LazySessionAccessTest extends TestCase
 
     /**
      * @group legacy
-     *
-     * @expectedDeprecation Using $_SESSION has been deprecated %s.
      */
     public function testStartsSessionOnCount(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.5: Using "$_SESSION" has been deprecated %s.');
+
         $beBag = new AttributeBag();
         $beBag->setName('contao_backend');
 
@@ -150,10 +172,28 @@ class LazySessionAccessTest extends TestCase
 
         $this->assertFalse($session->isStarted());
 
-        \count($_SESSION);
-
+        $this->assertCount(5, $_SESSION);
         $this->assertTrue($session->isStarted());
         $this->assertSame($beBag, $_SESSION['BE_DATA']);
         $this->assertSame($feBag, $_SESSION['FE_DATA']);
+    }
+
+    public function testDoesNotStartSessionOnCountWithoutPreviousSession(): void
+    {
+        $beBag = new AttributeBag();
+        $beBag->setName('contao_backend');
+
+        $feBag = new AttributeBag();
+        $feBag->setName('contao_frontend');
+
+        $session = new Session(new MockNativeSessionStorage());
+        $session->registerBag($beBag);
+        $session->registerBag($feBag);
+
+        $_SESSION = new LazySessionAccess($session, false);
+
+        $this->assertFalse($session->isStarted());
+        $this->assertCount(0, $_SESSION);
+        $this->assertFalse($session->isStarted());
     }
 }

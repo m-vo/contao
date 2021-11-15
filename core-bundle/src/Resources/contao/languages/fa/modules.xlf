@@ -11,7 +11,7 @@
       </trans-unit>
       <trans-unit id="MOD.article.1">
         <source>Manage articles and content elements</source>
-        <target>مدیریت مقاله‌ها و عنصرهای محتوایی</target>
+        <target>مدیریت مقاله‌ها و المان‌های محتوایی</target>
       </trans-unit>
       <trans-unit id="MOD.form.0">
         <source>Forms</source>
@@ -47,7 +47,7 @@
       </trans-unit>
       <trans-unit id="MOD.tpl_editor.1">
         <source>Add or edit custom templates</source>
-        <target>افزودن یا ویرایش قالب‌های اختصاصی</target>
+        <target>افزودن یا ویرایش قالب‌های سفارشی</target>
       </trans-unit>
       <trans-unit id="MOD.accounts">
         <source>Account manager</source>
@@ -59,7 +59,7 @@
       </trans-unit>
       <trans-unit id="MOD.member.1">
         <source>Manage member accounts (front end)</source>
-        <target>مدیریت حساب‌های کاربری (بخش کاربری)</target>
+        <target>مدیریت حساب‌های اعضاء (بخش کاربری)</target>
       </trans-unit>
       <trans-unit id="MOD.mgroup.0">
         <source>Member groups</source>
@@ -67,7 +67,7 @@
       </trans-unit>
       <trans-unit id="MOD.mgroup.1">
         <source>Manage member groups (front end)</source>
-        <target>مدیریت گروه‌های کاربری (بخش کاربری)</target>
+        <target>مدیریت گروه‌های اعضاء (بخش کاربری)</target>
       </trans-unit>
       <trans-unit id="MOD.user.0">
         <source>Users</source>

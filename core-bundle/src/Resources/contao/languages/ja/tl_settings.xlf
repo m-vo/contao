@@ -73,22 +73,6 @@
         <source>Do not collapse elements in the back end preview.</source>
         <target>バックエンドのプレビューで要素を折り畳みません。</target>
       </trans-unit>
-      <trans-unit id="tl_settings.doNotRedirectEmpty.0">
-        <source>Do not redirect empty URLs</source>
-        <target>空のURLにリダイレクトしない</target>
-      </trans-unit>
-      <trans-unit id="tl_settings.doNotRedirectEmpty.1">
-        <source>For an empty URL display the website instead of redirecting to the language root page (not recommended).</source>
-        <target>言語をURLに追加を有効にしているときに、空のURLで言語のルートのページにリダイレクトしません。(推奨しません。)</target>
-      </trans-unit>
-      <trans-unit id="tl_settings.folderUrl.0">
-        <source>Enable folder URLs</source>
-        <target>フォルダーのURLを有効</target>
-      </trans-unit>
-      <trans-unit id="tl_settings.folderUrl.1">
-        <source>Here you can enable folder-style page aliases like &lt;em&gt;docs/install/download.html&lt;/em&gt; instead of &lt;em&gt;docs-install-download.html&lt;/em&gt;.</source>
-        <target>フォルダー形式のページのエイリアスを有効にして、&lt;em&gt;docs-install-download.html&lt;/em&gt;の代わりに&lt;em&gt;docs/install/download.html&lt;/em&gt;を使用可能にします。</target>
-      </trans-unit>
       <trans-unit id="tl_settings.allowedTags.0">
         <source>Allowed HTML tags</source>
         <target>許可するHTMLタグ</target>
@@ -96,6 +80,18 @@
       <trans-unit id="tl_settings.allowedTags.1">
         <source>Here you can enter a list of allowed HTML tags that will not be stripped.</source>
         <target>削除しないで許可するHTMLのタグのリストを指定します。</target>
+      </trans-unit>
+      <trans-unit id="tl_settings.allowedAttributes.0">
+        <source>Allowed HTML attributes</source>
+        <target>許可するHTMLの属性</target>
+      </trans-unit>
+      <trans-unit id="tl_settings.allowedAttributes.1">
+        <source>List of allowed HTML attributes that will not be stripped. The tag or attribute name &lt;code&gt;*&lt;/code&gt; stands for all tags or attributes. Wildcards can be used for attributes with dashes like &lt;code&gt;data-*&lt;/code&gt;.</source>
+        <target>除去しないで許可するHTMLの属性の一覧です。タグや属性の&lt;code&gt;*&lt;/code&gt;という名前はすべてのタグや属性を表します。&lt;code&gt;data-*&lt;/code&gt;の様にとダッシュ記号のある属性ではワイルドカードを使用できます。</target>
+      </trans-unit>
+      <trans-unit id="tl_settings.allowedAttributesWarning">
+        <source>Allowing &lt;code&gt;*&lt;/code&gt; attributes can be exploited for XSS attacks. Only do this if all backend users are trusted!</source>
+        <target>&lt;code&gt;*&lt;/code&gt; 属性の許可はXSSの攻撃に利用されます。すべてのバックエンドユーザーが信頼できる場合だけ許可してください!</target>
       </trans-unit>
       <trans-unit id="tl_settings.disableRefererCheck.0">
         <source>Disable request tokens</source>
@@ -174,8 +170,8 @@
         <target>ページのグループの初期設定</target>
       </trans-unit>
       <trans-unit id="tl_settings.defaultGroup.1">
-        <source>Here you can select a group as the default owner of a page.</source>
-        <target>ページを所有する初期設定とするグループを選択できます。</target>
+        <source>Here you can select a user group as the default owner of a page.</source>
+        <target>ページを所有する初期設定とするユーザーグループを選択できます。</target>
       </trans-unit>
       <trans-unit id="tl_settings.defaultChmod.0">
         <source>Default access rights</source>
@@ -197,10 +193,6 @@
         <source>Back end configuration</source>
         <target>バックエンドの構成</target>
       </trans-unit>
-      <trans-unit id="tl_settings.frontend_legend">
-        <source>Front end configuration</source>
-        <target>フロントエンドの構成</target>
-      </trans-unit>
       <trans-unit id="tl_settings.security_legend">
         <source>Security settings</source>
         <target>セキュリティの設定</target>
@@ -220,6 +212,10 @@
       <trans-unit id="tl_settings.chmod_legend">
         <source>Default access rights</source>
         <target>アクセス権の初期設定</target>
+      </trans-unit>
+      <trans-unit id="tl_settings.configuredInApp">
+        <source>This setting has been defined in the app configuration and cannot be changed here anymore.</source>
+        <target>この設定はapp構成で定義されて、ここでは変更できなくなりました。</target>
       </trans-unit>
     </body>
   </file>

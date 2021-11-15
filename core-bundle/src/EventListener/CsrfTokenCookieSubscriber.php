@@ -28,15 +28,8 @@ use Symfony\Component\HttpKernel\KernelEvents;
  */
 class CsrfTokenCookieSubscriber implements EventSubscriberInterface
 {
-    /**
-     * @var MemoryTokenStorage
-     */
-    private $tokenStorage;
-
-    /**
-     * @var string
-     */
-    private $cookiePrefix;
+    private MemoryTokenStorage $tokenStorage;
+    private string $cookiePrefix;
 
     public function __construct(MemoryTokenStorage $tokenStorage, string $cookiePrefix = 'csrf_')
     {
@@ -49,7 +42,7 @@ class CsrfTokenCookieSubscriber implements EventSubscriberInterface
      */
     public function onKernelRequest(RequestEvent $event): void
     {
-        if (!$event->isMasterRequest()) {
+        if (!$event->isMainRequest()) {
             return;
         }
 
@@ -61,7 +54,7 @@ class CsrfTokenCookieSubscriber implements EventSubscriberInterface
      */
     public function onKernelResponse(ResponseEvent $event): void
     {
-        if (!$event->isMasterRequest()) {
+        if (!$event->isMainRequest()) {
             return;
         }
 
@@ -133,7 +126,7 @@ class CsrfTokenCookieSubscriber implements EventSubscriberInterface
 
     private function replaceTokenOccurrences(Response $response): void
     {
-        // Return if the response is not a HTML document
+        // Return if the response is not an HTML document
         if (false === stripos((string) $response->headers->get('Content-Type'), 'text/html')) {
             return;
         }
@@ -147,14 +140,16 @@ class CsrfTokenCookieSubscriber implements EventSubscriberInterface
 
         $content = str_replace($tokens, '', $content, $replacedCount);
 
-        if ($replacedCount > 0) {
-            $response->setContent($content);
-
-            // Remove the Content-Length header now that we have changed the
-            // content length (see #2416). Do not add the header or adjust an
-            // existing one (see symfony/symfony#1846).
-            $response->headers->remove('Content-Length');
+        if ($replacedCount <= 0) {
+            return;
         }
+
+        $response->setContent($content);
+
+        // Remove the Content-Length header now that we have changed the
+        // content length (see #2416). Do not add the header or adjust an
+        // existing one (see symfony/symfony#1846).
+        $response->headers->remove('Content-Length');
     }
 
     private function removeCookies(Request $request, Response $response): void

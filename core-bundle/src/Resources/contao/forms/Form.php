@@ -10,8 +10,6 @@
 
 namespace Contao;
 
-use Patchwork\Utf8;
-
 /**
  * Provide methods to handle front end forms.
  *
@@ -72,7 +70,7 @@ class Form extends Hybrid
 		if ($request && System::getContainer()->get('contao.routing.scope_matcher')->isBackendRequest($request))
 		{
 			$objTemplate = new BackendTemplate('be_wildcard');
-			$objTemplate->wildcard = '### ' . Utf8::strtoupper($GLOBALS['TL_LANG']['CTE']['form'][0]) . ' ###';
+			$objTemplate->wildcard = '### ' . $GLOBALS['TL_LANG']['CTE']['form'][0] . ' ###';
 			$objTemplate->id = $this->id;
 			$objTemplate->link = $this->title;
 			$objTemplate->href = 'contao/main.php?do=form&amp;table=tl_form_field&amp;id=' . $this->id;
@@ -153,7 +151,7 @@ class Form extends Hybrid
 			foreach ($arrFields as $objField)
 			{
 				/** @var FormFieldModel $objField */
-				$strClass = $GLOBALS['TL_FFL'][$objField->type];
+				$strClass = $GLOBALS['TL_FFL'][$objField->type] ?? null;
 
 				// Continue if the class is not defined
 				if (!class_exists($strClass))
@@ -183,7 +181,7 @@ class Form extends Hybrid
 				}
 
 				// Unset the default value depending on the field type (see #4722)
-				if (!empty($arrData['value']) && !\in_array('value', StringUtil::trimsplit('[,;]', $GLOBALS['TL_DCA']['tl_form_field']['palettes'][$objField->type])))
+				if (!empty($arrData['value']) && !\in_array('value', StringUtil::trimsplit('[,;]', $GLOBALS['TL_DCA']['tl_form_field']['palettes'][$objField->type] ?? '')))
 				{
 					$arrData['value'] = '';
 				}
@@ -273,12 +271,12 @@ class Form extends Hybrid
 		$strAttributes = '';
 		$arrAttributes = StringUtil::deserialize($this->attributes, true);
 
-		if ($arrAttributes[0])
+		if (!empty($arrAttributes[0]))
 		{
 			$strAttributes .= ' id="' . $arrAttributes[0] . '"';
 		}
 
-		if ($arrAttributes[1])
+		if (!empty($arrAttributes[1]))
 		{
 			$strAttributes .= ' class="' . $arrAttributes[1] . '"';
 		}
@@ -353,7 +351,7 @@ class Form extends Hybrid
 				}
 
 				// Prepare CSV file
-				if ($this->format == 'csv')
+				if ($this->format == 'csv' || $this->format == 'csv_excel')
 				{
 					$keys[] = $k;
 					$values[] = (\is_array($v) ? implode(',', $v) : $v);
@@ -402,7 +400,7 @@ class Form extends Hybrid
 			// Fallback to default subject
 			if (!$email->subject)
 			{
-				$email->subject = $this->replaceInsertTags($this->subject, false);
+				$email->subject = html_entity_decode($this->replaceInsertTags($this->subject, false), ENT_QUOTES, 'UTF-8');
 			}
 
 			// Send copy to sender
@@ -417,7 +415,7 @@ class Form extends Hybrid
 			{
 				$objTemplate = new FrontendTemplate('form_xml');
 				$objTemplate->fields = $fields;
-				$objTemplate->charset = Config::get('characterSet');
+				$objTemplate->charset = System::getContainer()->getParameter('kernel.charset');
 
 				$email->attachFileFromString($objTemplate->parse(), 'form.xml', 'application/xml');
 			}
@@ -426,6 +424,10 @@ class Form extends Hybrid
 			if ($this->format == 'csv')
 			{
 				$email->attachFileFromString(StringUtil::decodeEntities('"' . implode('";"', $keys) . '"' . "\n" . '"' . implode('";"', $values) . '"'), 'form.csv', 'text/comma-separated-values');
+			}
+			elseif ($this->format == 'csv_excel')
+			{
+				$email->attachFileFromString(mb_convert_encoding("\u{FEFF}sep=;\n" . StringUtil::decodeEntities('"' . implode('";"', $keys) . '"' . "\n" . '"' . implode('";"', $values) . '"'), 'UTF-16LE', 'UTF-8'), 'form.csv', 'text/comma-separated-values');
 			}
 
 			$uploaded = '';
@@ -448,6 +450,12 @@ class Form extends Hybrid
 
 			$uploaded = trim($uploaded) ? "\n\n---\n" . $uploaded : '';
 			$email->text = StringUtil::decodeEntities(trim($message)) . $uploaded . "\n\n";
+
+			// Set the transport
+			if (!empty($this->mailerTransport))
+			{
+				$email->addHeader('X-Transport', $this->mailerTransport);
+			}
 
 			// Send the e-mail
 			$email->sendTo($recipients);
@@ -485,7 +493,7 @@ class Form extends Hybrid
 			{
 				foreach ($_SESSION['FILES'] as $k=>$v)
 				{
-					if ($v['uploaded'])
+					if ($v['uploaded'] ?? null)
 					{
 						$arrSet[$k] = StringUtil::stripRootDir($v['tmp_name']);
 					}
@@ -502,12 +510,15 @@ class Form extends Hybrid
 				}
 			}
 
+			// Load DataContainer of target table before trying to determine empty value (see #3499)
+			Controller::loadDataContainer($this->targetTable);
+
 			// Set the correct empty value (see #6284, #6373)
 			foreach ($arrSet as $k=>$v)
 			{
 				if ($v === '')
 				{
-					$arrSet[$k] = Widget::getEmptyValueByFieldType($GLOBALS['TL_DCA'][$this->targetTable]['fields'][$k]['sql']);
+					$arrSet[$k] = Widget::getEmptyValueByFieldType($GLOBALS['TL_DCA'][$this->targetTable]['fields'][$k]['sql'] ?? array());
 				}
 			}
 
@@ -568,7 +579,7 @@ class Form extends Hybrid
 	 */
 	protected function getMaxFileSize()
 	{
-		@trigger_error('Using Form::getMaxFileSize() has been deprecated and will no longer work in Contao 5.0. Use $this->objModel->getMaxUploadFileSize() instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.0', 'Using "Contao\Form::getMaxFileSize()" has been deprecated and will no longer work in Contao 5.0. Use "$this->objModel->getMaxUploadFileSize()" instead.');
 
 		return $this->objModel->getMaxUploadFileSize();
 	}
@@ -586,11 +597,11 @@ class Form extends Hybrid
 		}
 
 		$arrMessageBox = array('TL_ERROR', 'TL_CONFIRM', 'TL_INFO');
-		$_SESSION['FORM_DATA'] = \is_array($_SESSION['FORM_DATA']) ? $_SESSION['FORM_DATA'] : array();
+		$_SESSION['FORM_DATA'] = \is_array($_SESSION['FORM_DATA'] ?? null) ? $_SESSION['FORM_DATA'] : array();
 
 		foreach ($arrMessageBox as $tl)
 		{
-			if (\is_array($_SESSION[$formId][$tl]))
+			if (\is_array($_SESSION[$formId][$tl] ?? null))
 			{
 				$_SESSION[$formId][$tl] = array_unique($_SESSION[$formId][$tl]);
 

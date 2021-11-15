@@ -12,6 +12,7 @@ namespace Contao;
 
 use Contao\CoreBundle\Exception\ForwardPageNotFoundException;
 use Contao\CoreBundle\Exception\PageNotFoundException;
+use Contao\CoreBundle\Util\LocaleUtil;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -23,13 +24,15 @@ class PageError404 extends Frontend
 {
 	/**
 	 * Generate an error 404 page
+	 *
+	 * @param PageModel|null $page
 	 */
-	public function generate()
+	public function generate($page=null)
 	{
 		/** @var PageModel $objPage */
 		global $objPage;
 
-		$obj404 = $this->prepare();
+		$obj404 = $this->prepare($page);
 		$objPage = $obj404->loadDetails();
 
 		// Reset inherited cache timeouts (see #231)
@@ -49,14 +52,16 @@ class PageError404 extends Frontend
 	/**
 	 * Return a response object
 	 *
+	 * @param PageModel|null $page
+	 *
 	 * @return Response
 	 */
-	public function getResponse()
+	public function getResponse($page=null)
 	{
 		/** @var PageModel $objPage */
 		global $objPage;
 
-		$obj404 = $this->prepare();
+		$obj404 = $this->prepare($page);
 		$objPage = $obj404->loadDetails();
 
 		// Reset inherited cache timeouts (see #231)
@@ -75,17 +80,28 @@ class PageError404 extends Frontend
 	/**
 	 * Prepare the output
 	 *
+	 * @param PageModel|null $page
+	 *
 	 * @return PageModel
 	 *
 	 * @internal Do not call this method in your code. It will be made private in Contao 5.0.
 	 */
-	protected function prepare()
+	protected function prepare($page=null)
 	{
-		// Find the matching root page
-		$objRootPage = $this->getRootPageFromUrl();
+		$obj404 = null;
+
+		if ($page instanceof PageModel && $page->type === 'error_404')
+		{
+			// We don't actually need a root page, we just need the inherited properties to redirect a 404
+			$obj404 = $objRootPage = $page->loadDetails();
+		}
+		else
+		{
+			$objRootPage = $this->getRootPageFromUrl();
+		}
 
 		// Forward if the language should be but is not set (see #4028)
-		if (Config::get('addLanguageToUrl'))
+		if ($objRootPage->urlPrefix && System::getContainer()->getParameter('contao.legacy_routing'))
 		{
 			// Get the request string without the script name
 			$strRequest = Environment::get('relativeRequest');
@@ -102,11 +118,11 @@ class PageError404 extends Frontend
 				{
 					if ($strRequest == Environment::get('request'))
 					{
-						$strRequest = $objRootPage->language . '/' . $strRequest;
+						$strRequest = LocaleUtil::formatAsLanguageTag($objRootPage->language) . '/' . $strRequest;
 					}
 					else
 					{
-						$strRequest = Environment::get('script') . '/' . $objRootPage->language . '/' . $strRequest;
+						$strRequest = Environment::get('script') . '/' . LocaleUtil::formatAsLanguageTag($objRootPage->language) . '/' . $strRequest;
 					}
 
 					$this->redirect($strRequest);
@@ -115,7 +131,10 @@ class PageError404 extends Frontend
 		}
 
 		// Look for a 404 page
-		$obj404 = PageModel::find404ByPid($objRootPage->id);
+		if (null === $obj404)
+		{
+			$obj404 = PageModel::find404ByPid($objRootPage->id);
+		}
 
 		// Die if there is no page at all
 		if (null === $obj404)

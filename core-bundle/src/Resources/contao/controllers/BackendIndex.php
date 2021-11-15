@@ -10,6 +10,7 @@
 
 namespace Contao;
 
+use Contao\CoreBundle\Intl\Locales;
 use Contao\CoreBundle\Security\Exception\LockedException;
 use Scheb\TwoFactorBundle\Security\Authentication\Exception\InvalidTwoFactorCodeException;
 use Scheb\TwoFactorBundle\Security\Authentication\Token\TwoFactorToken;
@@ -17,7 +18,7 @@ use Scheb\TwoFactorBundle\Security\TwoFactor\Event\TwoFactorAuthenticationEvent;
 use Scheb\TwoFactorBundle\Security\TwoFactor\Event\TwoFactorAuthenticationEvents;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\UriSigner;
-use Symfony\Component\Routing\Router;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 
@@ -70,7 +71,7 @@ class BackendIndex extends Backend
 		}
 
 		$router = $container->get('router');
-		$targetPath = $router->generate('contao_backend', array(), Router::ABSOLUTE_URL);
+		$targetPath = $router->generate('contao_backend', array(), UrlGeneratorInterface::ABSOLUTE_URL);
 		$request = $container->get('request_stack')->getCurrentRequest();
 
 		if ($request && $request->query->has('redirect'))
@@ -107,11 +108,10 @@ class BackendIndex extends Backend
 		$objTemplate->messages = Message::generate();
 		$objTemplate->base = Environment::get('base');
 		$objTemplate->language = $GLOBALS['TL_LANGUAGE'];
-		$objTemplate->languages = System::getLanguages(true); // backwards compatibility
+		$objTemplate->languages = System::getContainer()->get(Locales::class)->getEnabledLocales(null, true); // backwards compatibility
 		$objTemplate->host = Backend::getDecodedHostname();
-		$objTemplate->charset = Config::get('characterSet');
+		$objTemplate->charset = System::getContainer()->getParameter('kernel.charset');
 		$objTemplate->userLanguage = $GLOBALS['TL_LANG']['tl_user']['language'][0];
-		$objTemplate->curLanguage = Input::post('language') ?: str_replace('-', '_', $GLOBALS['TL_LANGUAGE']);
 		$objTemplate->curUsername = Input::post('username') ?: '';
 		$objTemplate->loginButton = StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['continue']);
 		$objTemplate->username = $GLOBALS['TL_LANG']['tl_user']['username'][0];

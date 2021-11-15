@@ -38,7 +38,7 @@
         <target>Jazyk</target>
       </trans-unit>
       <trans-unit id="tl_page.language.1">
-        <source>Please enter the page language according to the ISO-639-1 standard (e.g. &quot;en&quot; for English or &quot;en-US&quot; for American English).</source>
+        <source>Please enter the page language according to the ISO-639 standard (e.g. &quot;en&quot; for English or &quot;en_US&quot; for American English).</source>
         <target>Zadejte prosím jazyk stránky podle mezinárodního standardu ISO-639-1 (například &quot;cs&quot; pro češtinu nebo &quot;en&quot; pro angličtinu). </target>
       </trans-unit>
       <trans-unit id="tl_page.robots.0">
@@ -89,6 +89,14 @@
         <source>Show this page if there is none that matches the visitor's language.</source>
         <target>Ukázat tuto stránku, pokud je operační systém návštěvníka v dané řeči či v nějaké jiné, v níž není ani jedna jazykových verzí Vaší webové stránky.</target>
       </trans-unit>
+      <trans-unit id="tl_page.disableLanguageRedirect.0">
+        <source>Disable language redirect</source>
+        <target>Vypnout jazykové přesměrování </target>
+      </trans-unit>
+      <trans-unit id="tl_page.disableLanguageRedirect.1">
+        <source>Do not redirect visitors to this website root based on their preferred browser language.</source>
+        <target>Automaticky nepřesměrovávat náštěvníky webu na jazykovou verzi korespondující s jazykem jejich prohlížeče.</target>
+      </trans-unit>
       <trans-unit id="tl_page.favicon.0">
         <source>Favicon</source>
         <target>Favicon</target>
@@ -103,6 +111,7 @@
       </trans-unit>
       <trans-unit id="tl_page.robotsTxt.1">
         <source>Here you can enter custom robots.txt content. It may be extended automatically by extensions.</source>
+        <target>Sem můžete zadat vlastní obsah robots.txt. Může být automaticky doplněný jinými rozšířeními</target>
       </trans-unit>
       <trans-unit id="tl_page.dns.0">
         <source>Domain name</source>
@@ -128,12 +137,21 @@
         <source>The assets URL applies to the &lt;em&gt;assets&lt;/em&gt; directory (page speed optimization).</source>
         <target>URL-adresa rozšíření se dotkne všech souborů v adresáři &lt;em&gt;rozšíření&lt;/em&gt; (zvýší rychlost načítání stránky).</target>
       </trans-unit>
+      <trans-unit id="tl_page.mailerTransport.0">
+        <source>Mailer transport</source>
+        <target>Přenašeč mailů</target>
+      </trans-unit>
+      <trans-unit id="tl_page.mailerTransport.1">
+        <source>Here you can override the mailer transport used to send e-mails on this website.</source>
+        <target>Zde můžete přepsat přenašeč mailů, který se používá pro odesílání mailů z Vaší webové stránky.</target>
+      </trans-unit>
       <trans-unit id="tl_page.adminEmail.0">
         <source>E-mail address of the website administrator</source>
         <target>E-mailová adresa administrátora webu</target>
       </trans-unit>
       <trans-unit id="tl_page.adminEmail.1">
         <source>This e-mail address will be used to send and receive system messages.</source>
+        <target>Tato mailová adresa se použije pro odesílání a přijímání systémových zpráv.</target>
       </trans-unit>
       <trans-unit id="tl_page.dateFormat.0">
         <source>Date format</source>
@@ -167,29 +185,37 @@
         <source>Here you can select a custom character set for auto-generated aliases.</source>
         <target>Zde můžete vybrat vlastní znaky, abyste ovlivnily automatické generování aliasů.</target>
       </trans-unit>
-      <trans-unit id="tl_page.createSitemap.0">
-        <source>Create an XML sitemap</source>
-        <target>Vytvořit XML mapu stránek</target>
+      <trans-unit id="tl_page.useFolderUrl.0">
+        <source>Enable folder URLs</source>
+        <target>Povolit tyto složkové adresy</target>
       </trans-unit>
-      <trans-unit id="tl_page.createSitemap.1">
-        <source>Create a Google XML sitemap in the &lt;em&gt;share/&lt;/em&gt; directory.</source>
-        <target>Vytvořit mapu stránku ve složce &lt;em&gt;share/&lt;/em&gt; ve formátu Google XML. </target>
+      <trans-unit id="tl_page.useFolderUrl.1">
+        <source>Generate folder-style page aliases like &lt;em&gt;docs/install/download.html&lt;/em&gt; instead of &lt;em&gt;docs-install-download.html&lt;/em&gt;.</source>
+        <target>Zde můžete povolit styly složek stránkových aliasů jako &lt;em&gt;docs/install/download.html&lt;/em&gt; namísto &lt;em&gt;docs-install-download.html&lt;/em&gt;.</target>
       </trans-unit>
-      <trans-unit id="tl_page.sitemapName.0">
-        <source>Sitemap file name</source>
-        <target>Název souboru</target>
+      <trans-unit id="tl_page.urlPrefix.0">
+        <source>URL prefix</source>
+        <target>Předpona URL</target>
       </trans-unit>
-      <trans-unit id="tl_page.sitemapName.1">
-        <source>Please enter the name of the sitemap file without extension.</source>
-        <target>Zadejte jméno XML souboru</target>
+      <trans-unit id="tl_page.urlPrefix.1">
+        <source>Enter a URL prefix (e.g. the language) that will be prepended to aliases for this root page.</source>
+        <target>Zadejte prosím předponu URL (např. jazyk), která se objeví na konci aliasů stránek této kořenové stránky.</target>
+      </trans-unit>
+      <trans-unit id="tl_page.urlSuffix.0">
+        <source>URL suffix</source>
+        <target>Přípona URL</target>
+      </trans-unit>
+      <trans-unit id="tl_page.urlSuffix.1">
+        <source>The URL suffix will be added to the URI string to simulate static documents.</source>
+        <target>Přípona URL se objeví na konci aliasu URL, aby tak simulovala statické dokumenty.</target>
       </trans-unit>
       <trans-unit id="tl_page.useSSL.0">
-        <source>Use HTTPS</source>
-        <target>Použít HTTPS</target>
+        <source>Protocol</source>
+        <target>Protokol</target>
       </trans-unit>
       <trans-unit id="tl_page.useSSL.1">
-        <source>This website is available via HTTPS.</source>
-        <target>Tato webová stránka je dostupná přes HTTPS.</target>
+        <source>Here you can select which protocol to use for the website.</source>
+        <target>Zde můžete vybrat, jaký se použije protokol pro webovou stránku.</target>
       </trans-unit>
       <trans-unit id="tl_page.autoforward.0">
         <source>Forward to another page</source>
@@ -241,21 +267,27 @@
       </trans-unit>
       <trans-unit id="tl_page.cache.0">
         <source>Shared cache timeout</source>
+        <target>Vypršení sdíleného úložiště</target>
       </trans-unit>
       <trans-unit id="tl_page.cache.1">
         <source>The period after which the page should no longer be considered fresh by a shared cache.</source>
+        <target>Počet sekund, po nichž má být stránka označená jako zastaralá při používání sdíleného meziúložiště.</target>
       </trans-unit>
       <trans-unit id="tl_page.alwaysLoadFromCache.0">
         <source>Always load from shared cache</source>
+        <target>Vždy načíst ze sdíleného meziúložiště</target>
       </trans-unit>
       <trans-unit id="tl_page.alwaysLoadFromCache.1">
         <source>Always load this page from the shared cache, even if a member is logged in. Note that you can no longer personalize the page for logged in members in this case!</source>
+        <target>Vždy načíst ze sdíleného meziúložiště, i když je člen přihlášený. Mějte na paměti, že pak nemůžete personifikovat stránky pro přihlášené členy!</target>
       </trans-unit>
       <trans-unit id="tl_page.clientCache.0">
         <source>Private cache timeout</source>
+        <target>Vypšení uživatelského meziúložiště</target>
       </trans-unit>
       <trans-unit id="tl_page.clientCache.1">
         <source>The period after which the page should no longer be considered fresh by a private cache.</source>
+        <target>Počet sekund, po nichž má být stránka označená jako zastaralá při používání sdíleného meziúložiště.</target>
       </trans-unit>
       <trans-unit id="tl_page.includeChmod.0">
         <source>Assign access rights</source>
@@ -278,7 +310,7 @@
         <target>Skupina</target>
       </trans-unit>
       <trans-unit id="tl_page.cgroup.1">
-        <source>Please select a group as the owner of the page.</source>
+        <source>Please select a user group as the owner of the page.</source>
         <target>Vyberte skupinu jako vlastníka současné stránky</target>
       </trans-unit>
       <trans-unit id="tl_page.chmod.0">
@@ -322,11 +354,11 @@
         <target>Zde můžete určit, zda se stránka objeví v mapě stránky HTML.</target>
       </trans-unit>
       <trans-unit id="tl_page.hide.0">
-        <source>Hide from navigation</source>
+        <source>Hide in navigation</source>
         <target>Skrýt stránku v navigaci</target>
       </trans-unit>
       <trans-unit id="tl_page.hide.1">
-        <source>Hide the page from the navigation menu.</source>
+        <source>Hide the page in the navigation menu.</source>
         <target>Skrýt stránku v navigačním menu</target>
       </trans-unit>
       <trans-unit id="tl_page.guests.0">
@@ -367,6 +399,7 @@
       </trans-unit>
       <trans-unit id="tl_page.start.1">
         <source>If you want to prevent the page from showing on the website before a certain date/time, you can enter it here. Otherwise leave the field blank.</source>
+        <target>Pokud chcete zabránit zobrazení události před jistým datem/časem, můžete to zadat tady. Jinak ponechte dané pole prázdné.</target>
       </trans-unit>
       <trans-unit id="tl_page.stop.0">
         <source>Show until</source>
@@ -374,26 +407,31 @@
       </trans-unit>
       <trans-unit id="tl_page.stop.1">
         <source>If you want to prevent the page from showing on the website after a certain date/time, you can enter it here. Otherwise leave the field blank.</source>
+        <target>Pokud chcete zabránit zobrazení události před jistým datem/časem, můžete to zadat tady. Jinak ponechte dané pole prázdné.</target>
       </trans-unit>
       <trans-unit id="tl_page.enforceTwoFactor.0">
         <source>Enforce two-factor authentication</source>
+        <target>Použít dvoufázové ověření</target>
       </trans-unit>
       <trans-unit id="tl_page.enforceTwoFactor.1">
         <source>Enforce two-factor authentication for all members.</source>
+        <target>Vynutit použité dvoufázového ověření pro členy.</target>
       </trans-unit>
       <trans-unit id="tl_page.twoFactorJumpTo.0">
         <source>Two-factor redirect page</source>
+        <target>Přesměrovací stánka pro dvoufázovou autorizaci</target>
       </trans-unit>
       <trans-unit id="tl_page.twoFactorJumpTo.1">
         <source>Please choose the page to which members will be redirected to set up two-factor authentication.</source>
+        <target>Vyberte prosím stránku, na níž bude uživatel přesměrován po úspěšném dvoufázovém ověření.</target>
       </trans-unit>
       <trans-unit id="tl_page.title_legend">
         <source>Name and type</source>
         <target>Název a typ</target>
       </trans-unit>
       <trans-unit id="tl_page.meta_legend">
-        <source>Meta data</source>
-        <target>Meta informace</target>
+        <source>Metadata</source>
+        <target>Metadata</target>
       </trans-unit>
       <trans-unit id="tl_page.system_legend">
         <source>System settings</source>
@@ -403,20 +441,21 @@
         <source>Redirect settings</source>
         <target>Přesměrování</target>
       </trans-unit>
-      <trans-unit id="tl_page.dns_legend">
-        <source>DNS settings</source>
-        <target>Nastavení DNS</target>
+      <trans-unit id="tl_page.url_legend">
+        <source>URL settings</source>
+        <target>Nastavení URL</target>
+      </trans-unit>
+      <trans-unit id="tl_page.language_legend">
+        <source>Language settings</source>
+        <target>Nastavení jazyka</target>
       </trans-unit>
       <trans-unit id="tl_page.website_legend">
         <source>Website settings</source>
+        <target>Nastavení webové stránky</target>
       </trans-unit>
       <trans-unit id="tl_page.global_legend">
         <source>Global settings</source>
         <target>Obecná nastavení</target>
-      </trans-unit>
-      <trans-unit id="tl_page.alias_legend">
-        <source>Alias settings</source>
-        <target>Nastavení aliasů</target>
       </trans-unit>
       <trans-unit id="tl_page.sitemap_legend">
         <source>XML sitemap</source>
@@ -529,6 +568,10 @@
       <trans-unit id="tl_page.articles">
         <source>Edit the articles of page ID %s</source>
         <target>Upravit článek stránky ID %s</target>
+      </trans-unit>
+      <trans-unit id="tl_page.legacyRouting">
+        <source>Disable legacy routing mode to enable this configuration.</source>
+        <target>Vypnout přesměrovací mód (legacy routing mode), aby se spustilo toto nastavení.</target>
       </trans-unit>
       <trans-unit id="CACHE.0">
         <source>0 (do not cache)</source>

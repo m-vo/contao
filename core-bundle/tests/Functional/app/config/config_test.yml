@@ -10,7 +10,8 @@ framework:
     translator: { fallbacks: ['%locale%'] }
     secret: '%env(APP_SECRET)%'
     router:
-        resource: '%kernel.project_dir%/../src/Resources/config/routing.yml'
+        utf8: true
+        resource: '%kernel.project_dir%/../src/Resources/config/routes.yml'
         strict_requirements: '%kernel.debug%'
     csrf_protection: ~
     default_locale: '%locale%'
@@ -42,11 +43,17 @@ doctrine:
         auto_generate_proxy_classes: true
 
 contao:
+    legacy_routing: false
     localconfig:
         licenseAccepted: true
+        disableCron: true
 
 scheb_two_factor:
     trusted_device:
         enabled: true
     backup_codes:
         enabled: true
+
+services:
+    doctrine.orm.default_entity_manager.validator_loader:
+        synthetic: true

@@ -74,7 +74,7 @@ class BackendMain extends Backend
 		// Front end redirect
 		if (Input::get('do') == 'feRedirect')
 		{
-			@trigger_error('Using the "feRedirect" parameter has been deprecated and will no longer work in Contao 5.0. Use the "contao_backend_preview" route directly instead.', E_USER_DEPRECATED);
+			trigger_deprecation('contao/core-bundle', '4.0', 'Using the "feRedirect" parameter has been deprecated and will no longer work in Contao 5.0. Use the "contao_backend_preview" route directly instead.');
 
 			$this->redirectToFrontendPage(Input::get('page'), Input::get('article'));
 		}
@@ -141,7 +141,7 @@ class BackendMain extends Backend
 			$this->Template->error = $GLOBALS['TL_LANG']['ERR']['general'];
 			$this->Template->title = $GLOBALS['TL_LANG']['ERR']['general'];
 
-			@trigger_error('Using act=error has been deprecated and will no longer work in Contao 5.0. Throw an exception instead.', E_USER_DEPRECATED);
+			trigger_deprecation('contao/core-bundle', '4.0', 'Using "act=error" has been deprecated and will no longer work in Contao 5.0. Throw an exception instead.');
 		}
 		// Welcome screen
 		elseif (!Input::get('do') && !Input::get('act'))
@@ -234,7 +234,7 @@ class BackendMain extends Backend
 		// File picker reference (backwards compatibility)
 		if (Input::get('popup') && Input::get('act') != 'show' && $objSession->get('filePickerRef') && ((Input::get('do') == 'page' && $this->User->hasAccess('page', 'modules')) || (Input::get('do') == 'files' && $this->User->hasAccess('files', 'modules'))))
 		{
-			$this->Template->managerHref = ampersand($objSession->get('filePickerRef'));
+			$this->Template->managerHref = StringUtil::ampersand($objSession->get('filePickerRef'));
 			$this->Template->manager = (strpos($objSession->get('filePickerRef'), 'contao/page?') !== false) ? $GLOBALS['TL_LANG']['MSC']['pagePickerHome'] : $GLOBALS['TL_LANG']['MSC']['filePickerHome'];
 		}
 
@@ -243,7 +243,7 @@ class BackendMain extends Backend
 		$this->Template->language = $GLOBALS['TL_LANGUAGE'];
 		$this->Template->title = StringUtil::specialchars(strip_tags($this->Template->title));
 		$this->Template->host = Backend::getDecodedHostname();
-		$this->Template->charset = Config::get('characterSet');
+		$this->Template->charset = System::getContainer()->getParameter('kernel.charset');
 		$this->Template->home = $GLOBALS['TL_LANG']['MSC']['home'];
 		$this->Template->isPopup = Input::get('popup');
 		$this->Template->learnMore = sprintf($GLOBALS['TL_LANG']['MSC']['learnMore'], '<a href="https://contao.org" target="_blank" rel="noreferrer noopener">contao.org</a>');

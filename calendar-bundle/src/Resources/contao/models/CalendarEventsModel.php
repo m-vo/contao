@@ -10,52 +10,57 @@
 
 namespace Contao;
 
+use Contao\CoreBundle\File\ModelMetadataTrait;
 use Contao\Model\Collection;
 
 /**
  * Reads and writes events
  *
- * @property integer $id
- * @property integer $pid
- * @property integer $tstamp
- * @property string  $title
- * @property string  $alias
- * @property integer $author
- * @property boolean $addTime
- * @property integer $startTime
- * @property integer $endTime
- * @property integer $startDate
- * @property integer $endDate
- * @property string  $pageTitle
- * @property string  $description
- * @property string  $location
- * @property string  $address
- * @property string  $teaser
- * @property boolean $addImage
- * @property string  $singleSRC
- * @property string  $alt
- * @property string  $size
- * @property string  $imagemargin
- * @property string  $imageUrl
- * @property boolean $fullsize
- * @property string  $caption
- * @property string  $floating
- * @property boolean $recurring
- * @property string  $repeatEach
- * @property integer $repeatEnd
- * @property integer $recurrences
- * @property boolean $addEnclosure
- * @property string  $enclosure
- * @property string  $source
- * @property integer $jumpTo
- * @property integer $articleId
- * @property string  $url
- * @property boolean $target
- * @property string  $cssClass
- * @property boolean $noComments
- * @property boolean $published
- * @property string  $start
- * @property string  $stop
+ * @property string|integer      $id
+ * @property string|integer      $pid
+ * @property string|integer      $tstamp
+ * @property string              $title
+ * @property string              $alias
+ * @property string|integer      $author
+ * @property string|boolean      $addTime
+ * @property string|integer|null $startTime
+ * @property string|integer|null $endTime
+ * @property string|integer|null $startDate
+ * @property string|integer|null $endDate
+ * @property string              $pageTitle
+ * @property string              $robots
+ * @property string|null         $description
+ * @property string              $location
+ * @property string              $address
+ * @property string|null         $teaser
+ * @property string|boolean      $addImage
+ * @property string|boolean      $overwriteMeta
+ * @property string|null         $singleSRC
+ * @property string              $alt
+ * @property string              $imageTitle
+ * @property string|integer      $size
+ * @property string|array        $imagemargin
+ * @property string              $imageUrl
+ * @property string|boolean      $fullsize
+ * @property string              $caption
+ * @property string              $floating
+ * @property string|boolean      $recurring
+ * @property string              $repeatEach
+ * @property string|integer      $repeatEnd
+ * @property string|integer      $recurrences
+ * @property string|boolean      $addEnclosure
+ * @property string|array|null   $enclosure
+ * @property string              $source
+ * @property string|integer      $jumpTo
+ * @property string|integer      $articleId
+ * @property string              $url
+ * @property string|boolean      $target
+ * @property string              $cssClass
+ * @property string|boolean      $noComments
+ * @property string|boolean      $featured
+ * @property string|boolean      $published
+ * @property string|integer      $start
+ * @property string|integer      $stop
  *
  * @method static CalendarEventsModel|null findById($id, array $opt=array())
  * @method static CalendarEventsModel|null findByPk($id, array $opt=array())
@@ -72,13 +77,16 @@ use Contao\Model\Collection;
  * @method static CalendarEventsModel|null findOneByStartDate($val, array $opt=array())
  * @method static CalendarEventsModel|null findOneByEndDate($val, array $opt=array())
  * @method static CalendarEventsModel|null findOneByPageTitle($val, array $opt=array())
+ * @method static CalendarEventsModel|null findOneByRobots($val, array $opt=array())
  * @method static CalendarEventsModel|null findOneByDescription($val, array $opt=array())
  * @method static CalendarEventsModel|null findOneByLocation($val, array $opt=array())
  * @method static CalendarEventsModel|null findOneByAddress($val, array $opt=array())
  * @method static CalendarEventsModel|null findOneByTeaser($val, array $opt=array())
  * @method static CalendarEventsModel|null findOneByAddImage($val, array $opt=array())
+ * @method static CalendarEventsModel|null findOneByOverwriteMeta($val, array $opt=array())
  * @method static CalendarEventsModel|null findOneBySingleSRC($val, array $opt=array())
  * @method static CalendarEventsModel|null findOneByAlt($val, array $opt=array())
+ * @method static CalendarEventsModel|null findOneByImageTitle($val, array $opt=array())
  * @method static CalendarEventsModel|null findOneBySize($val, array $opt=array())
  * @method static CalendarEventsModel|null findOneByImagemargin($val, array $opt=array())
  * @method static CalendarEventsModel|null findOneByImageUrl($val, array $opt=array())
@@ -98,6 +106,7 @@ use Contao\Model\Collection;
  * @method static CalendarEventsModel|null findOneByTarget($val, array $opt=array())
  * @method static CalendarEventsModel|null findOneByCssClass($val, array $opt=array())
  * @method static CalendarEventsModel|null findOneByNoComments($val, array $opt=array())
+ * @method static CalendarEventsModel|null findOneByFeatured($val, array $opt=array())
  * @method static CalendarEventsModel|null findOneByPublished($val, array $opt=array())
  * @method static CalendarEventsModel|null findOneByStart($val, array $opt=array())
  * @method static CalendarEventsModel|null findOneByStop($val, array $opt=array())
@@ -113,13 +122,16 @@ use Contao\Model\Collection;
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByStartDate($val, array $opt=array())
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByEndDate($val, array $opt=array())
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByPageTitle($val, array $opt=array())
+ * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByRobots($val, array $opt=array())
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByDescription($val, array $opt=array())
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByLocation($val, array $opt=array())
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByAddress($val, array $opt=array())
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByTeaser($val, array $opt=array())
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByAddImage($val, array $opt=array())
+ * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByOverwriteMeta($val, array $opt=array())
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findBySingleSRC($val, array $opt=array())
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByAlt($val, array $opt=array())
+ * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByImageTitle($val, array $opt=array())
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findBySize($val, array $opt=array())
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByImagemargin($val, array $opt=array())
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByImageUrl($val, array $opt=array())
@@ -139,6 +151,7 @@ use Contao\Model\Collection;
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByTarget($val, array $opt=array())
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByCssClass($val, array $opt=array())
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByNoComments($val, array $opt=array())
+ * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByFeatured($val, array $opt=array())
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByPublished($val, array $opt=array())
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByStart($val, array $opt=array())
  * @method static Collection|CalendarEventsModel[]|CalendarEventsModel|null findByStop($val, array $opt=array())
@@ -158,13 +171,16 @@ use Contao\Model\Collection;
  * @method static integer countByStartDate($val, array $opt=array())
  * @method static integer countByEndDate($val, array $opt=array())
  * @method static integer countByPageTitle($val, array $opt=array())
+ * @method static integer countByRobots($val, array $opt=array())
  * @method static integer countByDescription($val, array $opt=array())
  * @method static integer countByLocation($val, array $opt=array())
  * @method static integer countByAddress($val, array $opt=array())
  * @method static integer countByTeaser($val, array $opt=array())
  * @method static integer countByAddImage($val, array $opt=array())
+ * @method static integer countByOverwriteMeta($val, array $opt=array())
  * @method static integer countBySingleSRC($val, array $opt=array())
  * @method static integer countByAlt($val, array $opt=array())
+ * @method static integer countByImageTitle($val, array $opt=array())
  * @method static integer countBySize($val, array $opt=array())
  * @method static integer countByImagemargin($val, array $opt=array())
  * @method static integer countByImageUrl($val, array $opt=array())
@@ -184,6 +200,7 @@ use Contao\Model\Collection;
  * @method static integer countByTarget($val, array $opt=array())
  * @method static integer countByCssClass($val, array $opt=array())
  * @method static integer countByNoComments($val, array $opt=array())
+ * @method static integer countByFeatured($val, array $opt=array())
  * @method static integer countByPublished($val, array $opt=array())
  * @method static integer countByStart($val, array $opt=array())
  * @method static integer countByStop($val, array $opt=array())
@@ -192,6 +209,8 @@ use Contao\Model\Collection;
  */
 class CalendarEventsModel extends Model
 {
+	use ModelMetadataTrait;
+
 	/**
 	 * Table name
 	 * @var string
@@ -244,6 +263,18 @@ class CalendarEventsModel extends Model
 		$intEnd = (int) $intEnd;
 
 		$arrColumns = array("$t.pid=? AND (($t.startTime>=$intStart AND $t.startTime<=$intEnd) OR ($t.endTime>=$intStart AND $t.endTime<=$intEnd) OR ($t.startTime<=$intStart AND $t.endTime>=$intEnd) OR ($t.recurring='1' AND ($t.recurrences=0 OR $t.repeatEnd>=$intStart) AND $t.startTime<=$intEnd))");
+
+		if (isset($arrOptions['showFeatured']))
+		{
+			if ($arrOptions['showFeatured'] === true)
+			{
+				$arrColumns[] = "$t.featured='1'";
+			}
+			elseif ($arrOptions['showFeatured'] === false)
+			{
+				$arrColumns[] = "$t.featured=''";
+			}
+		}
 
 		if (!static::isPreviewMode($arrOptions))
 		{

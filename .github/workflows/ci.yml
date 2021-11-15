@@ -4,11 +4,11 @@ on:
     pull_request: ~
     push:
         branches:
-            - 4.9
+            - 4.x
         tags:
-            - 4.9.*
+            - '*'
     schedule:
-        - cron: 0 13 * * MON,TUE
+        - cron: 0 13 * * MON,THU
 
 jobs:
     coverage:
@@ -20,9 +20,11 @@ jobs:
               uses: shivammathur/setup-php@v2
               with:
                   php-version: 7.4
-                  extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, pcre, pdo, zlib
+                  extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, mysqli, pcre, pdo_mysql, zlib
                   tools: flex
                   coverage: pcov
+              env:
+                  COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Checkout
               uses: actions/checkout@v1
@@ -34,23 +36,25 @@ jobs:
               run: php -d pcov.enabled=1 vendor/bin/phpunit --testsuite=coverage --coverage-clover=clover.xml --colors=always
 
             - name: Upload the coverage report
-              uses: codecov/codecov-action@v1
+              uses: codecov/codecov-action@v2
               with:
-                  file: ./clover.xml
+                  files: ./clover.xml
                   fail_ci_if_error: true
 
-    coding-style:
-        name: Coding Style
+    ecs:
+        name: ECS
         runs-on: ubuntu-18.04
         if: github.event_name == 'pull_request'
         steps:
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
               with:
-                  php-version: 7.4
-                  extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, pcre, pdo, zlib
+                  php-version: 8.0
+                  extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, mysqli, pcre, pdo_mysql, zlib
                   tools: flex
                   coverage: none
+              env:
+                  COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Checkout
               uses: actions/checkout@v1
@@ -59,20 +63,112 @@ jobs:
               run: |
                   composer install --no-interaction --no-progress
                   composer bin ecs install --no-interaction --no-progress
-                  composer bin phpstan install --no-interaction --no-progress
 
-            - name: Check the coding standard
+            - name: Run ECS
+              run: tools/ecs/vendor/bin/ecs check *-bundle/bin *-bundle/src *-bundle/tests --config tools/ecs/vendor/contao/easy-coding-standard/config/default.php --no-progress-bar --ansi
+
+    ecs-legacy:
+        name: ECS Legacy
+        runs-on: ubuntu-18.04
+        if: github.event_name == 'pull_request'
+        steps:
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: 8.0
+                  extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, mysqli, pcre, pdo_mysql, zlib
+                  tools: flex
+                  coverage: none
+              env:
+                  COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Checkout
+              uses: actions/checkout@v1
+
+            - name: Install the dependencies
               run: |
-                  tools/ecs/vendor/bin/ecs check *-bundle/bin *-bundle/src *-bundle/tests --config tools/ecs/vendor/contao/easy-coding-standard/config/default.php --no-progress-bar --ansi
+                  composer install --no-interaction --no-progress
+                  composer bin ecs install --no-interaction --no-progress
+
+            - name: Run ECS
+              run: |
                   tools/ecs/vendor/bin/ecs check *-bundle/src/Resources/contao --config tools/ecs/vendor/contao/easy-coding-standard/config/legacy.php --no-progress-bar --ansi
                   tools/ecs/vendor/bin/ecs check *-bundle/src/Resources/contao/templates --config tools/ecs/vendor/contao/easy-coding-standard/config/template.php --no-progress-bar --ansi
 
-            - name: Analyze the code
-              run: tools/phpstan/vendor/bin/phpstan analyse core-bundle/src core-bundle/tests --level=3 --no-progress
+    phpstan:
+        name: PHPStan
+        runs-on: ubuntu-18.04
+        if: github.event_name == 'pull_request'
+        steps:
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: 8.0
+                  extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, mysqli, pcre, pdo_mysql, zlib
+                  tools: flex
+                  coverage: none
+              env:
+                  COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Analyze the YAML files
+            - name: Checkout
+              uses: actions/checkout@v1
+
+            - name: Install the dependencies
+              run: |
+                  composer install --no-interaction --no-progress
+                  composer bin phpstan install --no-interaction --no-progress
+
+            - name: Run PHPStan
+              run: tools/phpstan/vendor/bin/phpstan analyse --no-progress
+
+    psalm:
+        name: Psalm
+        runs-on: ubuntu-18.04
+        if: github.event_name == 'pull_request'
+        steps:
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: 8.0
+                  extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, mysqli, pcre, pdo_mysql, zlib
+                  tools: flex
+                  coverage: none
+              env:
+                  COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Checkout
+              uses: actions/checkout@v1
+
+            - name: Install the dependencies
+              run: |
+                  composer install --no-interaction --no-progress
+                  composer bin psalm install --no-interaction --no-progress
+
+            - name: Run Psalm
+              run: tools/psalm/vendor/bin/psalm --no-suggestions --no-progress
+
+    yamllint:
+        name: YAMLlint
+        runs-on: ubuntu-18.04
+        if: github.event_name == 'pull_request'
+        steps:
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: 8.0
+                  extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, mysqli, pcre, pdo_mysql, zlib
+                  tools: flex
+                  coverage: none
+              env:
+                  COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Checkout
+              uses: actions/checkout@v1
+
+            - name: Run YAMLlint
               run: |
                   python3 -m pip install --upgrade pip
+                  python3 -m pip install --upgrade setuptools wheel
                   python3 -m pip install --upgrade yamllint
                   /home/runner/.local/bin/yamllint .
 
@@ -83,15 +179,17 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                php: [7.2, 7.3, 7.4, 8.0]
+                php: [7.4, 8.0]
         steps:
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
               with:
                   php-version: ${{ matrix.php }}
-                  extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, pcre, pdo_mysql, zlib
+                  extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, mysqli, pcre, pdo_mysql, zlib
                   tools: flex
                   coverage: none
+              env:
+                  COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Initialize the database
               run: |
@@ -112,6 +210,44 @@ jobs:
               env:
                   DATABASE_URL: mysql://root:root@127.0.0.1:3306/contao_test
 
+    nightly:
+        name: PHP 8.1
+        runs-on: ubuntu-18.04
+        if: github.event_name != 'push'
+        continue-on-error: true
+        steps:
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: 8.1
+                  extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, mysqli, pcre, pdo_mysql, zlib
+                  tools: flex
+                  coverage: none
+              env:
+                  COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Initialize the database
+              run: |
+                  sudo /etc/init.d/mysql start
+                  mysql -uroot -proot -e "CREATE database contao_test"
+
+            - name: Checkout
+              uses: actions/checkout@v1
+
+            - name: Install the dependencies
+              run: |
+                  composer install --ignore-platform-req=php --no-interaction --no-progress
+                  # TODO: Remove the next line once Symfony 5.3.7 was released
+                  composer require "symfony/http-foundation:5.3.*@dev" --ignore-platform-req=php --no-interaction --no-progress
+
+            - name: Run the unit tests
+              run: vendor/bin/phpunit --colors=always
+
+            - name: Run the functional tests
+              run: vendor/bin/phpunit --testsuite=functional --colors=always
+              env:
+                  DATABASE_URL: mysql://root:root@127.0.0.1:3306/contao_test
+
     prefer-lowest:
         name: Prefer Lowest
         runs-on: ubuntu-18.04
@@ -120,10 +256,12 @@ jobs:
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
               with:
-                  php-version: 7.3
-                  extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, pcre, pdo_mysql, zlib
+                  php-version: 7.4
+                  extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, mysqli, pcre, pdo_mysql, zlib
                   tools: flex
                   coverage: none
+              env:
+                  COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Initialize the database
               run: |
@@ -153,9 +291,11 @@ jobs:
               uses: shivammathur/setup-php@v2
               with:
                   php-version: 7.4
-                  extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, pcre, pdo, zlib
+                  extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, mysqli, pcre, pdo_mysql, zlib
                   tools: flex
                   coverage: none
+              env:
+                  COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Checkout
               uses: actions/checkout@v1
@@ -195,6 +335,8 @@ jobs:
                   ini-values: memory_limit=1G
                   tools: flex
                   coverage: none
+              env:
+                  COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Adjust the Git autocrlf setting
               run: git config --global core.autocrlf false
@@ -208,17 +350,19 @@ jobs:
             - name: Run the unit tests
               run: vendor/bin/phpunit.bat --colors=always
 
-    composer:
-        name: Composer
+    dependencies:
+        name: Dependencies
         runs-on: ubuntu-18.04
         if: github.event_name != 'push'
         steps:
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
               with:
-                  php-version: 7.4
+                  php-version: 8.0
                   extensions: json, zlib
                   coverage: none
+              env:
+                  COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Checkout
               uses: actions/checkout@v1
@@ -242,6 +386,8 @@ jobs:
                   php-version: 7.4
                   extensions: json, zlib
                   coverage: none
+              env:
+                  COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Checkout
               uses: actions/checkout@v1

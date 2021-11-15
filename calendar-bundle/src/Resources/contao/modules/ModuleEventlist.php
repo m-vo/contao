@@ -11,7 +11,7 @@
 namespace Contao;
 
 use Contao\CoreBundle\Exception\PageNotFoundException;
-use Patchwork\Utf8;
+use Contao\CoreBundle\Image\Studio\Studio;
 
 /**
  * Front end module "event list".
@@ -25,6 +25,7 @@ use Patchwork\Utf8;
  * @property bool   $cal_ignoreDynamic
  * @property int    $cal_readerModule
  * @property bool   $cal_hideRunning
+ * @property string $cal_featured
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -54,7 +55,7 @@ class ModuleEventlist extends Events
 		if ($request && System::getContainer()->get('contao.routing.scope_matcher')->isBackendRequest($request))
 		{
 			$objTemplate = new BackendTemplate('be_wildcard');
-			$objTemplate->wildcard = '### ' . Utf8::strtoupper($GLOBALS['TL_LANG']['FMD']['eventlist'][0]) . ' ###';
+			$objTemplate->wildcard = '### ' . $GLOBALS['TL_LANG']['FMD']['eventlist'][0] . ' ###';
 			$objTemplate->title = $this->headline;
 			$objTemplate->id = $this->id;
 			$objTemplate->link = $this->name;
@@ -100,6 +101,18 @@ class ModuleEventlist extends Events
 		$intYear = Input::get('year');
 		$intMonth = Input::get('month');
 		$intDay = Input::get('day');
+
+		// Handle featured events
+		$blnFeatured = null;
+
+		if ($this->cal_featured == 'featured')
+		{
+			$blnFeatured = true;
+		}
+		elseif ($this->cal_featured == 'unfeatured')
+		{
+			$blnFeatured = false;
+		}
 
 		// Jump to the current period
 		if (!isset($_GET['year']) && !isset($_GET['month']) && !isset($_GET['day']))
@@ -158,7 +171,8 @@ class ModuleEventlist extends Events
 		list($intStart, $intEnd, $strEmpty) = $this->getDatesFromFormat($this->Date, $this->cal_format);
 
 		// Get all events
-		$arrAllEvents = $this->getAllEvents($this->cal_calendar, $intStart, $intEnd);
+		$arrAllEvents = $this->getAllEvents($this->cal_calendar, $intStart, $intEnd, $blnFeatured);
+
 		$sort = ($this->cal_order == 'descending') ? 'krsort' : 'ksort';
 
 		// Sort the days
@@ -170,10 +184,11 @@ class ModuleEventlist extends Events
 			$sort($arrAllEvents[$key]);
 		}
 
+		$intCount = 0;
 		$arrEvents = array();
 
 		// Remove events outside the scope
-		foreach ($arrAllEvents as $key=>$days)
+		foreach ($arrAllEvents as $days)
 		{
 			foreach ($days as $day=>$events)
 			{
@@ -212,6 +227,7 @@ class ModuleEventlist extends Events
 
 					$event['firstDay'] = $GLOBALS['TL_LANG']['DAYS'][date('w', $day)];
 					$event['firstDate'] = Date::parse($objPage->dateFormat, $day);
+					$event['count'] = ++$intCount; // see #74
 
 					$arrEvents[] = $event;
 				}
@@ -255,20 +271,7 @@ class ModuleEventlist extends Events
 		$dayCount = 0;
 		$eventCount = 0;
 		$headerCount = 0;
-		$imgSize = false;
 
-		// Override the default image size
-		if ($this->imgSize)
-		{
-			$size = StringUtil::deserialize($this->imgSize);
-
-			if ($size[0] > 0 || $size[1] > 0 || is_numeric($size[2]) || ($size[2][0] ?? null) === '_')
-			{
-				$imgSize = $this->imgSize;
-			}
-		}
-
-		$projectDir = System::getContainer()->getParameter('kernel.project_dir');
 		$uuids = array();
 
 		for ($i=$offset; $i<$limit; $i++)
@@ -321,6 +324,8 @@ class ModuleEventlist extends Events
 				$objTemplate->hasDetails = false;
 			}
 
+			$objTemplate->hasReader = $event['source'] == 'default';
+
 			// Add the template variables
 			$objTemplate->classList = $event['class'] . ((($headerCount % 2) == 0) ? ' even' : ' odd') . (($headerCount == 0) ? ' first' : '') . ($blnIsLastEvent ? ' last' : '') . ' cal_' . $event['parent'];
 			$objTemplate->classUpcoming = $event['class'] . ((($eventCount % 2) == 0) ? ' even' : ' odd') . (($eventCount == 0) ? ' first' : '') . ((($offset + $eventCount + 1) >= $limit) ? ' last' : '') . ' cal_' . $event['parent'];
@@ -341,33 +346,47 @@ class ModuleEventlist extends Events
 			}
 
 			$objTemplate->addImage = false;
+			$objTemplate->addBefore = false;
 
 			// Add an image
-			if ($event['addImage'] && $event['singleSRC'])
+			if ($event['addImage'])
 			{
-				$objModel = FilesModel::findByUuid($event['singleSRC']);
+				/** @var CalendarEventsModel $eventModel */
+				$eventModel = CalendarEventsModel::findByPk($event['id']);
+				$imgSize = $eventModel->size ?: null;
 
-				if ($objModel !== null && is_file($projectDir . '/' . $objModel->path))
+				// Override the default image size
+				if ($this->imgSize)
 				{
-					if ($imgSize)
+					$size = StringUtil::deserialize($this->imgSize);
+
+					if ($size[0] > 0 || $size[1] > 0 || is_numeric($size[2]) || ($size[2][0] ?? null) === '_')
 					{
-						$event['size'] = $imgSize;
+						$imgSize = $this->imgSize;
+					}
+				}
+
+				$figureBuilder = System::getContainer()->get(Studio::class)->createFigureBuilder();
+
+				$figure = $figureBuilder
+					->from($event['singleSRC'])
+					->setSize($imgSize)
+					->setMetadata($eventModel->getOverwriteMetadata())
+					->enableLightbox((bool) $eventModel->fullsize)
+					->buildIfResourceExists();
+
+				if (null !== $figure)
+				{
+					// Rebuild with link to event if none is set
+					if (!$figure->getLinkHref())
+					{
+						$figure = $figureBuilder
+							->setLinkHref($event['href'])
+							->setLinkAttribute('title', $objTemplate->readMore)
+							->build();
 					}
 
-					$event['singleSRC'] = $objModel->path;
-					$this->addImageToTemplate($objTemplate, $event, null, null, $objModel);
-
-					// Link to the event if no image link has been defined
-					if (!$objTemplate->fullsize && !$objTemplate->imageUrl)
-					{
-						// Unset the image title attribute
-						$picture = $objTemplate->picture;
-						unset($picture['title']);
-						$objTemplate->picture = $picture;
-
-						// Link to the event
-						$objTemplate->linkTitle = $objTemplate->readMore;
-					}
+					$figure->applyLegacyTemplateData($objTemplate, $eventModel->imagemargin, $eventModel->floating);
 				}
 			}
 
@@ -378,6 +397,19 @@ class ModuleEventlist extends Events
 			{
 				$this->addEnclosuresToTemplate($objTemplate, $event);
 			}
+
+			// schema.org information
+			$objTemplate->getSchemaOrgData = static function () use ($objTemplate, $event): array
+			{
+				$jsonLd = Events::getSchemaOrgData((new CalendarEventsModel())->setRow($event));
+
+				if ($objTemplate->addImage && $objTemplate->figure)
+				{
+					$jsonLd['image'] = $objTemplate->figure->getSchemaOrgData();
+				}
+
+				return $jsonLd;
+			};
 
 			$strEvents .= $objTemplate->parse();
 

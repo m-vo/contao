@@ -38,8 +38,8 @@
         <target>Ripulisci gli indici del motore di ricerca interno</target>
       </trans-unit>
       <trans-unit id="tl_maintenance_jobs.index.1">
-        <source>Truncates the tables &lt;code&gt;tl_search&lt;/code&gt; and &lt;code&gt;tl_search_index&lt;/code&gt;. Afterwards, you have to rebuild the search index (see above).</source>
-        <target>Tronca le tabelle &lt;code&gt; tl_search &lt;/ code&gt; e &lt;code&gt; tl_search_index &lt;/ code&gt;. Successivamente sarà necessario ricostruire l'indice di ricerca (vedi sopra).</target>
+        <source>Truncates the tables &lt;code&gt;tl_search&lt;/code&gt;, &lt;code&gt;tl_search_index&lt;/code&gt; and &lt;code&gt;tl_search_term&lt;/code&gt;. Afterwards, you have to rebuild the search index (see above).</source>
+        <target>Ripulisci le tabelle  &lt;code&gt;tl_search&lt;/code&gt;, &lt;code&gt;tl_search_index&lt;/code&gt; e &lt;code&gt;tl_search_term&lt;/code&gt;. Successivamente, sarà necessario ricostruire l'indice di ricerca (vedere sopra).</target>
       </trans-unit>
       <trans-unit id="tl_maintenance_jobs.undo.0">
         <source>Purge the undo table</source>
@@ -98,14 +98,6 @@ Rimuove i file &lt;code&gt;.css&lt;/code&gt; e &lt;code&gt;.js&lt;/code&gt; gene
         <source>Removes the cached versions of the front end pages.</source>
         <target>Rimuove la cache delle pagine di front end</target>
       </trans-unit>
-      <trans-unit id="tl_maintenance_jobs.search.0">
-        <source>Purge the search results cache</source>
-        <target>Elimina la cache dei risultati della ricerca</target>
-      </trans-unit>
-      <trans-unit id="tl_maintenance_jobs.search.1">
-        <source>Removes the cached versions of the search results.</source>
-        <target>Rimuove la cache relativa al motore di ricerca interno</target>
-      </trans-unit>
       <trans-unit id="tl_maintenance_jobs.temp.0">
         <source>Purge the temp folder</source>
         <target>Ripulisci la cartella temporanea</target>
@@ -127,8 +119,8 @@ Rimuove i file &lt;code&gt;.css&lt;/code&gt; e &lt;code&gt;.js&lt;/code&gt; gene
         <target>Ricrea i link simbolici</target>
       </trans-unit>
       <trans-unit id="tl_maintenance_jobs.symlinks.1">
-        <source>Recreates the symlinks in the &lt;code&gt;web/&lt;/code&gt; folder (document root).</source>
-        <target>Ricrea i link simbolici nella cartella &lt;code&gt;web/&lt;/code&gt; (document root).</target>
+        <source>Recreates the symlinks in the public folder (document root).</source>
+        <target>Ricrea i symlinks nella cartella pubblica (root del documento).</target>
       </trans-unit>
       <trans-unit id="tl_maintenance.crawler">
         <source>Crawler</source>

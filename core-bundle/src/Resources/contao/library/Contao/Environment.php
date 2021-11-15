@@ -199,7 +199,15 @@ class Environment
 		if (!empty($_SERVER['REQUEST_URI']))
 		{
 			$arrComponents = parse_url($_SERVER['REQUEST_URI']);
-			$strRequest = $arrComponents['path'] . (isset($arrComponents['query']) ? '?' . $arrComponents['query'] : '');
+
+			if ($arrComponents === false)
+			{
+				$strRequest = $_SERVER['REQUEST_URI'];
+			}
+			else
+			{
+				$strRequest = $arrComponents['path'] . (isset($arrComponents['query']) ? '?' . $arrComponents['query'] : '');
+			}
 		}
 		else
 		{
@@ -288,9 +296,9 @@ class Environment
 		}
 		else
 		{
-			$host = $_SERVER['SERVER_NAME'];
+			$host = $_SERVER['SERVER_NAME'] ?? null;
 
-			if ($_SERVER['SERVER_PORT'] != 80)
+			if (($_SERVER['SERVER_PORT'] ?? 80) != 80)
 			{
 				$host .= ':' . $_SERVER['SERVER_PORT'];
 			}
@@ -467,7 +475,7 @@ class Environment
 	 */
 	protected static function host()
 	{
-		return static::get('httpHost');
+		return preg_replace('/:\d+$/', '', static::get('httpHost'));
 	}
 
 	/**
@@ -634,7 +642,7 @@ class Environment
 	 */
 	public static function getInstance()
 	{
-		@trigger_error('Using Environment::getInstance() has been deprecated and will no longer work in Contao 5.0. The Environment class is now static.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.0', 'Using "Contao\Environment::getInstance()" has been deprecated and will no longer work in Contao 5.0. The "Contao\Environment" class is now static.');
 
 		if (static::$objInstance === null)
 		{

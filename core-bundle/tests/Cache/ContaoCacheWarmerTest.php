@@ -15,10 +15,10 @@ namespace Contao\CoreBundle\Tests\Cache;
 use Contao\CoreBundle\Cache\ContaoCacheWarmer;
 use Contao\CoreBundle\Config\ResourceFinder;
 use Contao\CoreBundle\Framework\ContaoFramework;
+use Contao\CoreBundle\Intl\Locales;
 use Contao\CoreBundle\Tests\TestCase;
 use Contao\System;
 use Doctrine\DBAL\Connection;
-use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Component\Config\Exception\FileLocatorFileNotFoundException;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\Filesystem\Filesystem;
@@ -75,7 +75,7 @@ class ContaoCacheWarmerTest extends TestCase
         $this->assertFileExists(Path::join($this->getTempDir(), 'var/cache/contao/sql/tl_test.php'));
 
         $this->assertStringContainsString(
-            "\$GLOBALS['TL_TEST'] = true;",
+            "\$GLOBALS['TL_TEST'] = \\true;",
             file_get_contents(Path::join($this->getTempDir(), 'var/cache/contao/config/config.php'))
         );
 
@@ -85,7 +85,7 @@ class ContaoCacheWarmerTest extends TestCase
         );
 
         $this->assertStringContainsString(
-            "\$GLOBALS['TL_DCA']['tl_test'] = [\n",
+            "\$GLOBALS['TL_DCA']['tl_test'] = [",
             file_get_contents(Path::join($this->getTempDir(), 'var/cache/contao/dca/tl_test.php'))
         );
 
@@ -117,7 +117,7 @@ class ContaoCacheWarmerTest extends TestCase
     {
         $connection = $this->createMock(Connection::class);
         $connection
-            ->method('query')
+            ->method('executeQuery')
             ->willThrowException(new \Exception())
         ;
 
@@ -133,10 +133,6 @@ class ContaoCacheWarmerTest extends TestCase
         $this->assertFileNotExists(Path::join($this->getTempDir(), 'var/cache/contao'));
     }
 
-    /**
-     * @param Connection&MockObject      $connection
-     * @param ContaoFramework&MockObject $framework
-     */
     private function getCacheWarmer(Connection $connection = null, ContaoFramework $framework = null, string $bundle = 'test-bundle'): ContaoCacheWarmer
     {
         if (null === $connection) {
@@ -152,7 +148,12 @@ class ContaoCacheWarmerTest extends TestCase
         $filesystem = new Filesystem();
         $finder = new ResourceFinder($fixtures);
         $locator = new FileLocator($fixtures);
-        $locales = ['en-US', 'en'];
+
+        $locales = $this->createMock(Locales::class);
+        $locales
+            ->method('getEnabledLocaleIds')
+            ->willReturn(['en-US', 'en'])
+        ;
 
         return new ContaoCacheWarmer($filesystem, $finder, $locator, $fixtures, $connection, $framework, $locales);
     }

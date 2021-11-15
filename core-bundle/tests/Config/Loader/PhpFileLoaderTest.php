@@ -17,10 +17,7 @@ use Contao\CoreBundle\Tests\TestCase;
 
 class PhpFileLoaderTest extends TestCase
 {
-    /**
-     * @var PhpFileLoader
-     */
-    private $loader;
+    private PhpFileLoader $loader;
 
     protected function setUp(): void
     {
@@ -48,9 +45,9 @@ class PhpFileLoaderTest extends TestCase
     {
         $expects = <<<'EOF'
 
-$GLOBALS['TL_TEST'] = true;
+            $GLOBALS['TL_TEST'] = \true;
 
-EOF;
+            EOF;
 
         $this->assertSame(
             $expects,
@@ -59,23 +56,9 @@ EOF;
 
         $content = <<<'EOF'
 
-$GLOBALS['TL_DCA']['tl_test'] = [
-    'config' => [
-        'dataContainer' => 'Table',
-        'sql' => [
-            'keys' => [
-                'id' => 'primary',
-            ],
-        ],
-    ],
-    'fields' => [
-        'id' => [
-            'sql' => "int(10) unsigned NOT NULL auto_increment"
-        ],
-    ],
-];
+            $GLOBALS['TL_DCA']['tl_test'] = ['config' => ['dataContainer' => 'Table', 'sql' => ['keys' => ['id' => 'primary']]], 'fields' => ['id' => ['sql' => "int(10) unsigned NOT NULL auto_increment"]]];
 
-EOF;
+            EOF;
 
         $this->assertSame(
             $content,
@@ -87,11 +70,11 @@ EOF;
     {
         $expects = <<<'EOF'
 
-namespace Foo\Bar {
-$GLOBALS['TL_DCA']['tl_test']['config']['dataContainer'] = 'Table';
-}
+            namespace Foo\Bar {
+            $GLOBALS['TL_DCA']['tl_test']['config']['dataContainer'] = 'Table';
+            }
 
-EOF;
+            EOF;
 
         $this->assertSame(
             $expects,
@@ -103,11 +86,11 @@ EOF;
 
         $expects = <<<'EOF'
 
-namespace {
-    $GLOBALS['TL_DCA']['tl_test']['config']['dataContainer'] = 'Table';
-}
+            namespace {
+            $GLOBALS['TL_DCA']['tl_test']['config']['dataContainer'] = 'Table';
+            }
 
-EOF;
+            EOF;
 
         $this->assertSame(
             $expects,
@@ -119,11 +102,11 @@ EOF;
 
         $expects = <<<'EOF'
 
-namespace  {
-$GLOBALS['TL_TEST'] = true;
-}
+            namespace {
+            $GLOBALS['TL_TEST'] = \true;
+            }
 
-EOF;
+            EOF;
 
         $this->assertSame(
             $expects,
@@ -141,23 +124,9 @@ EOF;
     {
         $content = <<<'EOF'
 
-$GLOBALS['TL_DCA']['tl_test'] = [
-    'config' => [
-        'dataContainer' => 'Table',
-        'sql' => [
-            'keys' => [
-                'id' => 'primary',
-            ],
-        ],
-    ],
-    'fields' => [
-        'id' => [
-            'sql' => "int(10) unsigned NOT NULL auto_increment"
-        ],
-    ],
-];
+            $GLOBALS['TL_DCA']['tl_test'] = ['config' => ['dataContainer' => 'Table', 'sql' => ['keys' => ['id' => 'primary']]], 'fields' => ['id' => ['sql' => "int(10) unsigned NOT NULL auto_increment"]]];
 
-EOF;
+            EOF;
 
         $this->assertSame(
             $content,
@@ -174,29 +143,9 @@ EOF;
     {
         $content = <<<'EOF'
 
-/**
- * I am a declare(strict_types=1) comment
- */
+            $GLOBALS['TL_DCA']['tl_test'] = ['config' => ['dataContainer' => 'Table', 'sql' => ['keys' => ['id' => 'primary']]], 'fields' => ['id' => ['sql' => "int(10) unsigned NOT NULL auto_increment"]]];
 
-
-
-$GLOBALS['TL_DCA']['tl_test'] = [
-    'config' => [
-        'dataContainer' => 'Table',
-        'sql' => [
-            'keys' => [
-                'id' => 'primary',
-            ],
-        ],
-    ],
-    'fields' => [
-        'id' => [
-            'sql' => "int(10) unsigned NOT NULL auto_increment"
-        ],
-    ],
-];
-
-EOF;
+            EOF;
 
         $this->assertSame(
             $content,
@@ -219,25 +168,10 @@ EOF;
     {
         $content = <<<'EOF'
 
-declare(ticks=1);
+            declare (ticks=1);
+            $GLOBALS['TL_DCA']['tl_test'] = ['config' => ['dataContainer' => 'Table', 'sql' => ['keys' => ['id' => 'primary']]], 'fields' => ['id' => ['sql' => "int(10) unsigned NOT NULL auto_increment"]]];
 
-$GLOBALS['TL_DCA']['tl_test'] = [
-    'config' => [
-        'dataContainer' => 'Table',
-        'sql' => [
-            'keys' => [
-                'id' => 'primary',
-            ],
-        ],
-    ],
-    'fields' => [
-        'id' => [
-            'sql' => "int(10) unsigned NOT NULL auto_increment"
-        ],
-    ],
-];
-
-EOF;
+            EOF;
 
         $this->assertSame(
             $content,

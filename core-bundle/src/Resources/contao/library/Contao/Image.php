@@ -120,7 +120,7 @@ class Image
 	 */
 	public function __construct(File $file)
 	{
-		@trigger_error('Using new Contao\Image() has been deprecated and will no longer work in Contao 5.0. Use the contao.image.image_factory service instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.3', 'Using the "Contao\Image" class has been deprecated and will no longer work in Contao 5.0. Use the "contao.image.image_factory" service instead.');
 
 		// Check whether the file exists
 		if (!$file->exists())
@@ -139,7 +139,7 @@ class Image
 		}
 
 		$this->fileObj = $file;
-		$arrAllowedTypes = StringUtil::trimsplit(',', strtolower(Config::get('validImageTypes')));
+		$arrAllowedTypes = System::getContainer()->getParameter('contao.image.valid_extensions');
 
 		// Check the file type
 		if (!\in_array($this->fileObj->extension, $arrAllowedTypes))
@@ -373,7 +373,7 @@ class Image
 		$path = $this->resizedPath;
 		$webDir = StringUtil::stripRootDir(System::getContainer()->getParameter('contao.web_dir'));
 
-		// Strip the web/ prefix (see #337)
+		// Strip the contao.web_dir directory prefix (see #337)
 		if (strncmp($path, $webDir . '/', \strlen($webDir) + 1) === 0)
 		{
 			$path = substr($path, \strlen($webDir) + 1);
@@ -708,7 +708,7 @@ class Image
 
 		$objFile = new File($src);
 
-		// Strip the web/ prefix (see #337)
+		// Strip the contao.web_dir directory prefix (see #337)
 		if (strncmp($src, $webDir . '/', \strlen($webDir) + 1) === 0)
 		{
 			$src = substr($src, \strlen($webDir) + 1);
@@ -734,7 +734,7 @@ class Image
 	 */
 	public static function resize($image, $width, $height, $mode='')
 	{
-		@trigger_error('Using Image::resize() has been deprecated and will no longer work in Contao 5.0. Use the contao.image.image_factory service instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.3', 'Using "Contao\Image::resize()" has been deprecated and will no longer work in Contao 5.0. Use the "contao.image.image_factory" service instead.');
 
 		return static::get($image, $width, $height, $mode, $image, true) ? true : false;
 	}
@@ -743,7 +743,7 @@ class Image
 	 * Create an image instance from the given image path and size
 	 *
 	 * @param string|File          $image The image path or File instance
-	 * @param array|integer|string $size  The image size as array (width, height, resize mode) or an tl_image_size ID or a predifined image size key
+	 * @param array|integer|string $size  The image size as array (width, height, resize mode) or an tl_image_size ID or a predefined image size key
 	 *
 	 * @return static The created image instance
 	 *
@@ -752,7 +752,7 @@ class Image
 	 */
 	public static function create($image, $size=null)
 	{
-		@trigger_error('Using Image::create() has been deprecated and will no longer work in Contao 5.0. Use the contao.image.image_factory service instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.3', 'Using "Contao\Image::create()" has been deprecated and will no longer work in Contao 5.0. Use the "contao.image.image_factory" service instead.');
 
 		if (\is_string($image))
 		{
@@ -869,7 +869,7 @@ class Image
 	 */
 	public static function get($image, $width, $height, $mode='', $target=null, $force=false)
 	{
-		@trigger_error('Using Image::get() has been deprecated and will no longer work in Contao 5.0. Use the contao.image.image_factory service instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.3', 'Using "Contao\Image::get()" has been deprecated and will no longer work in Contao 5.0. Use the "contao.image.image_factory" service instead.');
 
 		if (!$image)
 		{
@@ -907,7 +907,7 @@ class Image
 	 */
 	public static function getPixelValue($size)
 	{
-		@trigger_error('Using Image::getPixelValue() has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.3', 'Using "Contao\Image::getPixelValue()" has been deprecated and will no longer work in Contao 5.0. Use the "contao.image.image_factory" service instead.');
 
 		$value = preg_replace('/[^0-9.-]+/', '', $size);
 		$unit = preg_replace('/[^acehimnprtvwx%]/', '', $size);

@@ -38,12 +38,30 @@ class ContentAlias extends ContentElement
 			return '';
 		}
 
+		if (is_a($strClass, ContentProxy::class, true))
+		{
+			if (!empty($this->cssID[1]))
+			{
+				$objElement->classes = array_merge((array) $objElement->classes, array($this->cssID[1]));
+			}
+
+			/** @var ContentProxy $proxy */
+			$proxy = new $strClass($objElement, $this->strColumn);
+
+			if (!empty($this->cssID[0]))
+			{
+				$proxy->cssID = ' id="' . $this->cssID[0] . '"';
+			}
+
+			return $proxy->generate();
+		}
+
 		$objElement->origId = $objElement->origId ?: $objElement->id;
 		$objElement->id = $this->id;
 		$objElement->typePrefix = 'ce_';
 
 		/** @var ContentElement $objElement */
-		$objElement = new $strClass($objElement);
+		$objElement = new $strClass($objElement, $this->strColumn);
 
 		$cssID = StringUtil::deserialize($objElement->cssID, true);
 
@@ -56,7 +74,7 @@ class ContentAlias extends ContentElement
 		// Merge the CSS classes (see #6011)
 		if (!empty($this->cssID[1]))
 		{
-			$cssID[1] = trim($cssID[1] . ' ' . $this->cssID[1]);
+			$cssID[1] = trim(($cssID[1] ?? '') . ' ' . $this->cssID[1]);
 		}
 
 		$objElement->cssID = $cssID;

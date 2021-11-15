@@ -35,43 +35,36 @@ class BackendUser extends User
 {
 	/**
 	 * Edit page flag
-	 * @var string
 	 */
 	const CAN_EDIT_PAGE = 1;
 
 	/**
 	 * Edit page hierarchy flag
-	 * @var string
 	 */
 	const CAN_EDIT_PAGE_HIERARCHY = 2;
 
 	/**
 	 * Delete page flag
-	 * @var string
 	 */
 	const CAN_DELETE_PAGE = 3;
 
 	/**
 	 * Edit articles flag
-	 * @var string
 	 */
 	const CAN_EDIT_ARTICLES = 4;
 
 	/**
 	 * Edit article hierarchy flag
-	 * @var string
 	 */
 	const CAN_EDIT_ARTICLE_HIERARCHY = 5;
 
 	/**
 	 * Delete articles flag
-	 * @var string
 	 */
 	const CAN_DELETE_ARTICLES = 6;
 
 	/**
 	 * Symfony Security session key
-	 * @var string
 	 * @deprecated Deprecated since Contao 4.8, to be removed in Contao 5.0
 	 */
 	const SECURITY_SESSION_KEY = '_security_contao_backend';
@@ -148,7 +141,7 @@ class BackendUser extends User
 
 		if ($strUser !== null)
 		{
-			static::$objInstance = static::loadUserByUsername($strUser);
+			static::$objInstance = static::loadUserByIdentifier($strUser);
 
 			return static::$objInstance;
 		}
@@ -202,7 +195,7 @@ class BackendUser extends User
 	 */
 	public function authenticate()
 	{
-		@trigger_error('Using BackendUser::authenticate() has been deprecated and will no longer work in Contao 5.0. Use Symfony security instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.5', 'Using "Contao\BackendUser::authenticate()" has been deprecated and will no longer work in Contao 5.0. Use Symfony security instead.');
 
 		// Do not redirect if authentication is successful
 		if (System::getContainer()->get('contao.security.token_checker')->hasBackendUser())
@@ -237,7 +230,7 @@ class BackendUser extends User
 	 */
 	public function login()
 	{
-		@trigger_error('Using BackendUser::login() has been deprecated and will no longer work in Contao 5.0. Use Symfony security instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.5', 'Using "Contao\BackendUser::login()" has been deprecated and will no longer work in Contao 5.0. Use Symfony security instead.');
 
 		return System::getContainer()->get('contao.security.token_checker')->hasBackendUser();
 	}
@@ -519,7 +512,7 @@ class BackendUser extends User
 			{
 				$arrModules[$strGroupName]['class'] = 'group-' . $strGroupName . ' node-expanded';
 				$arrModules[$strGroupName]['title'] = StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['collapseNode']);
-				$arrModules[$strGroupName]['label'] = (($label = \is_array($GLOBALS['TL_LANG']['MOD'][$strGroupName]) ? $GLOBALS['TL_LANG']['MOD'][$strGroupName][0] : $GLOBALS['TL_LANG']['MOD'][$strGroupName]) != false) ? $label : $strGroupName;
+				$arrModules[$strGroupName]['label'] = ($label = \is_array($GLOBALS['TL_LANG']['MOD'][$strGroupName] ?? null) ? ($GLOBALS['TL_LANG']['MOD'][$strGroupName][0] ?? null) : ($GLOBALS['TL_LANG']['MOD'][$strGroupName] ?? null)) ? $label : $strGroupName;
 				$arrModules[$strGroupName]['href'] = $router->generate('contao_backend', array('do'=>Input::get('do'), 'mtg'=>$strGroupName, 'ref'=>$strRefererId));
 				$arrModules[$strGroupName]['ajaxUrl'] = $router->generate('contao_backend');
 				$arrModules[$strGroupName]['icon'] = 'modPlus.gif'; // backwards compatibility with e.g. EasyThemes
@@ -533,8 +526,8 @@ class BackendUser extends User
 					if ($blnAccess && !$blnHide)
 					{
 						$arrModules[$strGroupName]['modules'][$strModuleName] = $arrModuleConfig;
-						$arrModules[$strGroupName]['modules'][$strModuleName]['title'] = StringUtil::specialchars($GLOBALS['TL_LANG']['MOD'][$strModuleName][1]);
-						$arrModules[$strGroupName]['modules'][$strModuleName]['label'] = (($label = \is_array($GLOBALS['TL_LANG']['MOD'][$strModuleName]) ? $GLOBALS['TL_LANG']['MOD'][$strModuleName][0] : $GLOBALS['TL_LANG']['MOD'][$strModuleName]) != false) ? $label : $strModuleName;
+						$arrModules[$strGroupName]['modules'][$strModuleName]['title'] = StringUtil::specialchars($GLOBALS['TL_LANG']['MOD'][$strModuleName][1] ?? '');
+						$arrModules[$strGroupName]['modules'][$strModuleName]['label'] = ($label = \is_array($GLOBALS['TL_LANG']['MOD'][$strModuleName] ?? null) ? ($GLOBALS['TL_LANG']['MOD'][$strModuleName][0] ?? null) : ($GLOBALS['TL_LANG']['MOD'][$strModuleName] ?? null)) ? $label : $strModuleName;
 						$arrModules[$strGroupName]['modules'][$strModuleName]['class'] = 'navigation ' . $strModuleName;
 						$arrModules[$strGroupName]['modules'][$strModuleName]['href'] = $router->generate('contao_backend', array('do'=>$strModuleName, 'ref'=>$strRefererId));
 						$arrModules[$strGroupName]['modules'][$strModuleName]['isActive'] = false;
@@ -601,20 +594,40 @@ class BackendUser extends User
 	}
 
 	/**
-	 * {@inheritdoc}
+	 * @deprecated Deprecated since Contao 4.9, to be removed in Contao 5.0.
 	 */
 	public function serialize()
 	{
-		return serialize(array('admin' => $this->admin, 'amg' => $this->amg, 'parent' => parent::serialize()));
+		$data = $this->__serialize();
+		$data['parent'] = serialize($data['parent']);
+
+		return serialize($data);
+	}
+
+	public function __serialize(): array
+	{
+		return array('admin' => $this->admin, 'amg' => $this->amg, 'parent' => parent::__serialize());
 	}
 
 	/**
-	 * {@inheritdoc}
+	 * @deprecated Deprecated since Contao 4.9 to be removed in Contao 5.0.
 	 */
-	public function unserialize($serialized)
+	public function unserialize($data)
 	{
-		$data = unserialize($serialized, array('allowed_classes'=>false));
+		$unserialized = unserialize($data, array('allowed_classes'=>false));
 
+		if (!isset($unserialized['parent']))
+		{
+			return;
+		}
+
+		$unserialized['parent'] = unserialize($unserialized['parent'], array('allowed_classes'=>false));
+
+		$this->__unserialize($unserialized);
+	}
+
+	public function __unserialize(array $data): void
+	{
 		if (array_keys($data) != array('admin', 'amg', 'parent'))
 		{
 			return;
@@ -622,7 +635,7 @@ class BackendUser extends User
 
 		list($this->admin, $this->amg, $parent) = array_values($data);
 
-		parent::unserialize($parent);
+		parent::__unserialize($parent);
 	}
 
 	/**

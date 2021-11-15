@@ -1,12 +1,18 @@
 # Known limitations
 
+## Cache blocks scheduled publishing
+
+If elements are to be published time-controlled and the shared cache is active,
+they will only be shown on the website after the cache has been purged.
+
+More information: https://github.com/contao/contao/issues/3101
+
 ## Importing style sheets with a media query
 
 Although the internal style sheet editor will add an existing media query when
 exporting a style sheet, the media query will not be re-imported.
 
-More information: https://github.com/contao/contao/issues/273 
-
+More information: https://github.com/contao/contao/issues/273
 
 ## Models and database connections
 
@@ -23,11 +29,3 @@ types, e.g. from an article to a news item or from a news item to an event.
 They can only copy or move elements from e.g. one article to another article.
 
 More information: https://github.com/contao/core/issues/5234
-
-## Unique checks on encrypted data
-
-The DCA option `'encrypt'=>true` cannot be used together with `'unique'=>true`,
-because there is no effective way to check the unencrypted values for
-duplicate entries.
-
-More information: https://github.com/contao/core/issues/8144

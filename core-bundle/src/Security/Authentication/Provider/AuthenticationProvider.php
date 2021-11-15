@@ -22,66 +22,39 @@ use Scheb\TwoFactorBundle\Security\TwoFactor\AuthenticationContextFactoryInterfa
 use Scheb\TwoFactorBundle\Security\TwoFactor\Handler\AuthenticationHandlerInterface;
 use Scheb\TwoFactorBundle\Security\TwoFactor\Trusted\TrustedDeviceManagerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactoryInterface;
 use Symfony\Component\Security\Core\Authentication\Provider\AuthenticationProviderInterface;
 use Symfony\Component\Security\Core\Authentication\Provider\DaoAuthenticationProvider;
 use Symfony\Component\Security\Core\Authentication\Token\AnonymousToken;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
-use Symfony\Component\Security\Core\Encoder\EncoderFactoryInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Core\Exception\BadCredentialsException;
 use Symfony\Component\Security\Core\User\UserCheckerInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Core\User\UserProviderInterface;
 
+/**
+ * @deprecated Deprecated since Contao 4.13, to be removed in Contao 5.0.
+ *             Use the new authenticator system instead.
+ */
 class AuthenticationProvider extends DaoAuthenticationProvider
 {
-    /**
-     * @var UserCheckerInterface
-     */
-    private $userChecker;
-
-    /**
-     * @var string
-     */
-    private $providerKey;
-
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
-
-    /**
-     * @var AuthenticationProviderInterface
-     */
-    private $twoFactorAuthenticationProvider;
-
-    /**
-     * @var AuthenticationHandlerInterface
-     */
-    private $twoFactorAuthenticationHandler;
-
-    /**
-     * @var AuthenticationContextFactoryInterface
-     */
-    private $authenticationContextFactory;
-
-    /**
-     * @var RequestStack
-     */
-    private $requestStack;
-
-    /**
-     * @var TrustedDeviceManagerInterface
-     */
-    private $trustedDeviceManager;
+    private UserCheckerInterface $userChecker;
+    private string $providerKey;
+    private ContaoFramework $framework;
+    private AuthenticationProviderInterface $twoFactorAuthenticationProvider;
+    private AuthenticationHandlerInterface $twoFactorAuthenticationHandler;
+    private AuthenticationContextFactoryInterface $authenticationContextFactory;
+    private RequestStack $requestStack;
+    private TrustedDeviceManagerInterface $trustedDeviceManager;
 
     /**
      * @internal Do not inherit from this class; decorate the "contao.security.authentication_provider" service instead
      */
-    public function __construct(UserProviderInterface $userProvider, UserCheckerInterface $userChecker, string $providerKey, EncoderFactoryInterface $encoderFactory, ContaoFramework $framework, AuthenticationProviderInterface $twoFactorAuthenticationProvider, AuthenticationHandlerInterface $twoFactorAuthenticationHandler, AuthenticationContextFactoryInterface $authenticationContextFactory, RequestStack $requestStack, TrustedDeviceManagerInterface $trustedDeviceManager)
+    public function __construct(UserProviderInterface $userProvider, UserCheckerInterface $userChecker, string $providerKey, PasswordHasherFactoryInterface $passwordHasherFactory, ContaoFramework $framework, AuthenticationProviderInterface $twoFactorAuthenticationProvider, AuthenticationHandlerInterface $twoFactorAuthenticationHandler, AuthenticationContextFactoryInterface $authenticationContextFactory, RequestStack $requestStack, TrustedDeviceManagerInterface $trustedDeviceManager)
     {
-        parent::__construct($userProvider, $userChecker, $providerKey, $encoderFactory, false);
+        parent::__construct($userProvider, $userChecker, $providerKey, $passwordHasherFactory, false);
 
         $this->userChecker = $userChecker;
         $this->providerKey = $providerKey;
@@ -110,9 +83,8 @@ class AuthenticationProvider extends DaoAuthenticationProvider
             return $token;
         }
 
-        // AnonymousToken and TwoFactorTokenInterface can be ignored. Guard
-        // might return null due to having multiple Guard authenticators.
-        if ($token instanceof AnonymousToken || $token instanceof TwoFactorTokenInterface || null === $token) {
+        // AnonymousToken and TwoFactorTokenInterface can be ignored.
+        if ($token instanceof AnonymousToken || $token instanceof TwoFactorTokenInterface) {
             return $token;
         }
 
@@ -121,7 +93,7 @@ class AuthenticationProvider extends DaoAuthenticationProvider
             return $token;
         }
 
-        $request = $this->requestStack->getMasterRequest();
+        $request = $this->requestStack->getMainRequest();
         $context = $this->authenticationContextFactory->create($request, $token, $this->providerKey);
 
         return $this->twoFactorAuthenticationHandler->beginTwoFactorAuthentication($context);
@@ -231,11 +203,11 @@ class AuthenticationProvider extends DaoAuthenticationProvider
             return false;
         }
 
-        @trigger_error('Using the "checkCredentials" hook has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+        trigger_deprecation('contao/core-bundle', '4.5', 'Using the "checkCredentials" hook has been deprecated and will no longer work in Contao 5.0.');
 
         /** @var System $system */
         $system = $this->framework->getAdapter(System::class);
-        $username = $token->getUsername();
+        $username = $token->getUserIdentifier();
         $credentials = $token->getCredentials();
 
         foreach ($GLOBALS['TL_HOOKS']['checkCredentials'] as $callback) {

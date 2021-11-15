@@ -15,14 +15,14 @@ use Contao\Model\Collection;
 /**
  * Reads and writes member groups
  *
- * @property integer $id
- * @property integer $tstamp
- * @property string  $name
- * @property boolean $redirect
- * @property integer $jumpTo
- * @property boolean $disable
- * @property string  $start
- * @property string  $stop
+ * @property string|integer $id
+ * @property string|integer $tstamp
+ * @property string         $name
+ * @property string|boolean $redirect
+ * @property string|integer $jumpTo
+ * @property string|boolean $disable
+ * @property string|integer $start
+ * @property string|integer $stop
  *
  * @method static MemberGroupModel|null findById($id, array $opt=array())
  * @method static MemberGroupModel|null findByPk($id, array $opt=array())
@@ -106,7 +106,7 @@ class MemberGroupModel extends Model
 	/**
 	 * Find the first active group with a published jumpTo page
 	 *
-	 * @param string $arrIds An array of member group IDs
+	 * @param array $arrIds An array of member group IDs
 	 *
 	 * @return MemberGroupModel|null The model or null if there is no matching member group
 	 *
@@ -115,7 +115,7 @@ class MemberGroupModel extends Model
 	 */
 	public static function findFirstActiveWithJumpToByIds($arrIds)
 	{
-		@trigger_error('Using MemberGroupModel::findFirstActiveWithJumpToByIds() has been deprecated and will no longer work in Contao 5.0. Use PageModel::findFirstActiveByMemberGroups() instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.0', 'Using "Contao\MemberGroupModel::findFirstActiveWithJumpToByIds()" has been deprecated and will no longer work in Contao 5.0. Use "Contao\PageModel::findFirstActiveByMemberGroups()" instead.');
 
 		if (empty($arrIds) || !\is_array($arrIds))
 		{

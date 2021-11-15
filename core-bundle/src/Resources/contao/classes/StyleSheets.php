@@ -74,12 +74,12 @@ class StyleSheets extends Backend
 		// Make sure the dcaconfig.php file is loaded
 		if (file_exists($this->strRootDir . '/system/config/dcaconfig.php'))
 		{
-			@trigger_error('Using the "dcaconfig.php" file has been deprecated and will no longer work in Contao 5.0. Create custom DCA files in the "contao/dca" folder instead.', E_USER_DEPRECATED);
+			trigger_deprecation('contao/core-bundle', '4.3', 'Using the "dcaconfig.php" file has been deprecated and will no longer work in Contao 5.0. Create custom DCA files in the "contao/dca" folder instead.');
 			include $this->strRootDir . '/system/config/dcaconfig.php';
 		}
 
 		// Delete old style sheets
-		foreach (scan($this->strRootDir . '/assets/css', true) as $file)
+		foreach (Folder::scan($this->strRootDir . '/assets/css', true) as $file)
 		{
 			// Skip directories
 			if (is_dir($this->strRootDir . '/assets/css/' . $file))
@@ -156,7 +156,7 @@ class StyleSheets extends Backend
 		}
 
 		// Merge the global style sheet variables
-		if ($row['vars'] != '' && \is_array($tmp = StringUtil::deserialize($row['vars'])))
+		if (!empty($row['vars']) && \is_array($tmp = StringUtil::deserialize($row['vars'])))
 		{
 			foreach ($tmp as $v)
 			{
@@ -165,7 +165,10 @@ class StyleSheets extends Backend
 		}
 
 		// Sort by key length (see #3316)
-		uksort($vars, 'length_sort_desc');
+		uksort($vars, static function ($a, $b): int
+		{
+			return \strlen($b) - \strlen($a);
+		});
 
 		// Create the file
 		$objFile = new File('assets/css/' . $row['name'] . '.css');
@@ -637,10 +640,10 @@ class StyleSheets extends Backend
 			// Border width
 			if (\is_array($row['borderwidth']))
 			{
-				$top = $row['borderwidth']['top'];
-				$right = $row['borderwidth']['right'];
-				$bottom = $row['borderwidth']['bottom'];
-				$left = $row['borderwidth']['left'];
+				$top = $row['borderwidth']['top'] ?? '';
+				$right = $row['borderwidth']['right'] ?? '';
+				$bottom = $row['borderwidth']['bottom'] ?? '';
+				$left = $row['borderwidth']['left'] ?? '';
 
 				// Try to shorten the definition
 				if ($top != '' && $right != '' && $bottom != '' && $left != '' && $top == $right && $top == $bottom && $top == $left)
@@ -846,7 +849,7 @@ class StyleSheets extends Backend
 			$fnColor = StringUtil::deserialize($row['fontcolor'], true);
 
 			// Font color
-			if ($fnColor[0] != '')
+			if (!empty($fnColor[0]))
 			{
 				$return .= $lb . 'color:' . $this->compileColor($fnColor, $blnWriteToFile, $vars) . ';';
 			}
@@ -1303,7 +1306,7 @@ class StyleSheets extends Backend
 		// Return form
 		return Message::generate() . '
 <div id="tl_buttons">
-<a href="' . ampersand(str_replace('&key=import', '', Environment::get('request'))) . '" class="header_back" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']) . '" accesskey="b">' . $GLOBALS['TL_LANG']['MSC']['backBT'] . '</a>
+<a href="' . StringUtil::ampersand(str_replace('&key=import', '', Environment::get('request'))) . '" class="header_back" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']) . '" accesskey="b">' . $GLOBALS['TL_LANG']['MSC']['backBT'] . '</a>
 </div>
 <form id="tl_style_sheet_import" class="tl_form tl_edit_form" method="post" enctype="multipart/form-data">
 <div class="tl_formbody_edit">
@@ -1373,7 +1376,10 @@ class StyleSheets extends Backend
 		}
 
 		// Sort by key length (see #3316)
-		uksort($vars, 'length_sort_desc');
+		uksort($vars, static function ($a, $b): int
+		{
+			return \strlen($b) - \strlen($a);
+		});
 
 		// Create the file
 		$objFile = new File('system/tmp/' . md5(uniqid(mt_rand(), true)));

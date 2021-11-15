@@ -11,7 +11,7 @@
 namespace Contao;
 
 use Contao\CoreBundle\OptIn\OptIn;
-use Patchwork\Utf8;
+use Contao\CoreBundle\String\SimpleTokenParser;
 use Symfony\Component\HttpFoundation\Session\Session;
 
 /**
@@ -41,7 +41,7 @@ class ModulePassword extends Module
 		if ($request && System::getContainer()->get('contao.routing.scope_matcher')->isBackendRequest($request))
 		{
 			$objTemplate = new BackendTemplate('be_wildcard');
-			$objTemplate->wildcard = '### ' . Utf8::strtoupper($GLOBALS['TL_LANG']['FMD']['lostPassword'][0]) . ' ###';
+			$objTemplate->wildcard = '### ' . $GLOBALS['TL_LANG']['FMD']['lostPassword'][0] . ' ###';
 			$objTemplate->title = $this->headline;
 			$objTemplate->id = $this->id;
 			$objTemplate->link = $this->name;
@@ -58,16 +58,11 @@ class ModulePassword extends Module
 	 */
 	protected function compile()
 	{
-		/** @var PageModel $objPage */
-		global $objPage;
-
-		$GLOBALS['TL_LANGUAGE'] = $objPage->language;
-
 		System::loadLanguageFile('tl_member');
 		$this->loadDataContainer('tl_member');
 
 		// Call onload_callback (e.g. to check permissions)
-		if (\is_array($GLOBALS['TL_DCA']['tl_member']['config']['onload_callback']))
+		if (\is_array($GLOBALS['TL_DCA']['tl_member']['config']['onload_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA']['tl_member']['config']['onload_callback'] as $callback)
 			{
@@ -122,8 +117,7 @@ class ModulePassword extends Module
 		// Initialize the widgets
 		foreach ($arrFields as $arrField)
 		{
-			/** @var Widget $strClass */
-			$strClass = $GLOBALS['TL_FFL'][$arrField['inputType']];
+			$strClass = $GLOBALS['TL_FFL'][$arrField['inputType']] ?? null;
 
 			// Continue if the class is not defined
 			if (!class_exists($strClass))
@@ -131,7 +125,7 @@ class ModulePassword extends Module
 				continue;
 			}
 
-			$arrField['eval']['required'] = $arrField['eval']['mandatory'];
+			$arrField['eval']['required'] = $arrField['eval']['mandatory'] ?? null;
 
 			/** @var Widget $objWidget */
 			$objWidget = new $strClass($strClass::getAttributesFromDca($arrField, $arrField['name']));
@@ -171,7 +165,6 @@ class ModulePassword extends Module
 
 			if ($objMember === null)
 			{
-				sleep(2); // Wait 2 seconds while brute forcing :)
 				$this->Template->error = $GLOBALS['TL_LANG']['MSC']['accountNotFound'];
 			}
 			else
@@ -238,9 +231,7 @@ class ModulePassword extends Module
 
 		// Define the form field
 		$arrField = $GLOBALS['TL_DCA']['tl_member']['fields']['password'];
-
-		/** @var Widget $strClass */
-		$strClass = $GLOBALS['TL_FFL']['password'];
+		$strClass = $GLOBALS['TL_FFL']['password'] ?? null;
 
 		// Fallback to default if the class is not defined
 		if (!class_exists($strClass))
@@ -277,7 +268,7 @@ class ModulePassword extends Module
 				$optInToken->confirm();
 
 				// Create a new version
-				if ($GLOBALS['TL_DCA']['tl_member']['config']['enableVersioning'])
+				if ($GLOBALS['TL_DCA']['tl_member']['config']['enableVersioning'] ?? null)
 				{
 					$objVersions->create();
 				}
@@ -336,7 +327,10 @@ class ModulePassword extends Module
 		$arrData['link'] = Idna::decode(Environment::get('base')) . Environment::get('request') . ((strpos(Environment::get('request'), '?') !== false) ? '&' : '?') . 'token=' . $optInToken->getIdentifier();
 
 		// Send the token
-		$optInToken->send(sprintf($GLOBALS['TL_LANG']['MSC']['passwordSubject'], Idna::decode(Environment::get('host'))), StringUtil::parseSimpleTokens($this->reg_password, $arrData));
+		$optInToken->send(
+			sprintf($GLOBALS['TL_LANG']['MSC']['passwordSubject'], Idna::decode(Environment::get('host'))),
+			System::getContainer()->get(SimpleTokenParser::class)->parse($this->reg_password, $arrData)
+		);
 
 		$this->log('A new password has been requested for user ID ' . $objMember->id . ' (' . Idna::decodeEmail($objMember->email) . ')', __METHOD__, TL_ACCESS);
 

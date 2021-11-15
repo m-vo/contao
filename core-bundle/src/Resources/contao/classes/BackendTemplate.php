@@ -19,11 +19,15 @@ use Symfony\Component\HttpFoundation\Response;
  * @property array  $javascripts
  * @property array  $stylesheets
  * @property string $mootools
+ * @property string $attributes
+ * @property string $badgeTitle
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
 class BackendTemplate extends Template
 {
+	use BackendTemplateTrait;
+
 	/**
 	 * Add a hook to modify the template output
 	 *
@@ -73,6 +77,8 @@ class BackendTemplate extends Template
 		{
 			$this->ua .= ' fullscreen';
 		}
+
+		$this->addBackendConfig();
 
 		// Style sheets
 		if (!empty($GLOBALS['TL_CSS']) && \is_array($GLOBALS['TL_CSS']))
@@ -139,14 +145,7 @@ class BackendTemplate extends Template
 		// MooTools scripts (added at the page bottom)
 		if (!empty($GLOBALS['TL_MOOTOOLS']) && \is_array($GLOBALS['TL_MOOTOOLS']))
 		{
-			$strMootools = '';
-
-			foreach (array_unique($GLOBALS['TL_MOOTOOLS']) as $script)
-			{
-				$strMootools .= $script;
-			}
-
-			$this->mootools .= $strMootools;
+			$this->mootools .= implode('', array_unique($GLOBALS['TL_MOOTOOLS']));
 		}
 
 		$strBuffer = $this->parse();
@@ -168,59 +167,60 @@ class BackendTemplate extends Template
 	}
 
 	/**
-	 * Return the locale string
-	 *
-	 * @return string
+	 * Add the contao.backend configuration
 	 */
-	protected function getLocaleString()
+	private function addBackendConfig(): void
 	{
 		$container = System::getContainer();
 
-		return
-			'var Contao={'
-				. 'theme:"' . Backend::getTheme() . '",'
-				. 'lang:{'
-					. 'close:"' . $GLOBALS['TL_LANG']['MSC']['close'] . '",'
-					. 'collapse:"' . $GLOBALS['TL_LANG']['MSC']['collapseNode'] . '",'
-					. 'expand:"' . $GLOBALS['TL_LANG']['MSC']['expandNode'] . '",'
-					. 'loading:"' . $GLOBALS['TL_LANG']['MSC']['loadingData'] . '",'
-					. 'apply:"' . $GLOBALS['TL_LANG']['MSC']['apply'] . '"'
-				. '},'
-				. 'script_url:"' . $container->get('contao.assets.assets_context')->getStaticUrl() . '",'
-				. 'path:"' . Environment::get('path') . '",'
-				. 'routes:{'
-					. 'backend_picker:"' . $container->get('router')->generate('contao_backend_picker') . '"'
-				. '},'
-				. 'request_token:"' . REQUEST_TOKEN . '",'
-				. 'referer_id:"' . $container->get('request_stack')->getCurrentRequest()->attributes->get('_contao_referer_id') . '"'
-			. '};';
-	}
+		if ($container->hasParameter('contao.backend.attributes'))
+		{
+			$attributes = $container->getParameter('contao.backend.attributes');
 
-	/**
-	 * Return the datepicker string
-	 *
-	 * Fix the MooTools more parsers which incorrectly parse ISO-8601 and do
-	 * not handle German date formats at all.
-	 *
-	 * @return string
-	 */
-	protected function getDateString()
-	{
-		return
-			'Locale.define("en-US","Date",{'
-				. 'months:["' . implode('","', $GLOBALS['TL_LANG']['MONTHS']) . '"],'
-				. 'days:["' . implode('","', $GLOBALS['TL_LANG']['DAYS']) . '"],'
-				. 'months_abbr:["' . implode('","', $GLOBALS['TL_LANG']['MONTHS_SHORT']) . '"],'
-				. 'days_abbr:["' . implode('","', $GLOBALS['TL_LANG']['DAYS_SHORT']) . '"]'
-			. '});'
-			. 'Locale.define("en-US","DatePicker",{'
-				. 'select_a_time:"' . $GLOBALS['TL_LANG']['DP']['select_a_time'] . '",'
-				. 'use_mouse_wheel:"' . $GLOBALS['TL_LANG']['DP']['use_mouse_wheel'] . '",'
-				. 'time_confirm_button:"' . $GLOBALS['TL_LANG']['DP']['time_confirm_button'] . '",'
-				. 'apply_range:"' . $GLOBALS['TL_LANG']['DP']['apply_range'] . '",'
-				. 'cancel:"' . $GLOBALS['TL_LANG']['DP']['cancel'] . '",'
-				. 'week:"' . $GLOBALS['TL_LANG']['DP']['week'] . '"'
-			. '});';
+			if (!empty($attributes) && \is_array($attributes))
+			{
+				$this->attributes = ' ' . implode(' ', array_map(
+					static function ($v, $k) { return sprintf('data-%s="%s"', $k, $v); },
+					$attributes,
+					array_keys($attributes)
+				));
+			}
+		}
+
+		if ($container->hasParameter('contao.backend.custom_css'))
+		{
+			$css = $container->getParameter('contao.backend.custom_css');
+
+			if (!empty($css) && \is_array($css))
+			{
+				if (!\is_array($GLOBALS['TL_CSS']))
+				{
+					$GLOBALS['TL_CSS'] = array();
+				}
+
+				$GLOBALS['TL_CSS'] = array_merge($GLOBALS['TL_CSS'], $css);
+			}
+		}
+
+		if ($container->hasParameter('contao.backend.custom_js'))
+		{
+			$js = $container->getParameter('contao.backend.custom_js');
+
+			if (!empty($js) && \is_array($js))
+			{
+				if (!\is_array($GLOBALS['TL_JAVASCRIPT']))
+				{
+					$GLOBALS['TL_JAVASCRIPT'] = array();
+				}
+
+				$GLOBALS['TL_JAVASCRIPT'] = array_merge($GLOBALS['TL_JAVASCRIPT'], $js);
+			}
+		}
+
+		if ($container->hasParameter('contao.backend.badge_title'))
+		{
+			$this->badgeTitle = $container->getParameter('contao.backend.badge_title');
+		}
 	}
 }
 

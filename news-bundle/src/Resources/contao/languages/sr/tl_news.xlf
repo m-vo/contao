@@ -49,6 +49,14 @@
         <source>Here you can add a custom meta title to overwrite the default page title.</source>
         <target>Овде можете додати произвољан мета назив који ће прегазити подразумевани назив странице.</target>
       </trans-unit>
+      <trans-unit id="tl_news.robots.0">
+        <source>Robots tag</source>
+        <target>Роботски тагови</target>
+      </trans-unit>
+      <trans-unit id="tl_news.robots.1">
+        <source>Here you can overwrite how search engines handle the news item.</source>
+        <target>Овде можете прегазити правила која користе претраживачи приликом обраде вести.</target>
+      </trans-unit>
       <trans-unit id="tl_news.description.0">
         <source>Meta description</source>
         <target>Мета опис</target>
@@ -246,7 +254,7 @@
         <target>Локација преусмерења</target>
       </trans-unit>
       <trans-unit id="tl_news.meta_legend">
-        <source>Meta data</source>
+        <source>Metadata</source>
         <target>Мета подаци</target>
       </trans-unit>
       <trans-unit id="tl_news.expert_legend">

@@ -14,32 +14,24 @@ namespace Contao\CoreBundle\Routing;
 
 use Contao\Config;
 use Contao\CoreBundle\Framework\ContaoFramework;
+use Contao\CoreBundle\Util\LocaleUtil;
 use Symfony\Component\Routing\Exception\MissingMandatoryParametersException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Routing\RequestContext;
 
 class UrlGenerator implements UrlGeneratorInterface
 {
-    /**
-     * @var UrlGeneratorInterface
-     */
-    private $router;
-
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
-
-    /**
-     * @var bool
-     */
-    private $prependLocale;
+    private UrlGeneratorInterface $router;
+    private ContaoFramework $framework;
+    private bool $prependLocale;
 
     /**
      * @internal Do not inherit from this class; decorate the "contao.routing.url_generator" service instead
      */
     public function __construct(UrlGeneratorInterface $router, ContaoFramework $framework, bool $prependLocale)
     {
+        trigger_deprecation('contao/core-bundle', '4.10', 'Using the "Contao\CoreBundle\Routing\UrlGenerator" class has been deprecated and will no longer work in Contao 5.0. Use the Symfony router instead.', E_USER_DEPRECATED);
+
         $this->router = $router;
         $this->framework = $framework;
         $this->prependLocale = $prependLocale;
@@ -97,7 +89,13 @@ class UrlGenerator implements UrlGeneratorInterface
      */
     private function prepareLocale(array &$parameters): void
     {
-        if (!$this->prependLocale && \array_key_exists('_locale', $parameters)) {
+        if (!\array_key_exists('_locale', $parameters)) {
+            return;
+        }
+
+        if ($this->prependLocale) {
+            $parameters['_locale'] = LocaleUtil::formatAsLanguageTag($parameters['_locale']);
+        } else {
             unset($parameters['_locale']);
         }
     }
@@ -164,6 +162,10 @@ class UrlGenerator implements UrlGeneratorInterface
      */
     private function addHostToContext(RequestContext $context, array $parameters, int &$referenceType): void
     {
+        /**
+         * @var string   $host
+         * @var int|null $port
+         */
         [$host, $port] = $this->getHostAndPort($parameters['_domain']);
 
         if ($context->getHost() === $host) {
@@ -187,12 +189,14 @@ class UrlGenerator implements UrlGeneratorInterface
     /**
      * Extracts host and port from the domain.
      *
-     * @return array<(string|null)>
+     * @return array<string|int|null>
      */
     private function getHostAndPort(string $domain): array
     {
         if (false !== strpos($domain, ':')) {
-            return explode(':', $domain, 2);
+            [$host, $port] = explode(':', $domain, 2);
+
+            return [$host, (int) $port];
         }
 
         return [$domain, null];

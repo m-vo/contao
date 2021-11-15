@@ -79,6 +79,7 @@
       </trans-unit>
       <trans-unit id="tl_faq_category.requireLogin.1">
         <source>Allow only authenticated members to create comments.</source>
+        <target>Komentiranje dovoli samo prijavljenim uporabnikom.</target>
       </trans-unit>
       <trans-unit id="tl_faq_category.disableCaptcha.0">
         <source>Disable spam protection</source>
@@ -115,10 +116,6 @@
       <trans-unit id="tl_faq_category.notify_both">
         <source>Author and system administrator</source>
         <target>Avtor in administrator sistema</target>
-      </trans-unit>
-      <trans-unit id="tl_faq_category.deleteConfirm">
-        <source>Deleting category ID %s will also delete all its FAQs! Continue?</source>
-        <target>Če izbrišete kategorijo boste izbrisali tudi vsa vprašanja v njej! Ali res želite pobrisati kategorijo ID %s?</target>
       </trans-unit>
       <trans-unit id="tl_faq_category.new.0">
         <source>New</source>

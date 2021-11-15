@@ -30,6 +30,7 @@ use Contao\Model\Registry;
 use Contao\PageModel;
 use Contao\RequestToken;
 use PHPUnit\Framework\MockObject\MockObject;
+use Symfony\Bridge\PhpUnit\ExpectDeprecationTrait;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -38,6 +39,8 @@ use Symfony\Contracts\Service\ResetInterface;
 
 class ContaoFrameworkTest extends TestCase
 {
+    use ExpectDeprecationTrait;
+
     /**
      * @runInSeparateProcess
      * @preserveGlobalState disabled
@@ -180,9 +183,9 @@ class ContaoFrameworkTest extends TestCase
      */
     public function testInitializesTheFrameworkWithAnInsecurePath(): void
     {
-        $request = Request::create('/contao4/web/index.php/index.html');
-        $request->server->set('SCRIPT_FILENAME', '/var/www/contao4/web/index.php');
-        $request->server->set('SCRIPT_NAME', '/contao4/web/index.php');
+        $request = Request::create('/contao4/public/index.php/index.html');
+        $request->server->set('SCRIPT_FILENAME', '/var/www/contao4/public/index.php');
+        $request->server->set('SCRIPT_NAME', '/contao4/public/index.php');
 
         $framework = $this->mockFramework($request);
         $framework->setContainer($this->getContainerWithContaoConfiguration());
@@ -210,7 +213,7 @@ class ContaoFrameworkTest extends TestCase
         $this->assertSame('index.php/index.html', TL_SCRIPT);
         $this->assertFalse(BE_USER_LOGGED_IN);
         $this->assertFalse(FE_USER_LOGGED_IN);
-        $this->assertSame('/contao4/web', TL_PATH);
+        $this->assertSame('/contao4/public', TL_PATH);
     }
 
     /**
@@ -384,7 +387,8 @@ class ContaoFrameworkTest extends TestCase
             $this->createMock(TokenChecker::class),
             new Filesystem(),
             $this->getTempDir(),
-            error_reporting()
+            error_reporting(),
+            false
         );
 
         $framework->setContainer($this->getContainerWithContaoConfiguration());
@@ -421,7 +425,8 @@ class ContaoFrameworkTest extends TestCase
             $this->createMock(TokenChecker::class),
             new Filesystem(),
             $this->getTempDir(),
-            error_reporting()
+            error_reporting(),
+            false
         );
 
         $framework->setContainer($this->getContainerWithContaoConfiguration());
@@ -465,11 +470,11 @@ class ContaoFrameworkTest extends TestCase
      *
      * @runInSeparateProcess
      * @preserveGlobalState disabled
-     *
-     * @expectedDeprecation Using $_SESSION has been deprecated %s.
      */
     public function testRegistersTheLazySessionAccessObject(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.5: Using "$_SESSION" has been deprecated %s.');
+
         $beBag = new ArrayAttributeBag();
         $beBag->setName('contao_backend');
 
@@ -489,6 +494,7 @@ class ContaoFrameworkTest extends TestCase
         $framework->setContainer($this->getContainerWithContaoConfiguration());
         $framework->initialize();
 
+        /** @phpstan-ignore-next-line */
         $this->assertInstanceOf(LazySessionAccess::class, $_SESSION);
         $this->assertInstanceOf(ArrayAttributeBag::class, $_SESSION['BE_DATA']);
         $this->assertInstanceOf(ArrayAttributeBag::class, $_SESSION['FE_DATA']);
@@ -707,7 +713,8 @@ class ContaoFrameworkTest extends TestCase
             $tokenChecker ?? $this->createMock(TokenChecker::class),
             new Filesystem(),
             $this->getTempDir(),
-            error_reporting()
+            error_reporting(),
+            false
         );
 
         $adapters = [

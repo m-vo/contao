@@ -21,20 +21,9 @@ class PaletteManipulator
     public const POSITION_PREPEND = 'prepend';
     public const POSITION_APPEND = 'append';
 
-    /**
-     * @var array
-     */
-    private $legends = [];
-
-    /**
-     * @var array
-     */
-    private $fields = [];
-
-    /**
-     * @var array
-     */
-    private $removes = [];
+    private array $legends = [];
+    private array $fields = [];
+    private array $removes = [];
 
     public static function create(): self
     {
@@ -177,7 +166,7 @@ class PaletteManipulator
     /**
      * Converts a palette string to a configuration array.
      *
-     * @return array<string, array<string, (array<string>|bool)>>
+     * @return array<int|string, array>
      */
     private function explode(string $palette): array
     {

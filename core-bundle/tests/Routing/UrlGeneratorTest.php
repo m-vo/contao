@@ -15,6 +15,7 @@ namespace Contao\CoreBundle\Tests\Routing;
 use Contao\CoreBundle\Routing\UrlGenerator;
 use Contao\CoreBundle\Tests\TestCase;
 use PHPUnit\Framework\MockObject\MockObject;
+use Symfony\Bridge\PhpUnit\ExpectDeprecationTrait;
 use Symfony\Component\Routing\Exception\MissingMandatoryParametersException;
 use Symfony\Component\Routing\Generator\UrlGenerator as ParentUrlGenerator;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -22,10 +23,17 @@ use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 
+/**
+ * @group legacy
+ */
 class UrlGeneratorTest extends TestCase
 {
+    use ExpectDeprecationTrait;
+
     public function testCanWriteTheContext(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.10: Using the "Contao\CoreBundle\Routing\UrlGenerator" class has been deprecated %s.');
+
         $router = new ParentUrlGenerator(new RouteCollection(), new RequestContext());
         $generator = new UrlGenerator($router, $this->mockContaoFramework(), false);
 
@@ -191,6 +199,8 @@ class UrlGeneratorTest extends TestCase
 
     public function testReadsTheContextFromTheDomain(): void
     {
+        $this->expectDeprecation('%sUsing the "%sUrlGenerator" class has been deprecated%s');
+
         $routes = new RouteCollection();
         $routes->add('contao_index', new Route('/'));
 
@@ -219,11 +229,13 @@ class UrlGeneratorTest extends TestCase
 
     /**
      * To tests this case, we omit the _ssl parameter and set the scheme to
-     * "https" in the context. If the generator still returns a HTTPS URL, we
+     * "https" in the context. If the generator still returns an HTTPS URL, we
      * know that the context has not been modified.
      */
     public function testDoesNotModifyTheContextIfThereIsAHostname(): void
     {
+        $this->expectDeprecation('%sUsing the "%sUrlGenerator" class has been deprecated%s');
+
         $routes = new RouteCollection();
         $routes->add('contao_index', new Route('/'));
 
@@ -240,12 +252,13 @@ class UrlGeneratorTest extends TestCase
         );
     }
 
+    /**
+     * @psalm-suppress InvalidArgument
+     */
     public function testHandlesNonArrayParameters(): void
     {
-        $this
-            ->getUrlGenerator($this->mockRouterWithContext(['alias' => 'foo']))
-            ->generate('foo', 'bar')
-        ;
+        $generator = $this->getUrlGenerator($this->mockRouterWithContext(['alias' => 'foo']));
+        $generator->generate('foo', 'bar');
     }
 
     private function getUrlGenerator(UrlGeneratorInterface $router, bool $prependLocale = false, bool $useAutoItem = true): UrlGenerator
@@ -253,6 +266,8 @@ class UrlGeneratorTest extends TestCase
         $framework = $this->mockContaoFramework();
 
         $GLOBALS['TL_CONFIG']['useAutoItem'] = $useAutoItem;
+
+        $this->expectDeprecation('%sUsing the "%sUrlGenerator" class has been deprecated%s');
 
         return new UrlGenerator($router, $framework, $prependLocale);
     }

@@ -22,12 +22,12 @@ use Scheb\TwoFactorBundle\SchebTwoFactorBundle;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\MonologBundle\MonologBundle;
 use Symfony\Bundle\SecurityBundle\SecurityBundle;
-use Symfony\Bundle\SwiftmailerBundle\SwiftmailerBundle;
 use Symfony\Bundle\TwigBundle\TwigBundle;
 use Symfony\Cmf\Bundle\RoutingBundle\CmfRoutingBundle;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Kernel;
+use Terminal42\ServiceAnnotationBundle\Terminal42ServiceAnnotationBundle;
 
 class AppKernel extends Kernel
 {
@@ -38,12 +38,12 @@ class AppKernel extends Kernel
             new SecurityBundle(),
             new TwigBundle(),
             new MonologBundle(), // prevents a lot of [debug] lines in the console output (see #1927)
-            new SwiftmailerBundle(),
             new DoctrineBundle(),
             new SchebTwoFactorBundle(),
             new KnpTimeBundle(),
             new KnpMenuBundle(),
             new CmfRoutingBundle(),
+            new Terminal42ServiceAnnotationBundle(),
             new ContaoCoreBundle(),
             new ContaoNewsBundle(),
         ];

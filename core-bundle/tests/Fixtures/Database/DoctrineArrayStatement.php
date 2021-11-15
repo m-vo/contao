@@ -15,9 +15,12 @@ namespace Contao\CoreBundle\Tests\Fixtures\Database;
 use Doctrine\DBAL\Cache\ArrayStatement;
 use Doctrine\DBAL\ParameterType;
 
+/**
+ * @deprecated
+ */
 class DoctrineArrayStatement extends ArrayStatement
 {
-    private $rowCount;
+    private int $rowCount;
 
     public function __construct(array $data)
     {

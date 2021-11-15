@@ -10,6 +10,8 @@
 
 namespace Contao;
 
+use Contao\CoreBundle\Image\Studio\Studio;
+use Contao\CoreBundle\Security\ContaoCorePermissions;
 use Contao\Model\Collection;
 
 /**
@@ -36,29 +38,18 @@ abstract class ModuleNews extends Module
 			return $arrArchives;
 		}
 
-		$this->import(FrontendUser::class, 'User');
 		$objArchive = NewsArchiveModel::findMultipleByIds($arrArchives);
 		$arrArchives = array();
 
 		if ($objArchive !== null)
 		{
-			$blnFeUserLoggedIn = System::getContainer()->get('contao.security.token_checker')->hasFrontendUser();
+			$security = System::getContainer()->get('security.helper');
 
 			while ($objArchive->next())
 			{
-				if ($objArchive->protected)
+				if ($objArchive->protected && !$security->isGranted(ContaoCorePermissions::MEMBER_IN_GROUPS, StringUtil::deserialize($objArchive->groups, true)))
 				{
-					if (!$blnFeUserLoggedIn || !\is_array($this->User->groups))
-					{
-						continue;
-					}
-
-					$groups = StringUtil::deserialize($objArchive->groups);
-
-					if (empty($groups) || !\is_array($groups) || !\count(array_intersect($groups, $this->User->groups)))
-					{
-						continue;
-					}
+					continue;
 				}
 
 				$arrArchives[] = $objArchive->id;
@@ -105,6 +96,7 @@ abstract class ModuleNews extends Module
 		$objTemplate->text = '';
 		$objTemplate->hasText = false;
 		$objTemplate->hasTeaser = false;
+		$objTemplate->hasReader = true;
 
 		// Clean the RTE output
 		if ($objArticle->teaser)
@@ -119,6 +111,7 @@ abstract class ModuleNews extends Module
 		{
 			$objTemplate->text = true;
 			$objTemplate->hasText = true;
+			$objTemplate->hasReader = false;
 		}
 
 		// Compile the news text
@@ -151,58 +144,60 @@ abstract class ModuleNews extends Module
 		$arrMeta = $this->getMetaFields($objArticle);
 
 		// Add the meta information
-		$objTemplate->date = $arrMeta['date'];
+		$objTemplate->date = $arrMeta['date'] ?? null;
 		$objTemplate->hasMetaFields = !empty($arrMeta);
-		$objTemplate->numberOfComments = $arrMeta['ccount'];
-		$objTemplate->commentCount = $arrMeta['comments'];
+		$objTemplate->numberOfComments = $arrMeta['ccount'] ?? null;
+		$objTemplate->commentCount = $arrMeta['comments'] ?? null;
 		$objTemplate->timestamp = $objArticle->date;
-		$objTemplate->author = $arrMeta['author'];
+		$objTemplate->author = $arrMeta['author'] ?? null;
 		$objTemplate->datetime = date('Y-m-d\TH:i:sP', $objArticle->date);
-
 		$objTemplate->addImage = false;
+		$objTemplate->addBefore = false;
 
 		// Add an image
-		if ($objArticle->addImage && $objArticle->singleSRC)
+		if ($objArticle->addImage)
 		{
-			$objModel = FilesModel::findByUuid($objArticle->singleSRC);
+			$imgSize = $objArticle->size ?: null;
 
-			if ($objModel !== null && is_file(System::getContainer()->getParameter('kernel.project_dir') . '/' . $objModel->path))
+			// Override the default image size
+			if ($this->imgSize)
 			{
-				// Do not override the field now that we have a model registry (see #6303)
-				$arrArticle = $objArticle->row();
+				$size = StringUtil::deserialize($this->imgSize);
 
-				// Override the default image size
-				if ($this->imgSize)
+				if ($size[0] > 0 || $size[1] > 0 || is_numeric($size[2]) || ($size[2][0] ?? null) === '_')
 				{
-					$size = StringUtil::deserialize($this->imgSize);
+					$imgSize = $this->imgSize;
+				}
+			}
 
-					if ($size[0] > 0 || $size[1] > 0 || is_numeric($size[2]) || ($size[2][0] ?? null) === '_')
-					{
-						$arrArticle['size'] = $this->imgSize;
-					}
+			$figureBuilder = System::getContainer()
+				->get(Studio::class)
+				->createFigureBuilder()
+				->from($objArticle->singleSRC)
+				->setSize($imgSize)
+				->setMetadata($objArticle->getOverwriteMetadata())
+				->enableLightbox((bool) $objArticle->fullsize);
+
+			// If the external link is opened in a new window, open the image link in a new window as well (see #210)
+			if ('external' === $objTemplate->source && $objTemplate->target)
+			{
+				$figureBuilder->setLinkAttribute('target', '_blank');
+			}
+
+			if (null !== ($figure = $figureBuilder->buildIfResourceExists()))
+			{
+				// Rebuild with link to news article if none is set
+				if (!$figure->getLinkHref())
+				{
+					$linkTitle = StringUtil::specialchars(sprintf($GLOBALS['TL_LANG']['MSC']['readMore'], $objArticle->headline), true);
+
+					$figure = $figureBuilder
+						->setLinkHref($objTemplate->link)
+						->setLinkAttribute('title', $linkTitle)
+						->build();
 				}
 
-				$arrArticle['singleSRC'] = $objModel->path;
-				$this->addImageToTemplate($objTemplate, $arrArticle, null, null, $objModel);
-
-				// Link to the news article if no image link has been defined (see #30)
-				if (!$objTemplate->fullsize && !$objTemplate->imageUrl)
-				{
-					// Unset the image title attribute
-					$picture = $objTemplate->picture;
-					unset($picture['title']);
-					$objTemplate->picture = $picture;
-
-					// Link to the news article
-					$objTemplate->href = $objTemplate->link;
-					$objTemplate->linkTitle = StringUtil::specialchars(sprintf($GLOBALS['TL_LANG']['MSC']['readMore'], $objArticle->headline), true);
-
-					// If the external link is opened in a new window, open the image link in a new window, too (see #210)
-					if ($objTemplate->source == 'external' && $objTemplate->target && strpos($objTemplate->attributes, 'target="_blank"') === false)
-					{
-						$objTemplate->attributes .= ' target="_blank"';
-					}
-				}
+				$figure->applyLegacyTemplateData($objTemplate, $objArticle->imagemargin, $objArticle->floating);
 			}
 		}
 
@@ -230,6 +225,19 @@ abstract class ModuleNews extends Module
 			$responseTagger = System::getContainer()->get('fos_http_cache.http.symfony_response_tagger');
 			$responseTagger->addTags(array('contao.db.tl_news.' . $objArticle->id));
 		}
+
+		// schema.org information
+		$objTemplate->getSchemaOrgData = static function () use ($objTemplate, $objArticle): array
+		{
+			$jsonLd = News::getSchemaOrgData($objArticle);
+
+			if ($objTemplate->addImage && $objTemplate->figure)
+			{
+				$jsonLd['image'] = $objTemplate->figure->getSchemaOrgData();
+			}
+
+			return $jsonLd;
+		};
 
 		return $objTemplate->parse();
 	}
@@ -307,7 +315,8 @@ abstract class ModuleNews extends Module
 					/** @var UserModel $objAuthor */
 					if (($objAuthor = $objArticle->getRelated('author')) instanceof UserModel)
 					{
-						$return['author'] = $GLOBALS['TL_LANG']['MSC']['by'] . ' <span itemprop="author">' . $objAuthor->name . '</span>';
+						$return['author'] = $GLOBALS['TL_LANG']['MSC']['by'] . ' ' . $objAuthor->name;
+						$return['authorModel'] = $objAuthor;
 					}
 					break;
 
@@ -347,7 +356,7 @@ abstract class ModuleNews extends Module
 	 */
 	protected function generateNewsUrl($objItem, $blnAddArchive=false)
 	{
-		@trigger_error('Using ModuleNews::generateNewsUrl() has been deprecated and will no longer work in Contao 5.0. Use News::generateNewsUrl() instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/news-bundle', '4.1', 'Using "Contao\ModuleNews::generateNewsUrl()" has been deprecated and will no longer work in Contao 5.0. Use "Contao\News::generateNewsUrl()" instead.');
 
 		return News::generateNewsUrl($objItem, $blnAddArchive);
 	}
@@ -369,10 +378,11 @@ abstract class ModuleNews extends Module
 		$strArticleUrl = News::generateNewsUrl($objArticle, $blnAddArchive);
 
 		return sprintf(
-			'<a href="%s" title="%s" itemprop="url">%s%s</a>',
+			'<a href="%s" title="%s"%s>%s%s</a>',
 			$strArticleUrl,
 			StringUtil::specialchars(sprintf($strReadMore, $blnIsInternal ? $objArticle->headline : $strArticleUrl), true),
-			($blnIsReadMore ? $strLink : '<span itemprop="headline">' . $strLink . '</span>'),
+			($objArticle->target && !$blnIsInternal ? ' target="_blank" rel="noreferrer noopener"' : ''),
+			$strLink,
 			($blnIsReadMore && $blnIsInternal ? '<span class="invisible"> ' . $objArticle->headline . '</span>' : '')
 		);
 	}

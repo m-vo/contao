@@ -54,7 +54,7 @@ class Config
 	protected $blnIsModified = false;
 
 	/**
-	 * Local file existance
+	 * Local file existence
 	 * @var boolean
 	 */
 	protected static $blnHasLcf;
@@ -76,6 +76,34 @@ class Config
 	 * @var string
 	 */
 	protected $strRootDir;
+
+	private static $arrDeprecatedMap = array
+	(
+		'dbHost'           => 'database_host',
+		'dbPort'           => 'database_port',
+		'dbUser'           => 'database_user',
+		'dbPass'           => 'database_password',
+		'dbDatabase'       => 'database_name',
+		'smtpHost'         => 'mailer_host',
+		'smtpUser'         => 'mailer_user',
+		'smtpPass'         => 'mailer_password',
+		'smtpPort'         => 'mailer_port',
+		'smtpEnc'          => 'mailer_encryption',
+		'addLanguageToUrl' => 'contao.prepend_locale',
+		'urlSuffix'        => 'contao.url_suffix',
+		'uploadPath'       => 'contao.upload_path',
+		'editableFiles'    => 'contao.editable_files',
+		'debugMode'        => 'kernel.debug',
+		'characterSet'     => 'kernel.charset',
+		'enableSearch'     => 'contao.search.default_indexer.enable',
+		'indexProtected'   => 'contao.search.index_protected',
+	);
+
+	private static $arrDeprecated = array
+	(
+		'validImageTypes' => 'contao.image.valid_extensions',
+		'jpgQuality'      => 'contao.image.imagine_options[jpeg_quality]',
+	);
 
 	/**
 	 * Prevent direct instantiation (Singleton)
@@ -331,7 +359,7 @@ class Config
 	 */
 	public function getActiveModules()
 	{
-		@trigger_error('Using Config::getActiveModules() has been deprecated and will no longer work in Contao 5.0. Use the container parameter "kernel.bundles" instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.0', 'Using "Contao\Config::getActiveModules()" has been deprecated and will no longer work in Contao 5.0. Use "kernel.bundles" instead.');
 
 		return ModuleLoader::getActive();
 	}
@@ -387,10 +415,15 @@ class Config
 	 *
 	 * @param string $strKey The short key
 	 *
-	 * @return mixed|null The configuration value
+	 * @return mixed The configuration value
 	 */
 	public static function get($strKey)
 	{
+		if (isset(self::$arrDeprecated[$strKey]) || isset(self::$arrDeprecatedMap[$strKey]))
+		{
+			trigger_deprecation('contao/core-bundle', '4.12', 'Using "%s(\'%s\')" has been deprecated. Use the "%s" parameter instead.', __METHOD__, $strKey, self::$arrDeprecated[$strKey] ?? self::$arrDeprecatedMap[$strKey]);
+		}
+
 		return $GLOBALS['TL_CONFIG'][$strKey] ?? null;
 	}
 
@@ -398,10 +431,15 @@ class Config
 	 * Temporarily set a configuration value
 	 *
 	 * @param string $strKey   The short key
-	 * @param string $varValue The configuration value
+	 * @param mixed  $varValue The configuration value
 	 */
 	public static function set($strKey, $varValue)
 	{
+		if (isset(self::$arrDeprecated[$strKey]) || isset(self::$arrDeprecatedMap[$strKey]))
+		{
+			trigger_deprecation('contao/core-bundle', '4.12', 'Using "%s(\'%s\', …)" has been deprecated. Use the "%s" parameter instead.', __METHOD__, $strKey, self::$arrDeprecated[$strKey] ?? self::$arrDeprecatedMap[$strKey]);
+		}
+
 		$GLOBALS['TL_CONFIG'][$strKey] = $varValue;
 	}
 
@@ -483,34 +521,21 @@ class Config
 			}
 		}
 
-		$arrMap = array
-		(
-			'dbHost'           => 'database_host',
-			'dbPort'           => 'database_port',
-			'dbUser'           => 'database_user',
-			'dbPass'           => 'database_password',
-			'dbDatabase'       => 'database_name',
-			'smtpHost'         => 'mailer_host',
-			'smtpUser'         => 'mailer_user',
-			'smtpPass'         => 'mailer_password',
-			'smtpPort'         => 'mailer_port',
-			'smtpEnc'          => 'mailer_encryption',
-			'addLanguageToUrl' => 'contao.prepend_locale',
-			'encryptionKey'    => 'contao.encryption_key',
-			'urlSuffix'        => 'contao.url_suffix',
-			'uploadPath'       => 'contao.upload_path',
-			'editableFiles'    => 'contao.editable_files',
-			'debugMode'        => 'kernel.debug',
-			'enableSearch'     => 'contao.search.default_indexer.enable',
-			'indexProtected'   => 'contao.search.index_protected',
-		);
-
-		foreach ($arrMap as $strKey=>$strParam)
+		foreach (self::$arrDeprecatedMap as $strKey=>$strParam)
 		{
 			if ($container->hasParameter($strParam))
 			{
 				$GLOBALS['TL_CONFIG'][$strKey] = $container->getParameter($strParam);
 			}
+		}
+
+		$objRequest = $container->get('request_stack')->getCurrentRequest();
+
+		/** @var PageModel $objPage */
+		if (null !== $objRequest && ($objPage = $objRequest->attributes->get('pageModel')) instanceof PageModel)
+		{
+			$GLOBALS['TL_CONFIG']['addLanguageToUrl'] = $objPage->urlPrefix !== '';
+			$GLOBALS['TL_CONFIG']['urlSuffix'] = $objPage->urlSuffix;
 		}
 
 		if ($container->hasParameter('contao.image.valid_extensions'))

@@ -16,16 +16,21 @@ use Contao\CoreBundle\Crawl\Escargot\Subscriber\EscargotSubscriberInterface;
 use Contao\CoreBundle\EventListener\SearchIndexListener;
 use Contao\CoreBundle\Migration\MigrationInterface;
 use Contao\CoreBundle\Picker\PickerProviderInterface;
+use Contao\CoreBundle\Routing\Page\ContentCompositionInterface;
+use Contao\CoreBundle\Routing\Page\DynamicRouteInterface;
 use Contao\CoreBundle\Search\Indexer\IndexerInterface;
 use Imagine\Exception\RuntimeException;
 use Imagine\Gd\Imagine;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
+use Webmozart\PathUtil\Path;
 
 class ContaoCoreExtension extends Extension
 {
@@ -36,19 +41,18 @@ class ContaoCoreExtension extends Extension
 
     public function getConfiguration(array $config, ContainerBuilder $container): Configuration
     {
-        return new Configuration(
-            $container->getParameter('kernel.project_dir'),
-            $container->getParameter('kernel.default_locale')
-        );
+        return new Configuration($container->getParameter('kernel.project_dir'));
     }
 
     public function load(array $configs, ContainerBuilder $container): void
     {
-        $configuration = new Configuration(
-            $container->getParameter('kernel.project_dir'),
-            $container->getParameter('kernel.default_locale')
-        );
+        if ('UTF-8' !== $container->getParameter('kernel.charset')) {
+            trigger_deprecation('contao/core-bundle', '4.12', 'Using the charset "%s" is not supported, use "UTF-8" instead. In Contao 5.0 an exception will be thrown for unsupported charsets.', $container->getParameter('kernel.charset'));
+        }
 
+        $projectDir = $container->getParameter('kernel.project_dir');
+
+        $configuration = new Configuration($projectDir);
         $config = $this->processConfiguration($configuration, $configs);
 
         $loader = new YamlFileLoader(
@@ -57,14 +61,13 @@ class ContaoCoreExtension extends Extension
         );
 
         $loader->load('commands.yml');
+        $loader->load('controller.yml');
         $loader->load('listener.yml');
         $loader->load('services.yml');
         $loader->load('migrations.yml');
 
-        $container->setParameter('contao.web_dir', $config['web_dir']);
-        $container->setParameter('contao.prepend_locale', $config['prepend_locale']);
-        $container->setParameter('contao.encryption_key', $config['encryption_key']);
-        $container->setParameter('contao.url_suffix', $config['url_suffix']);
+        // TODO: Replace "?? $config['web_dir']" with "?? Path::join($projectDir, 'public')" in Contao 5 (see #3535)
+        $container->setParameter('contao.web_dir', $this->getComposerPublicDir($projectDir) ?? $config['web_dir']);
         $container->setParameter('contao.upload_path', $config['upload_path']);
         $container->setParameter('contao.editable_files', $config['editable_files']);
         $container->setParameter('contao.preview_script', $config['preview_script']);
@@ -79,10 +82,15 @@ class ContaoCoreExtension extends Extension
         $container->setParameter('contao.image.imagine_options', $config['image']['imagine_options']);
         $container->setParameter('contao.image.reject_large_uploads', $config['image']['reject_large_uploads']);
         $container->setParameter('contao.security.two_factor.enforce_backend', $config['security']['two_factor']['enforce_backend']);
-
-        if (isset($config['localconfig'])) {
-            $container->setParameter('contao.localconfig', $config['localconfig']);
-        }
+        $container->setParameter('contao.localconfig', $config['localconfig'] ?? []);
+        $container->setParameter('contao.backend.attributes', $config['backend']['attributes']);
+        $container->setParameter('contao.backend.custom_css', $config['backend']['custom_css']);
+        $container->setParameter('contao.backend.custom_js', $config['backend']['custom_js']);
+        $container->setParameter('contao.backend.badge_title', $config['backend']['badge_title']);
+        $container->setParameter('contao.backend.route_prefix', $config['backend']['route_prefix']);
+        $container->setParameter('contao.intl.locales', $config['intl']['locales']);
+        $container->setParameter('contao.intl.enabled_locales', $config['intl']['enabled_locales']);
+        $container->setParameter('contao.intl.countries', $config['intl']['countries']);
 
         $this->handleSearchConfig($config, $container);
         $this->handleCrawlConfig($config, $container);
@@ -90,6 +98,7 @@ class ContaoCoreExtension extends Extension
         $this->setImagineService($config, $container);
         $this->overwriteImageTargetDir($config, $container);
         $this->handleTokenCheckerConfig($config, $container);
+        $this->handleLegacyRouting($config, $configs, $container, $loader);
 
         $container
             ->registerForAutoconfiguration(PickerProviderInterface::class)
@@ -100,6 +109,16 @@ class ContaoCoreExtension extends Extension
             ->registerForAutoconfiguration(MigrationInterface::class)
             ->addTag('contao.migration')
         ;
+
+        $container
+            ->registerForAutoconfiguration(DynamicRouteInterface::class)
+            ->addTag('contao.page')
+        ;
+
+        $container
+            ->registerForAutoconfiguration(ContentCompositionInterface::class)
+            ->addTag('contao.page')
+        ;
     }
 
     private function handleSearchConfig(array $config, ContainerBuilder $container): void
@@ -109,7 +128,7 @@ class ContaoCoreExtension extends Extension
             ->addTag('contao.search_indexer')
         ;
 
-        // Set the two parameters so they can be used in our legacy Config class for maximum BC
+        // Set the two parameters, so they can be used in our legacy Config class for maximum BC
         $container->setParameter('contao.search.default_indexer.enable', $config['search']['default_indexer']['enable']);
         $container->setParameter('contao.search.index_protected', $config['search']['index_protected']);
 
@@ -168,14 +187,27 @@ class ContaoCoreExtension extends Extension
 
         $imageSizes = [];
 
+        // Do not add a size with the special name '_defaults' but merge its values into all other definitions instead.
         foreach ($config['image']['sizes'] as $name => $value) {
+            if ('_defaults' === $name) {
+                continue;
+            }
+
+            if (isset($config['image']['sizes']['_defaults'])) {
+                // Make sure that arrays defined under _defaults will take precedence over empty arrays (see #2783)
+                $value = array_merge(
+                    $config['image']['sizes']['_defaults'],
+                    array_filter($value, static fn ($v) => !\is_array($v) || !empty($v))
+                );
+            }
+
             $imageSizes['_'.$name] = $this->camelizeKeys($value);
         }
 
         $services = ['contao.image.image_sizes', 'contao.image.image_factory', 'contao.image.picture_factory'];
 
         foreach ($services as $service) {
-            if (method_exists($container->getDefinition($service)->getClass(), 'setPredefinedSizes')) {
+            if (method_exists((string) $container->getDefinition($service)->getClass(), 'setPredefinedSizes')) {
                 $container->getDefinition($service)->addMethodCall('setPredefinedSizes', [$imageSizes]);
             }
         }
@@ -252,10 +284,10 @@ class ContaoCoreExtension extends Extension
 
         $container->setParameter(
             'contao.image.target_dir',
-            $container->getParameter('kernel.project_dir').'/'.$config['image']['target_path']
+            Path::join($container->getParameter('kernel.project_dir'), $config['image']['target_path'])
         );
 
-        @trigger_error('Using the "contao.image.target_path" parameter has been deprecated and will no longer work in Contao 5.0. Use the "contao.image.target_dir" parameter instead.', E_USER_DEPRECATED);
+        trigger_deprecation('contao/core-bundle', '4.4', 'Using the "contao.image.target_path" parameter has been deprecated and will no longer work in Contao 5.0. Use the "contao.image.target_dir" parameter instead.');
     }
 
     private function handleTokenCheckerConfig(array $config, ContainerBuilder $container): void
@@ -270,5 +302,45 @@ class ContaoCoreExtension extends Extension
         if ($container->hasParameter('security.role_hierarchy.roles') && \count($container->getParameter('security.role_hierarchy.roles')) > 0) {
             $tokenChecker->replaceArgument(5, new Reference('security.access.role_hierarchy_voter'));
         }
+    }
+
+    private function handleLegacyRouting(array $mergedConfig, array $configs, ContainerBuilder $container, YamlFileLoader $loader): void
+    {
+        if (false === $mergedConfig['legacy_routing']) {
+            foreach ($configs as $config) {
+                if (isset($config['prepend_locale'])) {
+                    throw new InvalidConfigurationException('Setting contao.prepend_locale to "'.var_export($config['prepend_locale'], true).'" requires legacy routing.');
+                }
+
+                if (isset($config['url_suffix'])) {
+                    throw new InvalidConfigurationException('Setting contao.url_suffix to "'.$config['url_suffix'].'" requires legacy routing.');
+                }
+            }
+        }
+
+        $container->setParameter('contao.legacy_routing', $mergedConfig['legacy_routing']);
+        $container->setParameter('contao.prepend_locale', $mergedConfig['prepend_locale']);
+        $container->setParameter('contao.url_suffix', $mergedConfig['url_suffix']);
+
+        if ($mergedConfig['legacy_routing']) {
+            $loader->load('legacy_routing.yml');
+        }
+    }
+
+    private function getComposerPublicDir(string $projectDir): ?string
+    {
+        $fs = new Filesystem();
+
+        if (!$fs->exists($composerJsonFilePath = Path::join($projectDir, 'composer.json'))) {
+            return null;
+        }
+
+        $composerConfig = json_decode(file_get_contents($composerJsonFilePath), true, 512, JSON_THROW_ON_ERROR);
+
+        if (null === ($publicDir = $composerConfig['extra']['public-dir'] ?? null)) {
+            return null;
+        }
+
+        return Path::join($projectDir, $publicDir);
     }
 }

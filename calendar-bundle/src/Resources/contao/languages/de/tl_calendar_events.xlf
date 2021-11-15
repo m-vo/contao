@@ -73,6 +73,14 @@
         <source>Here you can add a custom meta title to overwrite the default page title.</source>
         <target>Hier können Sie einen individuellen Meta-Titel eingeben, um den Standard-Seitentitel zu überschreiben.</target>
       </trans-unit>
+      <trans-unit id="tl_calendar_events.robots.0">
+        <source>Robots tag</source>
+        <target>Robots-Tag</target>
+      </trans-unit>
+      <trans-unit id="tl_calendar_events.robots.1">
+        <source>Here you can overwrite how search engines handle the event.</source>
+        <target>Hier legen Sie fest, wie Suchmaschinen das Event behandeln.</target>
+      </trans-unit>
       <trans-unit id="tl_calendar_events.description.0">
         <source>Meta description</source>
         <target>Meta-Beschreibung</target>
@@ -237,6 +245,14 @@
         <source>Do not allow comments for this particular event.</source>
         <target>Die Kommentarfunktion für dieses Event deaktivieren.</target>
       </trans-unit>
+      <trans-unit id="tl_calendar_events.featured.0">
+        <source>Feature event</source>
+        <target>Event hervorheben</target>
+      </trans-unit>
+      <trans-unit id="tl_calendar_events.featured.1">
+        <source>Show the event in a featured event list.</source>
+        <target>Das Event in einer Liste hervorgehobener Events anzeigen.</target>
+      </trans-unit>
       <trans-unit id="tl_calendar_events.published.0">
         <source>Publish event</source>
         <target>Event veröffentlichen</target>
@@ -302,7 +318,7 @@
         <target>Weiterleitungsziel</target>
       </trans-unit>
       <trans-unit id="tl_calendar_events.meta_legend">
-        <source>Meta data</source>
+        <source>Metadata</source>
         <target>Metadaten</target>
       </trans-unit>
       <trans-unit id="tl_calendar_events.expert_legend">
@@ -360,6 +376,10 @@
       <trans-unit id="tl_calendar_events.toggle">
         <source>Publish/unpublish event ID %s</source>
         <target>Event ID %s veröffentlichen/unveröffentlichen</target>
+      </trans-unit>
+      <trans-unit id="tl_calendar_events.feature">
+        <source>Feature/unfeature event ID %s</source>
+        <target>Event ID %s hervorheben/zurücksetzen</target>
       </trans-unit>
       <trans-unit id="tl_calendar_events.editheader">
         <source>Edit the settings of event ID %s</source>

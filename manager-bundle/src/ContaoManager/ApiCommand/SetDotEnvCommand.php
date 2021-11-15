@@ -18,16 +18,14 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Webmozart\PathUtil\Path;
 
 /**
  * @internal
  */
 class SetDotEnvCommand extends Command
 {
-    /**
-     * @var string
-     */
-    private $projectDir;
+    private string $projectDir;
 
     public function __construct(Application $application)
     {
@@ -50,7 +48,7 @@ class SetDotEnvCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $dotenv = new DotenvDumper($this->projectDir.'/.env');
+        $dotenv = new DotenvDumper(Path::join($this->projectDir, '.env'));
         $dotenv->setParameter($input->getArgument('key'), $input->getArgument('value'));
         $dotenv->dump();
 

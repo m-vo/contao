@@ -163,7 +163,7 @@
       </trans-unit>
       <trans-unit id="tl_news_archive.editmeta">
         <source>Edit the news archive settings</source>
-        <target>Éditer les paramètres de l'archive</target>
+        <target>Éditer les paramètres de l'archive d'actualités</target>
       </trans-unit>
       <trans-unit id="tl_news_archive.copy">
         <source>Duplicate news archive ID %s</source>

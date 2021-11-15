@@ -20,6 +20,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Webmozart\PathUtil\Path;
 
 /**
  * @Route(defaults={"_scope" = "frontend"})
@@ -28,19 +29,14 @@ use Symfony\Component\Routing\Annotation\Route;
  */
 class FaviconController
 {
-    /**
-     * @var ContaoFramework
-     */
-    private $contaoFramework;
+    private ContaoFramework $contaoFramework;
+    private string $projectDir;
+    private ?ResponseTagger $responseTagger;
 
-    /**
-     * @var ResponseTagger|null
-     */
-    private $responseTagger;
-
-    public function __construct(ContaoFramework $contaoFramework, ResponseTagger $responseTagger = null)
+    public function __construct(ContaoFramework $contaoFramework, string $projectDir, ResponseTagger $responseTagger = null)
     {
         $this->contaoFramework = $contaoFramework;
+        $this->projectDir = $projectDir;
         $this->responseTagger = $responseTagger;
     }
 
@@ -72,8 +68,8 @@ class FaviconController
             return new Response('', Response::HTTP_NOT_FOUND);
         }
 
-        // Cache the response for 1 year and tag it so it is invalidated when the settings are edited
-        $response = new BinaryFileResponse($faviconModel->path);
+        // Cache the response for 1 year and tag it, so it is invalidated when the settings are edited
+        $response = new BinaryFileResponse(Path::join($this->projectDir, $faviconModel->path));
         $response->setSharedMaxAge(31556952);
 
         switch ($faviconModel->extension) {

@@ -14,6 +14,7 @@ use Contao\CoreBundle\Exception\RedirectResponseException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Core\User\EquatableInterface;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Http\Session\SessionAuthenticationStrategy;
 
@@ -34,73 +35,75 @@ use Symfony\Component\Security\Http\Session\SessionAuthenticationStrategy;
  *         echo $user->name;
  *     }
  *
- * @property integer     $id
- * @property integer     $tstamp
- * @property string      $username
- * @property string      $name
- * @property string      $email
- * @property string      $language
- * @property string      $backendTheme
- * @property string      $fullscreen
- * @property string      $uploader
- * @property string      $showHelp
- * @property string      $thumbnails
- * @property string      $useRTE
- * @property string      $useCE
- * @property string      $password
- * @property string      $pwChange
- * @property string      $admin
- * @property array       $groups
- * @property string      $inherit
- * @property string      $modules
- * @property string      $themes
- * @property array       $pagemounts
- * @property string      $alpty
- * @property array       $filemounts
- * @property string      $fop
- * @property string      $forms
- * @property string      $formp
- * @property array       $amg
- * @property string      $disable
- * @property string      $start
- * @property string      $stop
- * @property array       $session
- * @property integer     $dateAdded
- * @property integer     $lastLogin
- * @property integer     $currentLogin
- * @property integer     $loginAttempts
- * @property integer     $locked
- * @property string      $firstname
- * @property string      $lastname
- * @property string      $dateOfBirth
- * @property string      $gender
- * @property string      $company
- * @property string      $street
- * @property string      $postal
- * @property string      $city
- * @property string      $state
- * @property string      $country
- * @property string      $phone
- * @property string      $mobile
- * @property string      $fax
- * @property string      $website
- * @property string      $login
- * @property string      $assignDir
- * @property string      $homeDir
- * @property integer     $createdOn
- * @property string      $loginPage
- * @property object      $objImport
- * @property object      $objAuth
- * @property object      $objLogin
- * @property object      $objLogout
- * @property string      $useTwoFactor
- * @property string|null $secret
- * @property string|null $backupCodes
- * @property integer     $trustedTokenVersion
+ * @property string|integer    $id
+ * @property string|integer    $tstamp
+ * @property string|null       $username
+ * @property string            $name
+ * @property string            $email
+ * @property string            $language
+ * @property string            $backendTheme
+ * @property string|boolean    $fullscreen
+ * @property string            $uploader
+ * @property string|boolean    $showHelp
+ * @property string|boolean    $thumbnails
+ * @property string|boolean    $useRTE
+ * @property string|boolean    $useCE
+ * @property string            $password
+ * @property string|boolean    $pwChange
+ * @property string|boolean    $admin
+ * @property string|array|null $groups
+ * @property string            $inherit
+ * @property string|array|null $modules
+ * @property string|array|null $themes
+ * @property string|array|null $elements
+ * @property string|array|null $fields
+ * @property string|array|null $pagemounts
+ * @property string|array|null $alpty
+ * @property string|array|null $filemounts
+ * @property string|array|null $fop
+ * @property string|array|null $imageSizes
+ * @property string|array|null $forms
+ * @property string|array|null $formp
+ * @property string|array|null $amg
+ * @property string|boolean    $disable
+ * @property string|integer    $start
+ * @property string|integer    $stop
+ * @property string|array|null $session
+ * @property string|integer    $dateAdded
+ * @property string|null       $secret
+ * @property string|boolean    $useTwoFactor
+ * @property string|integer    $lastLogin
+ * @property string|integer    $currentLogin
+ * @property string|integer    $loginAttempts
+ * @property string|integer    $locked
+ * @property string|null       $backupCodes
+ * @property string|integer    $trustedTokenVersion
+ * @property string            $firstname
+ * @property string            $lastname
+ * @property string|integer    $dateOfBirth
+ * @property string            $gender
+ * @property string            $company
+ * @property string            $street
+ * @property string            $postal
+ * @property string            $city
+ * @property string            $state
+ * @property string            $country
+ * @property string            $phone
+ * @property string            $mobile
+ * @property string            $fax
+ * @property string            $website
+ * @property string|boolean    $login
+ * @property string|boolean    $assignDir
+ * @property string            $homeDir
+ *
+ * @property object $objImport
+ * @property object $objAuth
+ * @property object $objLogin
+ * @property object $objLogout
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
-abstract class User extends System implements UserInterface, EquatableInterface, \Serializable
+abstract class User extends System implements UserInterface, EquatableInterface, PasswordAuthenticatedUserInterface, \Serializable
 {
 	/**
 	 * Object instance (Singleton)
@@ -267,7 +270,7 @@ abstract class User extends System implements UserInterface, EquatableInterface,
 	 */
 	public function authenticate()
 	{
-		@trigger_error('Using User::authenticate() has been deprecated and will no longer work in Contao 5.0. Use Symfony security instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.5', 'Using "Contao\User::authenticate()" has been deprecated and will no longer work in Contao 5.0. Use Symfony security instead.');
 
 		return false;
 	}
@@ -282,7 +285,7 @@ abstract class User extends System implements UserInterface, EquatableInterface,
 	 */
 	public function login()
 	{
-		@trigger_error('Using User::login() has been deprecated and will no longer work in Contao 5.0. Use Symfony security instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.5', 'Using "Contao\User::login()" has been deprecated and will no longer work in Contao 5.0. Use Symfony security instead.');
 
 		return false;
 	}
@@ -297,7 +300,7 @@ abstract class User extends System implements UserInterface, EquatableInterface,
 	 */
 	protected function checkAccountStatus()
 	{
-		@trigger_error('Using User::checkAccountStatus() has been deprecated and will no longer work in Contao 5.0. Use Symfony security instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.5', 'Using "Contao\User::checkAccountStatus()" has been deprecated and will no longer work in Contao 5.0. Use Symfony security instead.');
 
 		try
 		{
@@ -358,7 +361,7 @@ abstract class User extends System implements UserInterface, EquatableInterface,
 	 */
 	protected function regenerateSessionId()
 	{
-		@trigger_error('Using User::regenerateSessionId() has been deprecated and will no longer work in Contao 5.0. Use Symfony authentication instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.5', 'Using "Contao\User::regenerateSessionId()" has been deprecated and will no longer work in Contao 5.0. Use Symfony authentication instead.');
 
 		$container = System::getContainer();
 		$strategy = $container->getParameter('security.authentication.session_strategy.strategy');
@@ -390,7 +393,7 @@ abstract class User extends System implements UserInterface, EquatableInterface,
 	 */
 	protected function generateSession()
 	{
-		@trigger_error('Using User::generateSession() has been deprecated and will no longer work in Contao 5.0. Use Symfony authentication instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.5', 'Using "Contao\User::generateSession()" has been deprecated and will no longer work in Contao 5.0. Use Symfony authentication instead.');
 	}
 
 	/**
@@ -403,7 +406,7 @@ abstract class User extends System implements UserInterface, EquatableInterface,
 	 */
 	public function logout()
 	{
-		@trigger_error('Using User::logout() has been deprecated and will no longer work in Contao 5.0. Use Symfony authentication instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.5', 'Using "Contao\User::logout()" has been deprecated and will no longer work in Contao 5.0. Use Symfony authentication instead.');
 
 		throw new RedirectResponseException(System::getContainer()->get('security.logout_url_generator')->getLogoutUrl());
 	}
@@ -411,33 +414,29 @@ abstract class User extends System implements UserInterface, EquatableInterface,
 	/**
 	 * Return true if the user is member of a particular group
 	 *
-	 * @param integer $id The group ID
+	 * @param mixed $ids A single group ID or an array of group IDs
 	 *
 	 * @return boolean True if the user is a member of the group
 	 */
-	public function isMemberOf($id)
+	public function isMemberOf($ids)
 	{
-		// ID not numeric
-		if (!is_numeric($id))
+		// Filter non-numeric values
+		$ids = array_filter((array) $ids, static function ($val) { return (string) (int) $val === (string) $val; });
+
+		if (empty($ids))
 		{
 			return false;
 		}
 
-		$groups = StringUtil::deserialize($this->groups);
+		$groups = StringUtil::deserialize($this->groups, true);
 
 		// No groups assigned
-		if (empty($groups) || !\is_array($groups))
+		if (empty($groups))
 		{
 			return false;
 		}
 
-		// Group ID found
-		if (\in_array($id, $groups))
-		{
-			return true;
-		}
-
-		return false;
+		return \count(array_intersect($ids, $groups)) > 0;
 	}
 
 	/**
@@ -455,8 +454,18 @@ abstract class User extends System implements UserInterface, EquatableInterface,
 
 	/**
 	 * @return User
+	 *
+	 * @deprecated Deprecated since Contao 4.13, to be removed in Contao 5.0.
+	 *             Use Contao\User::loadUserByIdentifier() instead.
 	 */
 	public static function loadUserByUsername($username)
+	{
+		trigger_deprecation('contao/core-bundle', '4.13', 'Using "Contao\User::loadUserByUsername()" has been deprecated and will no longer work in Contao 5.0. Use "Contao\User::loadUserByIdentifier()" instead.');
+
+		return self::loadUserByIdentifier($username);
+	}
+
+	public static function loadUserByIdentifier(string $identifier): ?self
 	{
 		/** @var Request $request */
 		$request = System::getContainer()->get('request_stack')->getCurrentRequest();
@@ -470,7 +479,7 @@ abstract class User extends System implements UserInterface, EquatableInterface,
 		$isLogin = $request->request->has('password') && $request->isMethod(Request::METHOD_POST);
 
 		// Load the user object
-		if ($user->findBy('username', $username) === false)
+		if ($user->findBy('username', $identifier) === false)
 		{
 			// Return if its not a real login attempt
 			if (!$isLogin)
@@ -480,7 +489,7 @@ abstract class User extends System implements UserInterface, EquatableInterface,
 
 			$password = $request->request->get('password');
 
-			if (self::triggerImportUserHook($username, $password, $user->strTable) === false)
+			if (self::triggerImportUserHook($identifier, $password, $user->strTable) === false)
 			{
 				return null;
 			}
@@ -498,10 +507,15 @@ abstract class User extends System implements UserInterface, EquatableInterface,
 
 	/**
 	 * {@inheritdoc}
+	 *
+	 * @deprecated Deprecated since Contao 4.13, to be removed in Contao 5.0.
+	 *             Use Contao\User::getUserIdentifier() instead.
 	 */
 	public function getUsername()
 	{
-		return $this->username;
+		trigger_deprecation('contao/core-bundle', '4.13', 'Using "Contao\User::getUsername()" has been deprecated and will no longer work in Contao 5.0. Use "Contao\User::getUserIdentifier()" instead.');
+
+		return $this->getUserIdentifier();
 	}
 
 	public function setUsername($username)
@@ -514,7 +528,25 @@ abstract class User extends System implements UserInterface, EquatableInterface,
 	/**
 	 * {@inheritdoc}
 	 */
-	public function getPassword()
+	public function getUserIdentifier(): string
+	{
+		if (null === $this->username)
+		{
+			throw new \RuntimeException('Missing username in User object');
+		}
+
+		if (!\is_string($this->username))
+		{
+			throw new \RuntimeException(sprintf('Invalid type "%s" for username', \gettype($this->username)));
+		}
+
+		return $this->username;
+	}
+
+	/**
+	 * {@inheritdoc}
+	 */
+	public function getPassword(): ?string
 	{
 		return $this->password;
 	}
@@ -542,11 +574,16 @@ abstract class User extends System implements UserInterface, EquatableInterface,
 	}
 
 	/**
-	 * {@inheritdoc}
+	 * @deprecated Deprecated since Contao 4.9, to be removed in Contao 5.0.
 	 */
 	public function serialize()
 	{
-		$data = array
+		return serialize($this->__serialize());
+	}
+
+	public function __serialize(): array
+	{
+		return array
 		(
 			'id' => $this->id,
 			'username' => $this->username,
@@ -555,17 +592,18 @@ abstract class User extends System implements UserInterface, EquatableInterface,
 			'start' => $this->start,
 			'stop' => $this->stop
 		);
-
-		return serialize($data);
 	}
 
 	/**
-	 * {@inheritdoc}
+	 * @deprecated Deprecated since Contao 4.9, to be removed in Contao 5.0.
 	 */
-	public function unserialize($serialized)
+	public function unserialize($data)
 	{
-		$data = unserialize($serialized, array('allowed_classes'=>false));
+		$this->__unserialize(unserialize($data, array('allowed_classes'=>false)));
+	}
 
+	public function __unserialize(array $data): void
+	{
 		if (array_keys($data) != array('id', 'username', 'password', 'disable', 'start', 'stop'))
 		{
 			return;
@@ -636,8 +674,6 @@ abstract class User extends System implements UserInterface, EquatableInterface,
 		{
 			return false;
 		}
-
-		@trigger_error('Using the "importUser" hook has been deprecated and will no longer work in Contao 5.0. Use the "contao.import_user" event instead.', E_USER_DEPRECATED);
 
 		foreach ($GLOBALS['TL_HOOKS']['importUser'] as $callback)
 		{

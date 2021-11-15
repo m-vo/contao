@@ -14,26 +14,16 @@ namespace Contao\ManagerBundle\Api;
 
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Yaml\Yaml;
+use Webmozart\PathUtil\Path;
 
 /**
  * @internal
  */
 class ManagerConfig
 {
-    /**
-     * @var string
-     */
-    private $configFile;
-
-    /**
-     * @var Filesystem|null
-     */
-    private $filesystem;
-
-    /**
-     * @var array
-     */
-    private $config;
+    private string $configFile;
+    private Filesystem $filesystem;
+    private ?array $config = null;
 
     public function __construct(string $projectDir, Filesystem $filesystem = null)
     {
@@ -41,13 +31,10 @@ class ManagerConfig
             $projectDir = (string) $realpath;
         }
 
-        $this->configFile = $projectDir.'/config/contao-manager.yml';
+        $this->configFile = Path::join($projectDir, 'config/contao-manager.yml');
         $this->filesystem = $filesystem ?: new Filesystem();
     }
 
-    /**
-     * @return array<mixed>
-     */
     public function all(): array
     {
         if (null === $this->config) {
@@ -57,9 +44,6 @@ class ManagerConfig
         return $this->config;
     }
 
-    /**
-     * @return array<mixed>
-     */
     public function read(): array
     {
         $this->config = [];

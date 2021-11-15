@@ -145,6 +145,22 @@
         <source>Checks whether the input is a valid URL.</source>
         <target>Провери да ли је унешен исправан формат URL.</target>
       </trans-unit>
+      <trans-unit id="tl_form_field.httpurl.0">
+        <source>Absolute URL</source>
+        <target>Апсолутни URL</target>
+      </trans-unit>
+      <trans-unit id="tl_form_field.httpurl.1">
+        <source>Checks whether the input is a valid absolute URL.</source>
+        <target>Провера да ли је унос исправан апсолутни URL</target>
+      </trans-unit>
+      <trans-unit id="tl_form_field.custom.0">
+        <source>Custom</source>
+        <target>Произвољно</target>
+      </trans-unit>
+      <trans-unit id="tl_form_field.custom.1">
+        <source>Checks against a custom regular expression.</source>
+        <target>Провера са произвољним типичним изразима.</target>
+      </trans-unit>
       <trans-unit id="tl_form_field.placeholder.0">
         <source>Placeholder</source>
         <target>Placeholder</target>
@@ -152,6 +168,22 @@
       <trans-unit id="tl_form_field.placeholder.1">
         <source>Show this text as long as the field is empty (requires HTML5).</source>
         <target>Прикажи овај текст док год је поље празно (потребан HTML5).</target>
+      </trans-unit>
+      <trans-unit id="tl_form_field.customRgxp.0">
+        <source>Custom regular expression</source>
+        <target>Произвољни типичан израз </target>
+      </trans-unit>
+      <trans-unit id="tl_form_field.customRgxp.1">
+        <source>The custom regular expression including delimiters and modifiers.</source>
+        <target>Произвољан типичан израз који укључује делимитере и знакове за прилагођавања.</target>
+      </trans-unit>
+      <trans-unit id="tl_form_field.errorMsg.0">
+        <source>Error message</source>
+        <target>Порука грешке</target>
+      </trans-unit>
+      <trans-unit id="tl_form_field.errorMsg.1">
+        <source>Show this error message in the front end if the user input is invalid.</source>
+        <target>Прикажи ову поруку на Фронт Енду, ако корисник унесе неисправан унос. </target>
       </trans-unit>
       <trans-unit id="tl_form_field.minlength.0">
         <source>Minimum length</source>

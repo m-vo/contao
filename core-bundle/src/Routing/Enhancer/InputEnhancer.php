@@ -14,6 +14,7 @@ namespace Contao\CoreBundle\Routing\Enhancer;
 
 use Contao\Config;
 use Contao\CoreBundle\Framework\ContaoFramework;
+use Contao\CoreBundle\Util\LocaleUtil;
 use Contao\Input;
 use Contao\PageModel;
 use Symfony\Cmf\Component\Routing\Enhancer\RouteEnhancerInterface;
@@ -22,28 +23,21 @@ use Symfony\Component\Routing\Exception\ResourceNotFoundException;
 
 class InputEnhancer implements RouteEnhancerInterface
 {
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
-
-    /**
-     * @var bool
-     */
-    private $prependLocale;
+    private ContaoFramework $framework;
 
     /**
      * @internal Do not inherit from this class; decorate the "contao.routing.input_enhancer" service instead
      */
-    public function __construct(ContaoFramework $framework, bool $prependLocale)
+    public function __construct(ContaoFramework $framework)
     {
         $this->framework = $framework;
-        $this->prependLocale = $prependLocale;
     }
 
     public function enhance(array $defaults, Request $request): array
     {
-        if (!isset($defaults['pageModel']) || !$defaults['pageModel'] instanceof PageModel) {
+        $page = $defaults['pageModel'] ?? null;
+
+        if (!$page instanceof PageModel) {
             return $defaults;
         }
 
@@ -52,8 +46,8 @@ class InputEnhancer implements RouteEnhancerInterface
         /** @var Input $input */
         $input = $this->framework->getAdapter(Input::class);
 
-        if ($this->prependLocale && !empty($defaults['_locale'])) {
-            $input->setGet('language', $defaults['_locale']);
+        if (!empty($page->urlPrefix)) {
+            $input->setGet('language', LocaleUtil::formatAsLanguageTag($page->rootLanguage));
         }
 
         if (empty($defaults['parameters'])) {

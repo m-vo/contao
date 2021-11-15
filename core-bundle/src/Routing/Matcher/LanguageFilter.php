@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace Contao\CoreBundle\Routing\Matcher;
 
+use Contao\CoreBundle\Util\LocaleUtil;
 use Contao\PageModel;
 use Symfony\Cmf\Component\Routing\NestedMatcher\RouteFilterInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -23,16 +24,10 @@ use Symfony\Component\Routing\RouteCollection;
 class LanguageFilter implements RouteFilterInterface
 {
     /**
-     * @var bool
-     */
-    private $prependLocale;
-
-    /**
      * @internal Do not inherit from this class; decorate the "contao.routing.language_filter" service instead
      */
-    public function __construct(bool $prependLocale)
+    public function __construct()
     {
-        $this->prependLocale = $prependLocale;
     }
 
     public function filter(RouteCollection $collection, Request $request): RouteCollection
@@ -40,18 +35,20 @@ class LanguageFilter implements RouteFilterInterface
         $languages = $request->getLanguages();
 
         foreach ($collection->all() as $name => $route) {
-            if ('.fallback' !== substr($name, -9) && ($this->prependLocale || '.root' !== substr($name, -5))) {
-                continue;
-            }
-
             /** @var PageModel $pageModel */
             $pageModel = $route->getDefault('pageModel');
 
+            if (!$pageModel instanceof PageModel) {
+                continue;
+            }
+
+            if ('.fallback' !== substr($name, -9) && ('' !== $pageModel->urlPrefix || '.root' !== substr($name, -5))) {
+                continue;
+            }
+
             if (
-                !$pageModel instanceof PageModel
-                || $pageModel->rootIsFallback
-                || \in_array(str_replace('-', '_', $pageModel->rootLanguage), $languages, true)
-                || preg_grep('/'.preg_quote($pageModel->rootLanguage, '/').'_[A-Z]{2}/', $languages)
+                $pageModel->rootIsFallback
+                || preg_grep('/^'.LocaleUtil::getPrimaryLanguage($pageModel->rootLanguage).'/', $languages)
             ) {
                 continue;
             }

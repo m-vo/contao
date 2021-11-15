@@ -73,6 +73,14 @@
         <source>Here you can add a custom meta title to overwrite the default page title.</source>
         <target>独自のメタタイトルを追加して、ページの題名の初期値を上書きできます。</target>
       </trans-unit>
+      <trans-unit id="tl_calendar_events.robots.0">
+        <source>Robots tag</source>
+        <target>robotsタグ</target>
+      </trans-unit>
+      <trans-unit id="tl_calendar_events.robots.1">
+        <source>Here you can overwrite how search engines handle the event.</source>
+        <target>イベントを検索エンジンが扱う方法を上書き設定できます。</target>
+      </trans-unit>
       <trans-unit id="tl_calendar_events.description.0">
         <source>Meta description</source>
         <target>メタデスクリプション</target>
@@ -237,6 +245,14 @@
         <source>Do not allow comments for this particular event.</source>
         <target>この特定のイベントにコメントを許可しません。</target>
       </trans-unit>
+      <trans-unit id="tl_calendar_events.featured.0">
+        <source>Feature event</source>
+        <target>将来のイベント</target>
+      </trans-unit>
+      <trans-unit id="tl_calendar_events.featured.1">
+        <source>Show the event in a featured event list.</source>
+        <target>イベントを将来のイベントリストに表示</target>
+      </trans-unit>
       <trans-unit id="tl_calendar_events.published.0">
         <source>Publish event</source>
         <target>イベントを公開</target>
@@ -302,7 +318,7 @@
         <target>リダイレクト先</target>
       </trans-unit>
       <trans-unit id="tl_calendar_events.meta_legend">
-        <source>Meta data</source>
+        <source>Metadata</source>
         <target>メタデータ</target>
       </trans-unit>
       <trans-unit id="tl_calendar_events.expert_legend">
@@ -360,6 +376,10 @@
       <trans-unit id="tl_calendar_events.toggle">
         <source>Publish/unpublish event ID %s</source>
         <target>ID %sのイベントの公開と非公開を切り替え</target>
+      </trans-unit>
+      <trans-unit id="tl_calendar_events.feature">
+        <source>Feature/unfeature event ID %s</source>
+        <target>%sのイベントを特別かどうかを切り替え</target>
       </trans-unit>
       <trans-unit id="tl_calendar_events.editheader">
         <source>Edit the settings of event ID %s</source>

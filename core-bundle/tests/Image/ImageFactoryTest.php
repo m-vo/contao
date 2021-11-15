@@ -37,11 +37,14 @@ use Imagine\Image\Box;
 use Imagine\Image\ImageInterface as ImagineImageInterface;
 use Imagine\Image\ImagineInterface;
 use PHPUnit\Framework\MockObject\MockObject;
+use Symfony\Bridge\PhpUnit\ExpectDeprecationTrait;
 use Symfony\Component\Filesystem\Filesystem;
 use Webmozart\PathUtil\Path;
 
 class ImageFactoryTest extends TestCase
 {
+    use ExpectDeprecationTrait;
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
@@ -470,14 +473,14 @@ class ImageFactoryTest extends TestCase
         ;
 
         $filesystem
-            ->expects($this->once())
+            ->expects($this->exactly(2))
             ->method('exists')
             ->willReturn(true)
         ;
 
         $resizer = $this->createMock(ResizerInterface::class);
         $resizer
-            ->expects($this->once())
+            ->expects($this->exactly(2))
             ->method('resize')
             ->with(
                 $this->callback(
@@ -520,18 +523,20 @@ class ImageFactoryTest extends TestCase
         $framework = $this->mockContaoFramework([FilesModel::class => $filesAdapter]);
         $imageFactory = $this->getImageFactory($resizer, $imagine, $imagine, $filesystem, $framework);
         $image = $imageFactory->create($path, [50, 50, $mode]);
+        $imageFromSerializedConfig = $imageFactory->create($path, serialize([50, 50, $mode]));
 
         $this->assertSame($imageMock, $image);
+        $this->assertSame($imageMock, $imageFromSerializedConfig);
     }
 
     /**
      * @group legacy
      * @dataProvider getInvalidImportantParts
-     *
-     * @expectedDeprecation Defining the important part in absolute pixels has been deprecated %s.
      */
     public function testCreatesAnImageObjectFromAnImagePathWithInvalidImportantPart($invalid, $expected): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.8: Defining the important part in absolute pixels has been deprecated %s.');
+
         $path = Path::join($this->getTempDir(), 'images/dummy.jpg');
 
         /** @var FilesModel&MockObject $filesModel */
@@ -632,11 +637,11 @@ class ImageFactoryTest extends TestCase
 
     /**
      * @group legacy
-     *
-     * @expectedDeprecation Using new Contao\Image() has been deprecated %s.
      */
     public function testExecutesTheExecuteResizeHook(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.3: Using the "Contao\Image" class has been deprecated %s.');
+
         $GLOBALS['TL_CONFIG']['validImageTypes'] = 'jpg';
 
         $path = Path::join($this->getTempDir(), 'images/dummy.jpg');
@@ -710,11 +715,11 @@ class ImageFactoryTest extends TestCase
 
     /**
      * @group legacy
-     *
-     * @expectedDeprecation Using new Contao\Image() has been deprecated %s.
      */
     public function testExecutesTheGetImageHook(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.3: Using the "Contao\Image" class has been deprecated %s.');
+
         $GLOBALS['TL_CONFIG']['validImageTypes'] = 'jpg';
 
         $path = Path::join($this->getTempDir(), 'images/dummy.jpg');
@@ -762,8 +767,8 @@ class ImageFactoryTest extends TestCase
         );
 
         $this->assertSame(
-            Path::join($this->getTempDir(), 'images/dummy.jpg'),
-            $image->getPath(),
+            Path::normalize($this->getTempDir()).'/images/dummy.jpg',
+            Path::normalize($image->getPath()),
             'Hook should not get called if no resize is necessary'
         );
 
@@ -798,11 +803,11 @@ class ImageFactoryTest extends TestCase
 
     /**
      * @group legacy
-     *
-     * @expectedDeprecation Using new Contao\Image() has been deprecated %s.
      */
     public function testIgnoresAnEmptyHookReturnValue(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.3: Using the "Contao\Image" class has been deprecated %s.');
+
         $GLOBALS['TL_CONFIG']['validImageTypes'] = 'jpg';
 
         $path = Path::join($this->getTempDir(), 'images/dummy.jpg');
@@ -839,12 +844,6 @@ class ImageFactoryTest extends TestCase
     {
     }
 
-    /**
-     * @param ResizerInterface&MockObject $resizer
-     * @param ImagineInterface&MockObject $imagine
-     * @param ImagineInterface&MockObject $imagineSvg
-     * @param ContaoFramework&MockObject  $framework
-     */
     private function getImageFactory(ResizerInterface $resizer = null, ImagineInterface $imagine = null, ImagineInterface $imagineSvg = null, Filesystem $filesystem = null, ContaoFramework $framework = null, bool $bypassCache = null, array $imagineOptions = null, array $validExtensions = null, string $uploadDir = null): ImageFactory
     {
         if (null === $resizer) {

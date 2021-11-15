@@ -891,7 +891,8 @@ var Backend =
 		});
 		M.show({
 			'title': opt.title,
-			'contents': '<iframe src="' + opt.url + '" width="100%" height="' + opt.height + '" frameborder="0"></iframe>'
+			'contents': '<iframe src="' + opt.url + '" width="100%" height="' + opt.height + '" frameborder="0"></iframe>',
+			'model': 'modal'
 		});
 	},
 
@@ -909,13 +910,12 @@ var Backend =
 		if (!opt.height || opt.height > maxHeight) opt.height = maxHeight;
 		var M = new SimpleModal({
 			'width': opt.width,
-			'btn_ok': Contao.lang.close,
 			'draggable': false,
 			'overlayOpacity': .7,
 			'onShow': function() { document.body.setStyle('overflow', 'hidden'); },
 			'onHide': function() { document.body.setStyle('overflow', 'auto'); }
 		});
-		M.addButton(Contao.lang.close, 'btn', function() {
+		M.addButton(Contao.lang.cancel, 'btn', function() {
 			if (this.buttons[0].hasClass('btn-disabled')) {
 				return;
 			}
@@ -1330,6 +1330,29 @@ var Backend =
 	},
 
 	/**
+	 * Retrieve the interactive help
+	 */
+	retrieveInteractiveHelp: function (elements) {
+		elements && elements.each(function (element) {
+			var title = element.retrieve('tip:title');
+			title && element.set('title', title);
+		});
+	},
+
+	/**
+	 * Hide the interactive help
+	 */
+	hideInteractiveHelp: function () {
+		var hideTips = function () {
+			document.querySelectorAll('.tip-wrap').forEach(function (tip) {
+				tip.setStyle('display', 'none');
+			});
+		};
+		hideTips();
+		setTimeout(hideTips, (new Tips.Contao).options.showDelay); // hide delayed tips
+	},
+
+	/**
 	 * Make parent view items sortable
 	 *
 	 * @param {object} ul The DOM element
@@ -1432,7 +1455,7 @@ var Backend =
 			opacity: 0.6
 		}).addEvent('complete', function() {
 			var els = [],
-				lis = $(id).getChildren('li'),
+				lis = $(id).getChildren('[data-id]'),
 				i;
 			for (i=0; i<lis.length; i++) {
 				els.push(lis[i].get('data-id'));
@@ -1724,6 +1747,7 @@ var Backend =
 								ntr = new Element('tr');
 								childs = tr.getChildren();
 								for (i=0; i<childs.length; i++) {
+									Backend.retrieveInteractiveHelp(childs[i].getElements('button,a'));
 									next = childs[i].clone(true).inject(ntr, 'bottom');
 									if (textarea = childs[i].getFirst('textarea')) {
 										next.getFirst('textarea').value = textarea.value;
@@ -1732,6 +1756,7 @@ var Backend =
 								ntr.inject(tr, 'after');
 								addEventsTo(ntr);
 								makeSortable(tbody);
+								Backend.addInteractiveHelp();
 							});
 							break;
 						case 'rdelete':
@@ -1741,6 +1766,7 @@ var Backend =
 									tr.destroy();
 								}
 								makeSortable(tbody);
+								Backend.hideInteractiveHelp();
 							});
 							break;
 						case 'ccopy':
@@ -1750,15 +1776,19 @@ var Backend =
 								childs = tbody.getChildren();
 								for (i=0; i<childs.length; i++) {
 									current = childs[i].getChildren()[index];
+									Backend.retrieveInteractiveHelp(current.getElements('button,a'));
 									next = current.clone(true).inject(current, 'after');
 									if (textarea = current.getFirst('textarea')) {
 										next.getFirst('textarea').value = textarea.value;
 									}
 									addEventsTo(next);
 								}
-								next = head.getFirst('td').clone(true).inject(head.getLast('td'), 'before');
+								var headFirst = head.getFirst('td');
+								Backend.retrieveInteractiveHelp(headFirst.getElements('button,a'));
+								next = headFirst.clone(true).inject(head.getLast('td'), 'before');
 								addEventsTo(next);
 								makeSortable(tbody);
+								Backend.addInteractiveHelp();
 							});
 							break;
 						case 'cmovel':
@@ -1811,6 +1841,7 @@ var Backend =
 									head.getFirst('td').destroy();
 								}
 								makeSortable(tbody);
+								Backend.hideInteractiveHelp();
 							});
 							break;
 						case null:
@@ -1951,6 +1982,7 @@ var Backend =
 								ntr = new Element('tr');
 								childs = tr.getChildren();
 								for (i=0; i<childs.length; i++) {
+									Backend.retrieveInteractiveHelp(childs[i].getElements('button,a'));
 									next = childs[i].clone(true).inject(ntr, 'bottom');
 									if (select = childs[i].getElement('select')) {
 										next.getElement('select').value = select.value;
@@ -1961,6 +1993,7 @@ var Backend =
 								new Chosen(ntr.getElement('select.tl_select'));
 								addEventsTo(ntr);
 								makeSortable(tbody);
+								Backend.addInteractiveHelp();
 							});
 							break;
 						case 'delete':
@@ -1970,6 +2003,7 @@ var Backend =
 									tr.destroy();
 								}
 								makeSortable(tbody);
+								Backend.hideInteractiveHelp();
 							});
 							break;
 						case 'enable':
@@ -2067,6 +2101,7 @@ var Backend =
 								ntr = new Element('tr');
 								childs = tr.getChildren();
 								for (i=0; i<childs.length; i++) {
+									Backend.retrieveInteractiveHelp(childs[i].getElements('button,a'));
 									next = childs[i].clone(true).inject(ntr, 'bottom');
 									if (input = childs[i].getFirst('input')) {
 										next.getFirst('input').value = input.value;
@@ -2078,6 +2113,7 @@ var Backend =
 								ntr.inject(tr, 'after');
 								addEventsTo(ntr);
 								makeSortable(tbody);
+								Backend.addInteractiveHelp();
 							});
 							break;
 						case 'delete':
@@ -2087,6 +2123,7 @@ var Backend =
 									tr.destroy();
 								}
 								makeSortable(tbody);
+								Backend.hideInteractiveHelp();
 							});
 							break;
 						case null:
@@ -2166,6 +2203,7 @@ var Backend =
 								ntr = new Element('tr');
 								childs = tr.getChildren();
 								for (i=0; i<childs.length; i++) {
+									Backend.retrieveInteractiveHelp(childs[i].getElements('button,a'));
 									next = childs[i].clone(true).inject(ntr, 'bottom');
 									if (input = childs[i].getFirst('input')) {
 										next.getFirst().value = input.value;
@@ -2174,6 +2212,7 @@ var Backend =
 								ntr.inject(tr, 'after');
 								addEventsTo(ntr);
 								makeSortable(tbody);
+								Backend.addInteractiveHelp();
 							});
 							break;
 						case 'delete':
@@ -2183,6 +2222,7 @@ var Backend =
 									tr.destroy();
 								}
 								makeSortable(tbody);
+								Backend.hideInteractiveHelp();
 							});
 							break;
 						case null:
@@ -2267,69 +2307,12 @@ var Backend =
 	},
 
 	/**
-	 * Meta wizard
-	 *
-	 * @param {object} el The submit button
-	 * @param {string} ul The DOM element
-	 */
-	metaWizard: function(el, ul) {
-		var opt = el.getParent('div').getElement('select');
-
-		if (opt.value == '') {
-			return; // no language given
-		}
-
-		var li = $(ul).getLast('li').clone(true, true),
-			span = li.getElement('span'),
-			img = span.getElement('img');
-
-		// Update the data-language attribute
-		li.setProperty('data-language', opt.value);
-
-		// Update the language text
-		span.set('text', opt.options[opt.selectedIndex].text + ' ');
-		img.inject(span, 'bottom');
-
-		// Update the name, label and ID attributes
-		li.getElements('input').each(function(inp) {
-			inp.value = '';
-			inp.name = inp.name.replace(/\[[a-z]{2}(_[A-Z]{2})?]/, '[' + opt.value + ']');
-			var lbl = inp.getPrevious('label'),
-				i = parseInt(lbl.get('for').replace(/ctrl_[^_]+_/, ''));
-			lbl.set('for', lbl.get('for').replace(i, i+1));
-			inp.id = lbl.get('for');
-		});
-
-		// Update the class name
-		li.className = (li.className == 'even') ? 'odd' : 'even';
-		li.inject($(ul), 'bottom');
-
-		// Update the picker
-		li.getElements('a[id^=pp_]').each(function(link) {
-			var i = parseInt(link.get('id').replace(/pp_[^_]+_/, ''));
-			link.id = link.get('id').replace(i, i + 1);
-			var script = link.getNext('script');
-			script.set('html', script.get('html').replace(new RegExp('_' + i, 'g'), '_' + (i + 1)));
-			eval(script.get('html'));
-		});
-
-		// Disable the "add language" button
-		el.getParent('div').getElement('input[type="button"]').setProperty('disabled', true);
-
-		// Disable the option
-		opt.options[opt.selectedIndex].setProperty('disabled', true);
-		opt.value = '';
-	},
-
-	/**
 	 * Remove a meta entry
 	 *
 	 * @param {object} el The DOM element
 	 */
 	metaDelete: function(el) {
-		var li = el.getParent('li'),
-			select = el.getParent('div').getElement('select'),
-			opt;
+		var li = el.getParent('li');
 
 		// Empty the last element instead of removing it (see #4858)
 		if (li.getPrevious() === null && li.getNext() === null) {
@@ -2337,13 +2320,7 @@ var Backend =
 				input.value = '';
 			});
 		} else {
-			// If the language code is valid and the option exists, enable it (see #1635)
-			if (opt = select.getElement('option[value=' + li.getProperty('data-language') + ']')) {
-				opt.removeProperty('disabled');
-			}
-
 			li.destroy();
-			select.fireEvent('liszt:updated');
 		}
 	},
 
@@ -2407,6 +2384,7 @@ var Backend =
 								ntr = new Element('tr');
 								childs = tr.getChildren();
 								for (i=0; i<childs.length; i++) {
+									Backend.retrieveInteractiveHelp(childs[i].getElements('button,a'));
 									next = childs[i].clone(true).inject(ntr, 'bottom');
 									selects = childs[i].getElements('select');
 									nselects = next.getElements('select');
@@ -2417,6 +2395,7 @@ var Backend =
 								ntr.inject(tr, 'after');
 								addEventsTo(ntr);
 								makeSortable(tbody);
+								Backend.addInteractiveHelp();
 							});
 							break;
 						case 'delete':
@@ -2426,6 +2405,7 @@ var Backend =
 									tr.destroy();
 								}
 								makeSortable(tbody);
+								Backend.hideInteractiveHelp();
 							});
 							break;
 						case null:

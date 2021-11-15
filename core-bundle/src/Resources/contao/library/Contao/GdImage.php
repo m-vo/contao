@@ -10,7 +10,7 @@
 
 namespace Contao;
 
-@trigger_error('Using the "Contao\GdImage" class has been deprecated and will no longer work in Contao 5.0. Use the Imagine library instead.', E_USER_DEPRECATED);
+trigger_deprecation('contao/core-bundle', '4.3', 'Using the "Contao\GdImage" class has been deprecated and will no longer work in Contao 5.0. Use the Imagine library instead.');
 
 /**
  * GD image class
@@ -43,7 +43,7 @@ class GdImage
 	/**
 	 * Create a new object to handle a GD image
 	 *
-	 * @param resource $gdResource The GD resource handle
+	 * @param \GdImage|resource $gdResource The GD resource handle
 	 */
 	public function __construct($gdResource)
 	{
@@ -119,7 +119,7 @@ class GdImage
 	/**
 	 * Get the GD resource handle
 	 *
-	 * @return resource The GD resource handle
+	 * @return \GdImage|resource The GD resource handle
 	 */
 	public function getResource()
 	{

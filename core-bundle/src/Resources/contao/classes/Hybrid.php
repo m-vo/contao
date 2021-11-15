@@ -103,12 +103,12 @@ abstract class Hybrid extends Frontend
 			return;
 		}
 
-		/** @var Model $strModelClass */
 		$strModelClass = Model::getClassFromTable($this->strTable);
 
 		// Load the model
 		if (class_exists($strModelClass))
 		{
+			/** @var Model|null $objHybrid */
 			$objHybrid = $strModelClass::findByPk($objElement->{$this->strKey});
 
 			if ($objHybrid === null)
@@ -147,7 +147,7 @@ abstract class Hybrid extends Frontend
 		// Merge the CSS classes (see #6011)
 		if (!empty($this->cssID[1]))
 		{
-			$cssID[1] = trim($cssID[1] . ' ' . $this->cssID[1]);
+			$cssID[1] = trim(($cssID[1] ?? '') . ' ' . $this->cssID[1]);
 		}
 
 		$this->cssID = $cssID;
@@ -232,8 +232,8 @@ abstract class Hybrid extends Frontend
 		$this->compile();
 
 		$this->Template->style = !empty($this->arrStyle) ? implode(' ', $this->arrStyle) : '';
+		$this->Template->class = trim($this->typePrefix . $this->strKey . ' ' . ($this->cssID[1] ?? ''));
 		$this->Template->cssID = !empty($this->cssID[0]) ? ' id="' . $this->cssID[0] . '"' : '';
-		$this->Template->class = trim($this->typePrefix . $this->strKey . ' ' . $this->cssID[1]);
 
 		$this->Template->inColumn = $this->strColumn;
 
@@ -261,6 +261,12 @@ abstract class Hybrid extends Frontend
 		if (!$this->objParent instanceof ContentModel)
 		{
 			return false;
+		}
+
+		// Skip unsaved elements (see #2708)
+		if (isset($this->objParent->tstamp) && !$this->objParent->tstamp)
+		{
+			return true;
 		}
 
 		$isInvisible = $this->objParent->invisible || ($this->objParent->start && $this->objParent->start > time()) || ($this->objParent->stop && $this->objParent->stop <= time());

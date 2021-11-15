@@ -42,11 +42,11 @@
         <target>Affichez le fichier dans le navigateur au lieu d'ouvrir la boîte de dialogue de téléchargement.</target>
       </trans-unit>
       <trans-unit id="tl_content.overwriteMeta.0">
-        <source>Overwrite meta data</source>
+        <source>Overwrite metadata</source>
         <target>Écraser les métadonnées</target>
       </trans-unit>
       <trans-unit id="tl_content.overwriteMeta.1">
-        <source>Overwrite the meta data from the file manager.</source>
+        <source>Overwrite the metadata from the file manager.</source>
         <target>Écraser les métadonnées à partir de l'explorateur de fichier.</target>
       </trans-unit>
       <trans-unit id="tl_content.singleSRC.0">
@@ -289,6 +289,19 @@
         <source>Note that the code will not be executed. Use F11 to toggle the fullscreen mode if you are using the code editor.</source>
         <target>Noter que le code ne sera pas exécuté. Utiliser F11 pour basculer en mode plein écran si vous utilisez l'éditeur de code.</target>
       </trans-unit>
+      <trans-unit id="tl_content.markdownSource.0">
+        <source>Markdown source</source>
+      </trans-unit>
+      <trans-unit id="tl_content.markdownSource.1">
+        <source>Please choose the Markdown source.</source>
+      </trans-unit>
+      <trans-unit id="tl_content.markdownSource.sourceText">
+        <source>Text</source>
+        <target>Texte</target>
+      </trans-unit>
+      <trans-unit id="tl_content.markdownSource.sourceFile">
+        <source>File</source>
+      </trans-unit>
       <trans-unit id="tl_content.linkTitle.0">
         <source>Link text</source>
         <target>Texte du lien</target>
@@ -361,14 +374,6 @@
         <source>The number of items per page. Set to 0 to disable pagination.</source>
         <target>Le nombre d'éléments par page. Saisir 0 pour désactiver la pagination.</target>
       </trans-unit>
-      <trans-unit id="tl_content.numberOfItems.0">
-        <source>Total number of images</source>
-        <target>Nombre total d'images</target>
-      </trans-unit>
-      <trans-unit id="tl_content.numberOfItems.1">
-        <source>Here you can limit the total number of images. Set to 0 to show all.</source>
-        <target>Limiter le nombre total d'images. Mettre à 0 pour tout afficher.</target>
-      </trans-unit>
       <trans-unit id="tl_content.sortBy.0">
         <source>Order by</source>
         <target>Trier par</target>
@@ -378,11 +383,11 @@
         <target>Choisir un ordre de tri.</target>
       </trans-unit>
       <trans-unit id="tl_content.metaIgnore.0">
-        <source>Ignore files without meta data</source>
+        <source>Ignore files without metadata</source>
         <target>Ignorer les fichiers sans méta-données</target>
       </trans-unit>
       <trans-unit id="tl_content.metaIgnore.1">
-        <source>Do not show files without meta data matching the page language.</source>
+        <source>Do not show files without metadata matching the page language.</source>
         <target>Ne pas afficher les fichiers sans méta données correspondant à la langue de la page.</target>
       </trans-unit>
       <trans-unit id="tl_content.galleryTpl.0">
@@ -447,7 +452,7 @@
       </trans-unit>
       <trans-unit id="tl_content.playerOptions.1">
         <source>Here you can select the player options.</source>
-        <target>Vous pouvez choisir ici les options du lecteur.</target>
+        <target>Vous pouvez sélectionner ici les options du lecteur.</target>
       </trans-unit>
       <trans-unit id="tl_content.playerPreload.0">
         <source>Preloading</source>
@@ -778,8 +783,7 @@
         <target>Lecture inline (pas de mode plein écran)</target>
       </trans-unit>
       <trans-unit id="tl_content.player_preload.auto">
-        <source>Auto (preload the entiry video)</source>
-        <target>Auto (précharge la vidéo complète)</target>
+        <source>Auto (preload the entire video)</source>
       </trans-unit>
       <trans-unit id="tl_content.player_preload.metadata">
         <source>Metadata (preload the metadata only)</source>
@@ -819,10 +823,6 @@
       </trans-unit>
       <trans-unit id="tl_content.youtube_rel">
         <source>Limit related videos to the same channel</source>
-      </trans-unit>
-      <trans-unit id="tl_content.youtube_showinfo">
-        <source>Hide the top bar in the preview</source>
-        <target>Cacher la bar supérieure lors de la prévisualisation</target>
       </trans-unit>
       <trans-unit id="tl_content.youtube_nocookie">
         <source>Use the youtube-nocookie.com domain</source>

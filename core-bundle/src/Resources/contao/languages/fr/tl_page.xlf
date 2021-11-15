@@ -38,8 +38,7 @@
         <target>Langue</target>
       </trans-unit>
       <trans-unit id="tl_page.language.1">
-        <source>Please enter the page language according to the ISO-639-1 standard (e.g. &quot;en&quot; for English or &quot;en-US&quot; for American English).</source>
-        <target>Saisir la langue de la page selon la norme ISO-639-1 (ex. :  &quot;en&quot; pour l'anglais ou &quot;en-US&quot; pour l'anglais américain).</target>
+        <source>Please enter the page language according to the ISO-639 standard (e.g. &quot;en&quot; for English or &quot;en_US&quot; for American English).</source>
       </trans-unit>
       <trans-unit id="tl_page.robots.0">
         <source>Robots tag</source>
@@ -89,6 +88,14 @@
         <source>Show this page if there is none that matches the visitor's language.</source>
         <target>Afficher cette page si aucune page ne correspond à la langue du visiteur.</target>
       </trans-unit>
+      <trans-unit id="tl_page.disableLanguageRedirect.0">
+        <source>Disable language redirect</source>
+        <target>Désactiver la redirection en fonction de la langue</target>
+      </trans-unit>
+      <trans-unit id="tl_page.disableLanguageRedirect.1">
+        <source>Do not redirect visitors to this website root based on their preferred browser language.</source>
+        <target>Ne redirigez pas les visiteurs vers la racine de ce site en fonction de la langue de leur navigateur.</target>
+      </trans-unit>
       <trans-unit id="tl_page.favicon.0">
         <source>Favicon</source>
         <target>Favicon</target>
@@ -128,6 +135,14 @@
       <trans-unit id="tl_page.staticPlugins.1">
         <source>The assets URL applies to the &lt;em&gt;assets&lt;/em&gt; directory (page speed optimization).</source>
         <target>L'URL des ressources s'applique à toutes les ressources se trouvant dans le répertoire &lt;em&gt;assets&lt;/em&gt; (optimisation de la vitesse de chargement des pages).</target>
+      </trans-unit>
+      <trans-unit id="tl_page.mailerTransport.0">
+        <source>Mailer transport</source>
+        <target>Envoi d'e-mail</target>
+      </trans-unit>
+      <trans-unit id="tl_page.mailerTransport.1">
+        <source>Here you can override the mailer transport used to send e-mails on this website.</source>
+        <target>Ici, vous pouvez remplacer la méthode d'envoi d'email utilisée sur ce site Web.</target>
       </trans-unit>
       <trans-unit id="tl_page.adminEmail.0">
         <source>E-mail address of the website administrator</source>
@@ -169,29 +184,37 @@
         <source>Here you can select a custom character set for auto-generated aliases.</source>
         <target>Vous pouvez sélectionner ici un jeu de caractère personnalisé</target>
       </trans-unit>
-      <trans-unit id="tl_page.createSitemap.0">
-        <source>Create an XML sitemap</source>
-        <target>Créer un plan du site XML</target>
+      <trans-unit id="tl_page.useFolderUrl.0">
+        <source>Enable folder URLs</source>
+        <target>Activer les répertoires dans les URLs</target>
       </trans-unit>
-      <trans-unit id="tl_page.createSitemap.1">
-        <source>Create a Google XML sitemap in the &lt;em&gt;share/&lt;/em&gt; directory.</source>
-        <target>Créer un plan du site XML Google dans le répertoire &lt;em&gt;share/&lt;/em&gt;.</target>
+      <trans-unit id="tl_page.useFolderUrl.1">
+        <source>Generate folder-style page aliases like &lt;em&gt;docs/install/download.html&lt;/em&gt; instead of &lt;em&gt;docs-install-download.html&lt;/em&gt;.</source>
+        <target>Génère des alias de page avec des noms de dossier comme &lt;em&gt;docs/install/download.html&lt;/em&gt; au lieu de &lt;em&gt;docs-install-download.html&lt;/em&gt;</target>
       </trans-unit>
-      <trans-unit id="tl_page.sitemapName.0">
-        <source>Sitemap file name</source>
-        <target>Nom de fichier du plan du site</target>
+      <trans-unit id="tl_page.urlPrefix.0">
+        <source>URL prefix</source>
+        <target>Préfixe d'URL</target>
       </trans-unit>
-      <trans-unit id="tl_page.sitemapName.1">
-        <source>Please enter the name of the sitemap file without extension.</source>
-        <target>Saisir un nom pour le fichier (sans extension).</target>
+      <trans-unit id="tl_page.urlPrefix.1">
+        <source>Enter a URL prefix (e.g. the language) that will be prepended to aliases for this root page.</source>
+        <target>Entrez un préfixe d'URL (par exemple, la langue) qui sera ajouté aux alias pour cette page racine.</target>
+      </trans-unit>
+      <trans-unit id="tl_page.urlSuffix.0">
+        <source>URL suffix</source>
+        <target>Suffixe d'URL</target>
+      </trans-unit>
+      <trans-unit id="tl_page.urlSuffix.1">
+        <source>The URL suffix will be added to the URI string to simulate static documents.</source>
+        <target>Le suffixe d'URL sera ajouté à la chaîne URI pour simuler des documents statiques.</target>
       </trans-unit>
       <trans-unit id="tl_page.useSSL.0">
-        <source>Use HTTPS</source>
-        <target>Utiliser HTTPS</target>
+        <source>Protocol</source>
+        <target>Protocole</target>
       </trans-unit>
       <trans-unit id="tl_page.useSSL.1">
-        <source>This website is available via HTTPS.</source>
-        <target>Ce site internet est disponible via HTTPS.</target>
+        <source>Here you can select which protocol to use for the website.</source>
+        <target>Ici, vous pouvez sélectionner le protocole à utiliser pour le site Web.</target>
       </trans-unit>
       <trans-unit id="tl_page.autoforward.0">
         <source>Forward to another page</source>
@@ -286,8 +309,7 @@
         <target>Groupe</target>
       </trans-unit>
       <trans-unit id="tl_page.cgroup.1">
-        <source>Please select a group as the owner of the page.</source>
-        <target>Sélectionner un groupe qui sera propriétaire de la page.</target>
+        <source>Please select a user group as the owner of the page.</source>
       </trans-unit>
       <trans-unit id="tl_page.chmod.0">
         <source>Access rights</source>
@@ -330,12 +352,10 @@
         <target>Définir si la page est affichée dans le plan de site HTML.</target>
       </trans-unit>
       <trans-unit id="tl_page.hide.0">
-        <source>Hide from navigation</source>
-        <target>Ne pas afficher dans la navigation</target>
+        <source>Hide in navigation</source>
       </trans-unit>
       <trans-unit id="tl_page.hide.1">
-        <source>Hide the page from the navigation menu.</source>
-        <target>Masquer la page dans le menu de navigation.</target>
+        <source>Hide the page in the navigation menu.</source>
       </trans-unit>
       <trans-unit id="tl_page.guests.0">
         <source>Show to guests only</source>
@@ -406,8 +426,8 @@
         <target>Nom et type</target>
       </trans-unit>
       <trans-unit id="tl_page.meta_legend">
-        <source>Meta data</source>
-        <target>Meta-données</target>
+        <source>Metadata</source>
+        <target>Métadata</target>
       </trans-unit>
       <trans-unit id="tl_page.system_legend">
         <source>System settings</source>
@@ -417,9 +437,13 @@
         <source>Redirect settings</source>
         <target>Paramètres de redirection</target>
       </trans-unit>
-      <trans-unit id="tl_page.dns_legend">
-        <source>DNS settings</source>
-        <target>Paramètres DNS</target>
+      <trans-unit id="tl_page.url_legend">
+        <source>URL settings</source>
+        <target>Paramètres d'URL</target>
+      </trans-unit>
+      <trans-unit id="tl_page.language_legend">
+        <source>Language settings</source>
+        <target>Paramètres de langue</target>
       </trans-unit>
       <trans-unit id="tl_page.website_legend">
         <source>Website settings</source>
@@ -428,10 +452,6 @@
       <trans-unit id="tl_page.global_legend">
         <source>Global settings</source>
         <target>Paramètres globaux</target>
-      </trans-unit>
-      <trans-unit id="tl_page.alias_legend">
-        <source>Alias settings</source>
-        <target>Paramètres d'alias</target>
       </trans-unit>
       <trans-unit id="tl_page.sitemap_legend">
         <source>XML sitemap</source>
@@ -544,6 +564,10 @@
       <trans-unit id="tl_page.articles">
         <source>Edit the articles of page ID %s</source>
         <target>Éditer les articles de la page ID %s</target>
+      </trans-unit>
+      <trans-unit id="tl_page.legacyRouting">
+        <source>Disable legacy routing mode to enable this configuration.</source>
+        <target>Désactivez le mode de routage hérité pour activer cette configuration.</target>
       </trans-unit>
       <trans-unit id="CACHE.0">
         <source>0 (do not cache)</source>

@@ -74,12 +74,12 @@
         <target>Tutaj możesz wprowadzić wysokość ważnego obszaru.</target>
       </trans-unit>
       <trans-unit id="tl_files.meta.0">
-        <source>Meta data</source>
-        <target>Meta dane</target>
+        <source>Metadata</source>
+        <target>Metadane</target>
       </trans-unit>
       <trans-unit id="tl_files.meta.1">
-        <source>Here you can enter the file meta data.</source>
-        <target>Tutaj możesz wprowadzić meta dane pliku.</target>
+        <source>Here you can enter the file metadata. To add a language, create a matching root page in the site structure.</source>
+        <target>Tutaj możesz wprowadzić meta dane pliku. Aby dodać język, utwórz punkt startowy serwisu w strukturze stron.</target>
       </trans-unit>
       <trans-unit id="tl_files.fileupload.0">
         <source>File upload</source>
@@ -131,7 +131,7 @@
       </trans-unit>
       <trans-unit id="tl_files.dropzone">
         <source>Click or drop files here to upload</source>
-        <target>Kliknij lub upuść pliki tutaj, aby je wysłać</target>
+        <target>Kliknij lub upuść pliki tutaj aby je wysłać</target>
       </trans-unit>
       <trans-unit id="tl_files.dropzoneFileTooBig">
         <source>The file is too big ({{filesize}} MiB). The maximum filesize is {{maxFilesize}} MiB.</source>
@@ -151,7 +151,7 @@
       </trans-unit>
       <trans-unit id="tl_files.syncChanged">
         <source>Updated the hash of the file or folder &quot;%s&quot;</source>
-        <target>Zaktualizowano hash pliku lub folderu &quot;%s&quot;</target>
+        <target>Zaktualizowano hasha pliku lub folderu &quot;%s&quot;</target>
       </trans-unit>
       <trans-unit id="tl_files.syncUnchanged">
         <source>Found the file or folder &quot;%s&quot;</source>
@@ -207,11 +207,11 @@
       </trans-unit>
       <trans-unit id="tl_files.cut">
         <source>Move file or folder &quot;%s&quot;</source>
-        <target>Przenieś plik lub katalog &quot;%s&quot;</target>
+        <target>Przenieś ten plik lub katalog</target>
       </trans-unit>
       <trans-unit id="tl_files.copy">
         <source>Duplicate file or folder &quot;%s&quot;</source>
-        <target>Kopiuj plik lub katalog &quot;%s&quot;</target>
+        <target>Kopiuj ten plik lub katalog</target>
       </trans-unit>
       <trans-unit id="tl_files.edit">
         <source>Edit file or folder &quot;%s&quot;</source>
@@ -219,7 +219,7 @@
       </trans-unit>
       <trans-unit id="tl_files.delete">
         <source>Delete file or folder &quot;%s&quot;</source>
-        <target>Skasuj plik lub katalog &quot;%s&quot;</target>
+        <target>Skasuj ten plik lub katalog</target>
       </trans-unit>
       <trans-unit id="tl_files.drag">
         <source>Drag file or folder &quot;%s&quot;</source>

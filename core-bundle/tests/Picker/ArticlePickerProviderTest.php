@@ -18,11 +18,14 @@ use Contao\TestCase\ContaoTestCase;
 use Knp\Menu\FactoryInterface;
 use Knp\Menu\ItemInterface;
 use Knp\Menu\MenuItem;
+use Symfony\Bridge\PhpUnit\ExpectDeprecationTrait;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Security\Core\Security;
 
 class ArticlePickerProviderTest extends ContaoTestCase
 {
+    use ExpectDeprecationTrait;
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
@@ -39,11 +42,11 @@ class ArticlePickerProviderTest extends ContaoTestCase
 
     /**
      * @group legacy
-     *
-     * @expectedDeprecation Using a picker provider without injecting the translator service has been deprecated %s.
      */
     public function testCreatesTheMenuItem(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.4: Using a picker provider without injecting the translator service has been deprecated %s.');
+
         $config = json_encode([
             'context' => 'link',
             'extras' => [],
@@ -120,8 +123,9 @@ class ArticlePickerProviderTest extends ContaoTestCase
                 'fieldType' => 'radio',
                 'preserveRecord' => 'tl_article.2',
                 'value' => '5',
+                'flags' => ['urlattr'],
             ],
-            $picker->getDcaAttributes(new PickerConfig('link', $extra, '{{article_url::5}}'))
+            $picker->getDcaAttributes(new PickerConfig('link', $extra, '{{article_url::5|urlattr}}'))
         );
 
         $this->assertSame(
@@ -178,11 +182,7 @@ class ArticlePickerProviderTest extends ContaoTestCase
         $router = $this->createMock(RouterInterface::class);
         $router
             ->method('generate')
-            ->willReturnCallback(
-                static function (string $name, array $params): string {
-                    return $name.'?'.http_build_query($params);
-                }
-            )
+            ->willReturnCallback(static fn (string $name, array $params): string => $name.'?'.http_build_query($params))
         ;
 
         return new ArticlePickerProvider($menuFactory, $router, null, $security);

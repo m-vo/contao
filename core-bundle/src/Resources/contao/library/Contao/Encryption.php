@@ -10,7 +10,7 @@
 
 namespace Contao;
 
-@trigger_error('Using the "Contao\Encryption" class has been deprecated and will no longer work in Contao 5.0. Use the PHP password_* functions and a third-party library such as OpenSSL or phpseclib instead.', E_USER_DEPRECATED);
+trigger_deprecation('contao/core-bundle', '3.5', 'Using the "Contao\Encryption" class has been deprecated and will no longer work in Contao 5.0. Use the PHP password_* functions and a third-party library such as OpenSSL or phpseclib instead.');
 
 /**
  * Encrypts and decrypts data
@@ -43,121 +43,19 @@ class Encryption
 	protected static $resTd;
 
 	/**
-	 * Encrypt a value
-	 *
-	 * @param mixed  $varValue The value to encrypt
-	 * @param string $strKey   An optional encryption key
-	 *
-	 * @return string The encrypted value
+	 * @deprecated Use a third-party library such as OpenSSL or phpseclib instead
 	 */
 	public static function encrypt($varValue, $strKey=null)
 	{
-		// Recursively encrypt arrays
-		if (\is_array($varValue))
-		{
-			foreach ($varValue as $k=>$v)
-			{
-				$varValue[$k] = static::encrypt($v);
-			}
-
-			return $varValue;
-		}
-
-		if (!$varValue)
-		{
-			return '';
-		}
-
-		// Initialize the module
-		if (static::$resTd === null)
-		{
-			static::initialize();
-		}
-
-		if (!$strKey)
-		{
-			$strKey = System::getContainer()->getParameter('contao.encryption_key');
-		}
-
-		$iv = mcrypt_create_iv(mcrypt_enc_get_iv_size(static::$resTd));
-		mcrypt_generic_init(static::$resTd, md5($strKey), $iv);
-		$strEncrypted = mcrypt_generic(static::$resTd, $varValue);
-		$strEncrypted = base64_encode($iv . $strEncrypted);
-		mcrypt_generic_deinit(static::$resTd);
-
-		return $strEncrypted;
+		throw new \BadMethodCallException('This method is not supported anymore, because the PHP mcrypt extension has been removed in PHP 7.2.');
 	}
 
 	/**
-	 * Decrypt a value
-	 *
-	 * @param mixed  $varValue The value to decrypt
-	 * @param string $strKey   An optional encryption key
-	 *
-	 * @return string The decrypted value
+	 * @deprecated Use a third-party library such as OpenSSL or phpseclib instead
 	 */
 	public static function decrypt($varValue, $strKey=null)
 	{
-		// Recursively decrypt arrays
-		if (\is_array($varValue))
-		{
-			foreach ($varValue as $k=>$v)
-			{
-				$varValue[$k] = static::decrypt($v);
-			}
-
-			return $varValue;
-		}
-
-		if (!$varValue)
-		{
-			return '';
-		}
-
-		// Initialize the module
-		if (static::$resTd === null)
-		{
-			static::initialize();
-		}
-
-		$varValue = base64_decode($varValue);
-		$ivsize = mcrypt_enc_get_iv_size(static::$resTd);
-		$iv = substr($varValue, 0, $ivsize);
-		$varValue = substr($varValue, $ivsize);
-
-		if (!$varValue)
-		{
-			return '';
-		}
-
-		if (!$strKey)
-		{
-			$strKey = System::getContainer()->getParameter('contao.encryption_key');
-		}
-
-		mcrypt_generic_init(static::$resTd, md5($strKey), $iv);
-		$strDecrypted = mdecrypt_generic(static::$resTd, $varValue);
-		mcrypt_generic_deinit(static::$resTd);
-
-		return $strDecrypted;
-	}
-
-	/**
-	 * Initialize the encryption module
-	 *
-	 * @throws \Exception If the encryption module cannot be initialized
-	 */
-	protected static function initialize()
-	{
-		if (!\in_array('mcrypt', get_loaded_extensions()))
-		{
-			throw new \Exception('The PHP mcrypt extension is not installed');
-		}
-
-		if (!self::$resTd = mcrypt_module_open(Config::get('encryptionCipher'), '', Config::get('encryptionMode'), ''))
-		{
-			throw new \Exception('Error initializing encryption module');
-		}
+		throw new \BadMethodCallException('This method is not supported anymore, because the PHP mcrypt extension has been removed in PHP 7.2.');
 	}
 
 	/**
@@ -169,7 +67,7 @@ class Encryption
 	 */
 	public static function hash($strPassword)
 	{
-		$encoder = System::getContainer()->get('security.encoder_factory')->getEncoder(User::class);
+		$encoder = System::getContainer()->get('security.password_hasher_factory')->getEncoder(User::class);
 
 		return $encoder->encodePassword($strPassword, null);
 	}
@@ -218,17 +116,9 @@ class Encryption
 	 */
 	public static function verify($strPassword, $strHash)
 	{
-		$encoder = System::getContainer()->get('security.encoder_factory')->getEncoder(User::class);
+		$encoder = System::getContainer()->get('security.password_hasher_factory')->getEncoder(User::class);
 
 		return $encoder->isPasswordValid($strHash, $strPassword, null);
-	}
-
-	/**
-	 * Initialize the encryption module
-	 */
-	protected function __construct()
-	{
-		static::initialize();
 	}
 
 	/**

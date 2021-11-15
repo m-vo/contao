@@ -18,15 +18,8 @@ use Contao\OptInModel;
 
 class OptInToken implements OptInTokenInterface
 {
-    /**
-     * @var OptInModel
-     */
-    private $model;
-
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
+    private OptInModel $model;
+    private ContaoFramework $framework;
 
     public function __construct(OptInModel $model, ContaoFramework $framework)
     {
@@ -135,6 +128,8 @@ class OptInToken implements OptInTokenInterface
         $email = $this->framework->createInstance(Email::class);
         $email->subject = $this->model->emailSubject;
         $email->text = $this->model->emailText;
+        $email->from = $GLOBALS['TL_ADMIN_EMAIL'] ?? null;
+        $email->fromName = $GLOBALS['TL_ADMIN_NAME'] ?? null;
         $email->sendTo($this->model->email);
     }
 

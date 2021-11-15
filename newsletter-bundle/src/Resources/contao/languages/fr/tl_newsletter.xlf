@@ -73,13 +73,21 @@
         <source>Do not embed images in HTML newsletters.</source>
         <target>Ne pas inclure des images dans les bulletins d'information HTML.</target>
       </trans-unit>
+      <trans-unit id="tl_newsletter.mailerTransport.0">
+        <source>Mailer transport</source>
+        <target>Envoi d'e-mail</target>
+      </trans-unit>
+      <trans-unit id="tl_newsletter.mailerTransport.1">
+        <source>Here you can override the default mailer transport of the channel.</source>
+        <target>Vous pouvez remplacer la méthode d'envoi des mails pour cette liste de diffusion.</target>
+      </trans-unit>
       <trans-unit id="tl_newsletter.sender.0">
         <source>Custom sender e-mail address</source>
         <target>Adresse e-mail personnalisée de l'expéditeur</target>
       </trans-unit>
       <trans-unit id="tl_newsletter.sender.1">
         <source>Here you can override the default sender e-mail address of the channel.</source>
-        <target>Ici, vous pouvez remplacer l'adresse e-mail par défaut de l'expéditeur de la liste de diffusion.</target>
+        <target>Vous pouvez remplacer l'adresse e-mail par défaut de l'expéditeur de la liste de diffusion.</target>
       </trans-unit>
       <trans-unit id="tl_newsletter.senderName.0">
         <source>Custom sender name</source>
@@ -87,7 +95,7 @@
       </trans-unit>
       <trans-unit id="tl_newsletter.senderName.1">
         <source>Here you can override the default sender name of the channel.</source>
-        <target>Ici, vous pouvez remplacer le nom par défaut de l'expéditeur de la liste de diffusion.</target>
+        <target>Vous pouvez remplacer le nom par défaut de l'expéditeur de la liste de diffusion.</target>
       </trans-unit>
       <trans-unit id="tl_newsletter.mailsPerCycle.0">
         <source>Mails per cycle</source>

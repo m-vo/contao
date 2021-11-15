@@ -1,5 +1,21 @@
 # API changes
 
+## Version 4.* to 4.11
+
+Loading MooTools and jQuery from CDN is no longer supported, because it does
+not provide any advantage anymore.
+
+More information: https://github.com/contao/contao/pull/2438
+
+## Version 4.* to 4.10
+
+### CSS classes "first" and "last"
+
+The CSS classes "first" and "last" are no longer applied to articles and
+content elements. Use CSS selectors instead.
+
+More information: https://github.com/contao/contao/issues/239
+
 ## Version 4.* to 4.8
 
 ### Contao image 1.0
@@ -12,6 +28,13 @@ The `contao/image` library got updated from version 0.3 to 1.0. See
 The body class for the user agent (via the `{{ua::class}}` insert tag) has been
 removed in Contao `4.8` to improve caching capabilities. Adjust your CSS or use
 JavaScript if you need information about the user agent on the client side.
+
+### MediaElement.js
+
+The [MediaElement.js][2] component along with its `js_mediaelement` template has
+been removed in Contao 4.8 due to widespread support of HTML5 videos in current
+browsers. Use the HTML5 video element natively or integrate your own video player
+solution manually.
 
 ## Version 4.* to 4.6
 
@@ -170,53 +193,6 @@ template as follows:
   <?php $this->parent(); ?>
   <meta name="keywords" content="<?= $this->keywords ?>">
 <?php $this->endblock(); ?>
-```
-
-### Template changes
-
-Adding the schema.org tags required to insert an additional `<span>` element
-into the following templates:
-
-`cal_default.html5`
-
-```php
-<!-- OLD -->
-<div class="event">
-  <a href="<?= $event['href'] ?>"><?= $event['link'] ?></a>
-</div>
-
-<!-- NEW -->
-<div class="event" itemscope itemtype="http://schema.org/Event">
-  <a href="<?= $event['href'] ?>" itemprop="url"><span itemprop="name"><?= $event['link'] ?></span></a>
-</div>
-```
-
-`mod_breadcrumb.html5`
-
-```php
-<!-- OLD -->
-<li>
-  <a href="<?= $item['href'] ?>"><?= $item['link'] ?></a>
-</li>
-
-<!-- NEW -->
-<li itemscope itemtype="http://schema.org/ListItem" itemprop="itemListElement">
-  <a href="<?= $item['href'] ?>" itemprop="url"><span itemprop="name"><?= $item['link'] ?></span></a>
-</li>
-```
-
-`nav_default.html5`
-
-```php
-<!-- OLD -->
-<li>
-  <a href="<?= $item['href'] ?>"><?= $item['link'] ?></a>
-</li>
-
-<!-- NEW -->
-<li>
-  <a href="<?= $item['href'] ?>" itemprop="url"><span itemprop="name"><?= $item['link'] ?></span></a>
-</li>
 ```
 
 ### Template name changes
@@ -447,3 +423,4 @@ tables and views. However, the Doctrine schema manager, which is used in Contao
 4, only processes tables.
 
 [1]: https://github.com/contao/image/blob/master/UPGRADE.md#version-03-to-10
+[2]: https://www.mediaelementjs.com

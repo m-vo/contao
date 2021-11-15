@@ -24,9 +24,11 @@ class MakeServicesPublicPass implements CompilerPassInterface
 {
     private const SERVICES = [
         'assets.packages',
+        'debug.stopwatch',
         'fragment.handler',
         'lexik_maintenance.driver.factory',
         'monolog.logger.contao',
+        'security.authentication_utils',
         'security.authentication.trust_resolver',
         'security.firewall.map',
         'security.logout_url_generator',
@@ -36,8 +38,8 @@ class MakeServicesPublicPass implements CompilerPassInterface
 
     private const ALIASES = [
         'database_connection',
-        'swiftmailer.mailer',
-        'security.encoder_factory',
+        'mailer',
+        'security.password_hasher_factory',
     ];
 
     public function process(ContainerBuilder $container): void

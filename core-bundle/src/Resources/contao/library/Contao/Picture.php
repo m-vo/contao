@@ -17,7 +17,7 @@ use Contao\Image\ResizeConfiguration;
 use Contao\Image\ResizeOptions;
 use Contao\Model\Collection;
 
-@trigger_error('Using the "Contao\Picture" class has been deprecated and will no longer work in Contao 5.0. Use the "contao.image.picture_factory" service instead.', E_USER_DEPRECATED);
+trigger_deprecation('contao/core-bundle', '4.3', 'Using the "Contao\Picture" class has been deprecated and will no longer work in Contao 5.0. Use the "contao.image.picture_factory" service instead.');
 
 /**
  * Resizes images and creates picture data
@@ -64,7 +64,7 @@ class Picture
 	/**
 	 * The image size items collection
 	 *
-	 * @var ImageSizeItemModel[]|Collection
+	 * @var array<ImageSizeItemModel|object>|Collection
 	 */
 	protected $imageSizeItems = array();
 
@@ -82,7 +82,7 @@ class Picture
 	 * Create a picture instance from the given image path and size
 	 *
 	 * @param string|File          $file The image path or File instance
-	 * @param array|integer|string $size The image size as array (width, height, resize mode) or an tl_image_size ID or a predifined image size key
+	 * @param array|integer|string $size The image size as array (width, height, resize mode) or an tl_image_size ID or a predefined image size key
 	 *
 	 * @return static The created picture instance
 	 */
@@ -93,7 +93,6 @@ class Picture
 			$file = new File(rawurldecode($file));
 		}
 
-		$imageSize = null;
 		$picture = new static($file);
 
 		if (\is_array($size) && !empty($size[2]))
@@ -180,7 +179,7 @@ class Picture
 	/**
 	 * Set the image size
 	 *
-	 * @param ImageSizeModel|object|string $imageSize The image size or a predifined image size key
+	 * @param ImageSizeModel|object|string $imageSize The image size or a predefined image size key
 	 *
 	 * @return $this The picture object
 	 */
@@ -194,7 +193,7 @@ class Picture
 	/**
 	 * Set the image size items collection
 	 *
-	 * @param ImageSizeItemModel[]|Collection $imageSizeItems The image size items collection
+	 * @param array<ImageSizeItemModel|object>|Collection $imageSizeItems The image size items collection
 	 *
 	 * @return $this The picture object
 	 */
@@ -276,7 +275,7 @@ class Picture
 	/**
 	 * Get the config for one picture source element
 	 *
-	 * @param Model|object $imageSize The image size or image size item model
+	 * @param ImageSizeModel|ImageSizeItemModel|object $imageSize The image size or image size item model
 	 *
 	 * @return PictureConfigurationItem
 	 */

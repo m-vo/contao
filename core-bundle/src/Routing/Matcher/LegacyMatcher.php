@@ -14,6 +14,7 @@ namespace Contao\CoreBundle\Routing\Matcher;
 
 use Contao\Config;
 use Contao\CoreBundle\Framework\ContaoFramework;
+use Contao\CoreBundle\Util\LocaleUtil;
 use Contao\Input;
 use Contao\PageModel;
 use Contao\System;
@@ -23,25 +24,10 @@ use Symfony\Component\Routing\Matcher\RequestMatcherInterface;
 
 class LegacyMatcher implements RequestMatcherInterface
 {
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
-
-    /**
-     * @var RequestMatcherInterface
-     */
-    private $requestMatcher;
-
-    /**
-     * @var string
-     */
-    private $urlSuffix;
-
-    /**
-     * @var bool
-     */
-    private $prependLocale;
+    private ContaoFramework $framework;
+    private RequestMatcherInterface $requestMatcher;
+    private string $urlSuffix;
+    private bool $prependLocale;
 
     /**
      * @internal Do not inherit from this class; decorate the "contao.routing.legacy_matcher" service instead
@@ -72,17 +58,12 @@ class LegacyMatcher implements RequestMatcherInterface
         $locale = null;
         $fragments = null;
 
-        /** @var Config $config */
-        $config = $this->framework->getAdapter(Config::class);
-
-        if ($config->get('folderUrl')) {
-            try {
-                $match = $this->requestMatcher->matchRequest($request);
-                $fragments = $this->createFragmentsFromMatch($match);
-                $locale = $match['_locale'] ?? null;
-            } catch (ResourceNotFoundException $e) {
-                // Continue and parse fragments from path
-            }
+        try {
+            $match = $this->requestMatcher->matchRequest($request);
+            $fragments = $this->createFragmentsFromMatch($match);
+            $locale = isset($match['_locale']) ? LocaleUtil::formatAsLanguageTag($match['_locale']) : null;
+        } catch (ResourceNotFoundException $e) {
+            // continue and parse fragments from path
         }
 
         if (null === $fragments) {
@@ -100,7 +81,7 @@ class LegacyMatcher implements RequestMatcherInterface
             $input->setGet('language', $locale);
         }
 
-        @trigger_error('Using the "getPageIdFromUrl" hook has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+        trigger_deprecation('contao/core-bundle', '4.0', 'Using the "getPageIdFromUrl" hook has been deprecated and will no longer work in Contao 5.0.');
 
         $fragments = $this->executeLegacyHook($fragments);
         $pathInfo = $this->createPathFromFragments($fragments, $locale);
@@ -123,7 +104,7 @@ class LegacyMatcher implements RequestMatcherInterface
 
         /** @var Config $config */
         $config = $this->framework->getAdapter(Config::class);
-        $fragments = array_merge([$page->alias], explode('/', substr($parameters, 1)));
+        $fragments = [...[$page->alias], ...explode('/', substr($parameters, 1))];
 
         // Add the second fragment as auto_item if the number of fragments is even
         if ($config->get('useAutoItem') && 0 === \count($fragments) % 2) {

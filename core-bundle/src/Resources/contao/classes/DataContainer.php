@@ -22,22 +22,117 @@ use Symfony\Component\HttpFoundation\Session\Attribute\AttributeBagInterface;
 /**
  * Provide methods to handle data container arrays.
  *
- * @property integer $id
- * @property string  $table
- * @property mixed   $value
- * @property string  $field
- * @property string  $inputName
- * @property string  $palette
- * @property object  $activeRecord
- * @property array   $rootIds
+ * @property string|integer $id
+ * @property string         $table
+ * @property mixed          $value
+ * @property string         $field
+ * @property string         $inputName
+ * @property string         $palette
+ * @property object|null    $activeRecord
+ * @property array          $rootIds
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
 abstract class DataContainer extends Backend
 {
 	/**
+	 * Records are not sorted
+	 */
+	public const MODE_UNSORTED = 0;
+
+	/**
+	 * Records are sorted by a fixed field
+	 */
+	public const MODE_SORTED = 1;
+
+	/**
+	 * Records are sorted by a switchable field
+	 */
+	public const MODE_SORTABLE = 2;
+
+	/**
+	 * Records are sorted by the parent table
+	 */
+	public const MODE_SORTED_PARENT = 3;
+
+	/**
+	 * Displays the child records of a parent record (see content elements)
+	 */
+	public const MODE_PARENT = 4;
+
+	/**
+	 * Records are displayed as tree (see site structure)
+	 */
+	public const MODE_TREE = 5;
+
+	/**
+	 * Displays the child records within a tree structure (see articles module)
+	 */
+	public const MODE_TREE_EXTENDED = 6;
+
+	/**
+	 * Sort by initial letter ascending
+	 */
+	public const SORT_INITIAL_LETTER_ASC = 1;
+
+	/**
+	 * Sort by initial letter descending
+	 */
+	public const SORT_INITIAL_LETTER_DESC = 2;
+
+	/**
+	 * Sort by initial two letters ascending
+	 */
+	public const SORT_INITIAL_LETTERS_ASC = 3;
+
+	/**
+	 * Sort by initial two letters descending
+	 */
+	public const SORT_INITIAL_LETTERS_DESC = 4;
+
+	/**
+	 * Sort by day ascending
+	 */
+	public const SORT_DAY_ASC = 5;
+
+	/**
+	 * Sort by day descending
+	 */
+	public const SORT_DAY_DESC = 6;
+
+	/**
+	 * Sort by month ascending
+	 */
+	public const SORT_MONTH_ASC = 7;
+
+	/**
+	 * Sort by month descending
+	 */
+	public const SORT_MONTH_DESC = 8;
+
+	/**
+	 * Sort by year ascending
+	 */
+	public const SORT_YEAR_ASC = 9;
+
+	/**
+	 * Sort by year descending
+	 */
+	public const SORT_YEAR_DESC = 10;
+
+	/**
+	 * Sort ascending
+	 */
+	public const SORT_ASC = 11;
+
+	/**
+	 * Sort descending
+	 */
+	public const SORT_DESC = 12;
+
+	/**
 	 * Current ID
-	 * @var integer
+	 * @var integer|string
 	 */
 	protected $intId;
 
@@ -72,10 +167,22 @@ abstract class DataContainer extends Backend
 	protected $strPalette;
 
 	/**
-	 * IDs of all root records
+	 * IDs of all root records (permissions)
 	 * @var array
 	 */
-	protected $root;
+	protected $root = array();
+
+	/**
+	 * IDs of children of root records (permissions)
+	 * @var array
+	 */
+	protected $rootChildren = array();
+
+	/**
+	 * IDs of visible parents of the root records
+	 * @var array
+	 */
+	protected $visibleRootTrails = array();
 
 	/**
 	 * WHERE clause of the database query
@@ -213,7 +320,7 @@ abstract class DataContainer extends Backend
 	/**
 	 * Render a row of a box and return it as HTML string
 	 *
-	 * @param string $strPalette
+	 * @param string|array|null $strPalette
 	 *
 	 * @return string
 	 *
@@ -222,10 +329,10 @@ abstract class DataContainer extends Backend
 	 */
 	protected function row($strPalette=null)
 	{
-		$arrData = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField];
+		$arrData = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField] ?? array();
 
 		// Check if the field is excluded
-		if ($arrData['exclude'])
+		if ($arrData['exclude'] ?? null)
 		{
 			throw new AccessDeniedException('Field "' . $this->strTable . '.' . $this->strField . '" is excluded from being edited.');
 		}
@@ -233,19 +340,19 @@ abstract class DataContainer extends Backend
 		$xlabel = '';
 
 		// Toggle line wrap (textarea)
-		if ($arrData['inputType'] == 'textarea' && !isset($arrData['eval']['rte']))
+		if (($arrData['inputType'] ?? null) == 'textarea' && !isset($arrData['eval']['rte']))
 		{
 			$xlabel .= ' ' . Image::getHtml('wrap.svg', $GLOBALS['TL_LANG']['MSC']['wordWrap'], 'title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['wordWrap']) . '" class="toggleWrap" onclick="Backend.toggleWrap(\'ctrl_' . $this->strInputName . '\')"');
 		}
 
 		// Add the help wizard
-		if ($arrData['eval']['helpwizard'])
+		if ($arrData['eval']['helpwizard'] ?? null)
 		{
-			$xlabel .= ' <a href="contao/help.php?table=' . $this->strTable . '&amp;field=' . $this->strField . '" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['helpWizard']) . '" onclick="Backend.openModalIframe({\'title\':\'' . StringUtil::specialchars(str_replace("'", "\\'", $arrData['label'][0])) . '\',\'url\':this.href});return false">' . Image::getHtml('about.svg', $GLOBALS['TL_LANG']['MSC']['helpWizard']) . '</a>';
+			$xlabel .= ' <a href="contao/help.php?table=' . $this->strTable . '&amp;field=' . $this->strField . '" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['helpWizard']) . '" onclick="Backend.openModalIframe({\'title\':\'' . StringUtil::specialchars(str_replace("'", "\\'", $arrData['label'][0] ?? '')) . '\',\'url\':this.href});return false">' . Image::getHtml('about.svg', $GLOBALS['TL_LANG']['MSC']['helpWizard']) . '</a>';
 		}
 
 		// Add a custom xlabel
-		if (\is_array($arrData['xlabel']))
+		if (\is_array($arrData['xlabel'] ?? null))
 		{
 			foreach ($arrData['xlabel'] as $callback)
 			{
@@ -262,20 +369,19 @@ abstract class DataContainer extends Backend
 		}
 
 		// Input field callback
-		if (\is_array($arrData['input_field_callback']))
+		if (\is_array($arrData['input_field_callback'] ?? null))
 		{
 			$this->import($arrData['input_field_callback'][0]);
 
 			return $this->{$arrData['input_field_callback'][0]}->{$arrData['input_field_callback'][1]}($this, $xlabel);
 		}
 
-		if (\is_callable($arrData['input_field_callback']))
+		if (\is_callable($arrData['input_field_callback'] ?? null))
 		{
 			return $arrData['input_field_callback']($this, $xlabel);
 		}
 
-		/** @var Widget $strClass */
-		$strClass = $GLOBALS['BE_FFL'][$arrData['inputType']];
+		$strClass = $GLOBALS['BE_FFL'][($arrData['inputType'] ?? null)] ?? null;
 
 		// Return if the widget class does not exists
 		if (!class_exists($strClass))
@@ -285,7 +391,7 @@ abstract class DataContainer extends Backend
 
 		$arrData['eval']['required'] = false;
 
-		if ($arrData['eval']['mandatory'])
+		if ($arrData['eval']['mandatory'] ?? null)
 		{
 			if (\is_array($this->varValue))
 			{
@@ -325,7 +431,7 @@ abstract class DataContainer extends Backend
 		// Validate the field
 		if (Input::post('FORM_SUBMIT') == $this->strTable)
 		{
-			$suffix = ($this instanceof DC_Folder ? md5($this->intId) : $this->intId);
+			$suffix = $this->getFormFieldSuffix();
 			$key = (Input::get('act') == 'editAll') ? 'FORM_FIELDS_' . $suffix : 'FORM_FIELDS';
 
 			// Calculate the current palette
@@ -369,11 +475,11 @@ abstract class DataContainer extends Backend
 			// Deprecated since Contao 4.2, to be removed in Contao 5.0
 			if (!isset($_POST[$this->strInputName]) && \in_array($this->strInputName, $paletteFields))
 			{
-				@trigger_error('Using FORM_FIELDS has been deprecated and will no longer work in Contao 5.0. Make sure to always submit at least an empty string in your widget.', E_USER_DEPRECATED);
+				trigger_deprecation('contao/core-bundle', '4.2', 'Using $_POST[\'FORM_FIELDS\'] has been deprecated and will no longer work in Contao 5.0. Make sure to always submit at least an empty string in your widget.');
 			}
 
 			// Validate and save the field
-			if (\in_array($this->strInputName, $paletteFields) || Input::get('act') == 'overrideAll')
+			if ($objWidget->submitInput() && (\in_array($this->strInputName, $paletteFields) || Input::get('act') == 'overrideAll'))
 			{
 				$objWidget->validate();
 
@@ -385,6 +491,7 @@ abstract class DataContainer extends Backend
 						$this->noReload = true;
 					}
 				}
+				// The return value of submitInput() might have changed, therefore check it again here (see #2383)
 				elseif ($objWidget->submitInput())
 				{
 					$varValue = $objWidget->value;
@@ -424,9 +531,9 @@ abstract class DataContainer extends Backend
 		$strHelpClass = '';
 
 		// Date picker
-		if ($arrData['eval']['datepicker'])
+		if ($arrData['eval']['datepicker'] ?? null)
 		{
-			$rgxp = $arrData['eval']['rgxp'];
+			$rgxp = $arrData['eval']['rgxp'] ?? 'date';
 			$format = Date::formatToJs(Config::get($rgxp . 'Format'));
 
 			switch ($rgxp)
@@ -447,7 +554,7 @@ abstract class DataContainer extends Backend
 			$strOnSelect = '';
 
 			// Trigger the auto-submit function (see #8603)
-			if ($arrData['eval']['submitOnChange'])
+			if ($arrData['eval']['submitOnChange'] ?? null)
 			{
 				$strOnSelect = ",\n        onSelect: function() { Backend.autoSubmit(\"" . $this->strTable . "\"); }";
 			}
@@ -470,10 +577,10 @@ abstract class DataContainer extends Backend
 		}
 
 		// Color picker
-		if ($arrData['eval']['colorpicker'])
+		if ($arrData['eval']['colorpicker'] ?? null)
 		{
 			// Support single fields as well (see #5240)
-			$strKey = $arrData['eval']['multiple'] ? $this->strField . '_0' : $this->strField;
+			$strKey = ($arrData['eval']['multiple'] ?? null) ? $this->strField . '_0' : $this->strField;
 
 			$wizard .= ' ' . Image::getHtml('pickcolor.svg', $GLOBALS['TL_LANG']['MSC']['colorpicker'], 'title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['colorpicker']) . '" id="moo_' . $this->strField . '" style="cursor:pointer"') . '
   <script>
@@ -491,7 +598,7 @@ abstract class DataContainer extends Backend
   </script>';
 		}
 
-		$arrClasses = StringUtil::trimsplit(' ', (string) $arrData['eval']['tl_class']);
+		$arrClasses = StringUtil::trimsplit(' ', $arrData['eval']['tl_class'] ?? '');
 
 		// DCA picker
 		if (isset($arrData['eval']['dcaPicker']) && (\is_array($arrData['eval']['dcaPicker']) || $arrData['eval']['dcaPicker'] === true))
@@ -500,8 +607,13 @@ abstract class DataContainer extends Backend
 			$wizard .= Backend::getDcaPickerWizard($arrData['eval']['dcaPicker'], $this->strTable, $this->strField, $this->strInputName);
 		}
 
+		if (($arrData['inputType'] ?? null) == 'password')
+		{
+			$wizard .= Backend::getTogglePasswordWizard($this->strInputName);
+		}
+
 		// Add a custom wizard
-		if (\is_array($arrData['wizard']))
+		if (\is_array($arrData['wizard'] ?? null))
 		{
 			foreach ($arrData['wizard'] as $callback)
 			{
@@ -517,16 +629,18 @@ abstract class DataContainer extends Backend
 			}
 		}
 
+		$hasWizardClass = \in_array('wizard', $arrClasses);
+
 		if ($wizard)
 		{
 			$objWidget->wizard = $wizard;
 
-			if ($arrData['eval']['addWizardClass'] !== false && !\in_array('wizard', $arrClasses))
+			if (!$hasWizardClass)
 			{
 				$arrClasses[] = 'wizard';
 			}
 		}
-		elseif (\in_array('wizard', $arrClasses))
+		elseif ($hasWizardClass)
 		{
 			unset($arrClasses[array_search('wizard', $arrClasses)]);
 		}
@@ -537,17 +651,14 @@ abstract class DataContainer extends Backend
 			$this->blnUploadable = true;
 		}
 
-		if ($arrData['inputType'] != 'password')
-		{
-			$arrClasses[] = 'widget';
-		}
+		$arrClasses[] = 'widget';
 
 		// Mark floated single checkboxes
-		if ($arrData['inputType'] == 'checkbox' && !$arrData['eval']['multiple'] && \in_array('w50', $arrClasses))
+		if (($arrData['inputType'] ?? null) == 'checkbox' && !($arrData['eval']['multiple'] ?? null) && \in_array('w50', $arrClasses))
 		{
 			$arrClasses[] = 'cbx';
 		}
-		elseif ($arrData['inputType'] == 'text' && $arrData['eval']['multiple'] && \in_array('wizard', $arrClasses))
+		elseif (($arrData['inputType'] ?? null) == 'text' && ($arrData['eval']['multiple'] ?? null) && \in_array('wizard', $arrClasses))
 		{
 			$arrClasses[] = 'inline';
 		}
@@ -562,7 +673,7 @@ abstract class DataContainer extends Backend
 		// Replace the textarea with an RTE instance
 		if (!empty($arrData['eval']['rte']))
 		{
-			list ($file, $type) = explode('|', $arrData['eval']['rte'], 2);
+			list($file, $type) = explode('|', $arrData['eval']['rte'], 2) + array(null, null);
 
 			$fileBrowserTypes = array();
 			$pickerBuilder = System::getContainer()->get('contao.picker.builder');
@@ -590,7 +701,7 @@ abstract class DataContainer extends Backend
 		}
 
 		// Handle multi-select fields in "override all" mode
-		elseif (($arrData['inputType'] == 'checkbox' || $arrData['inputType'] == 'checkboxWizard') && $arrData['eval']['multiple'] && Input::get('act') == 'overrideAll')
+		elseif ((($arrData['inputType'] ?? null) == 'checkbox' || ($arrData['inputType'] ?? null) == 'checkboxWizard') && ($arrData['eval']['multiple'] ?? null) && Input::get('act') == 'overrideAll')
 		{
 			$updateMode = '
 </div>
@@ -666,7 +777,7 @@ abstract class DataContainer extends Backend
 		}
 
 		return $strPreview . '
-<div' . ($arrData['eval']['tl_class'] ? ' class="' . trim($arrData['eval']['tl_class']) . '"' : '') . '>' . $objWidget->parse() . $updateMode . (!$objWidget->hasErrors() ? $this->help($strHelpClass) : '') . '
+<div' . (!empty($arrData['eval']['tl_class']) ? ' class="' . trim($arrData['eval']['tl_class']) . '"' : '') . '>' . $objWidget->parse() . $updateMode . (!$objWidget->hasErrors() ? $this->help($strHelpClass) : '') . '
 </div>';
 	}
 
@@ -679,9 +790,9 @@ abstract class DataContainer extends Backend
 	 */
 	public function help($strClass='')
 	{
-		$return = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['label'][1];
+		$return = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['label'][1] ?? null;
 
-		if (!$return || $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['inputType'] == 'password' || !Config::get('showHelp'))
+		if (!$return || ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['inputType'] ?? null) == 'password' || !Config::get('showHelp'))
 		{
 			return '';
 		}
@@ -758,7 +869,7 @@ abstract class DataContainer extends Backend
 	 */
 	protected function generateButtons($arrRow, $strTable, $arrRootIds=array(), $blnCircularReference=false, $arrChildRecordIds=null, $strPrevious=null, $strNext=null)
 	{
-		if (empty($GLOBALS['TL_DCA'][$strTable]['list']['operations']) || !\is_array($GLOBALS['TL_DCA'][$strTable]['list']['operations']))
+		if (!\is_array($GLOBALS['TL_DCA'][$strTable]['list']['operations'] ?? null))
 		{
 			return '';
 		}
@@ -775,8 +886,8 @@ abstract class DataContainer extends Backend
 			{
 				if (\is_array($v['label']))
 				{
-					$label = $v['label'][0];
-					$title = sprintf($v['label'][1], $id);
+					$label = $v['label'][0] ?? null;
+					$title = sprintf($v['label'][1] ?? '', $id);
 				}
 				else
 				{
@@ -797,16 +908,16 @@ abstract class DataContainer extends Backend
 			}
 
 			// Call a custom function instead of using the default button
-			if (\is_array($v['button_callback']))
+			if (\is_array($v['button_callback'] ?? null))
 			{
 				$this->import($v['button_callback'][0]);
-				$return .= $this->{$v['button_callback'][0]}->{$v['button_callback'][1]}($arrRow, $v['href'], $label, $title, $v['icon'], $attributes, $strTable, $arrRootIds, $arrChildRecordIds, $blnCircularReference, $strPrevious, $strNext, $this);
+				$return .= $this->{$v['button_callback'][0]}->{$v['button_callback'][1]}($arrRow, $v['href'] ?? null, $label, $title, $v['icon'] ?? null, $attributes, $strTable, $arrRootIds, $arrChildRecordIds, $blnCircularReference, $strPrevious, $strNext, $this);
 				continue;
 			}
 
-			if (\is_callable($v['button_callback']))
+			if (\is_callable($v['button_callback'] ?? null))
 			{
-				$return .= $v['button_callback']($arrRow, $v['href'], $label, $title, $v['icon'], $attributes, $strTable, $arrRootIds, $arrChildRecordIds, $blnCircularReference, $strPrevious, $strNext, $this);
+				$return .= $v['button_callback']($arrRow, $v['href'] ?? null, $label, $title, $v['icon'] ?? null, $attributes, $strTable, $arrRootIds, $arrChildRecordIds, $blnCircularReference, $strPrevious, $strNext, $this);
 				continue;
 			}
 
@@ -848,11 +959,11 @@ abstract class DataContainer extends Backend
 
 			foreach ($arrDirections as $dir)
 			{
-				$label = $GLOBALS['TL_LANG'][$strTable][$dir][0] ?: $dir;
-				$title = $GLOBALS['TL_LANG'][$strTable][$dir][1] ?: $dir;
+				$label = !empty($GLOBALS['TL_LANG'][$strTable][$dir][0]) ? $GLOBALS['TL_LANG'][$strTable][$dir][0] : $dir;
+				$title = !empty($GLOBALS['TL_LANG'][$strTable][$dir][1]) ? $GLOBALS['TL_LANG'][$strTable][$dir][1] : $dir;
 
 				$label = Image::getHtml($dir . '.svg', $label);
-				$href = $v['href'] ?: '&amp;act=move';
+				$href = !empty($v['href']) ? $v['href'] : '&amp;act=move';
 
 				if ($dir == 'up')
 				{
@@ -875,7 +986,7 @@ abstract class DataContainer extends Backend
 	 */
 	protected function generateGlobalButtons()
 	{
-		if (empty($GLOBALS['TL_DCA'][$this->strTable]['list']['global_operations']) || !\is_array($GLOBALS['TL_DCA'][$this->strTable]['list']['global_operations']))
+		if (!\is_array($GLOBALS['TL_DCA'][$this->strTable]['list']['global_operations'] ?? null))
 		{
 			return '';
 		}
@@ -884,20 +995,20 @@ abstract class DataContainer extends Backend
 
 		foreach ($GLOBALS['TL_DCA'][$this->strTable]['list']['global_operations'] as $k=>$v)
 		{
-			if (!$v['showOnSelect'] && Input::get('act') == 'select')
+			if (!($v['showOnSelect'] ?? null) && Input::get('act') == 'select')
 			{
 				continue;
 			}
 
 			$v = \is_array($v) ? $v : array($v);
 			$label = \is_array($v['label']) ? $v['label'][0] : $v['label'];
-			$title = \is_array($v['label']) ? $v['label'][1] : $v['label'];
+			$title = \is_array($v['label']) ? ($v['label'][1] ?? null) : $v['label'];
 			$attributes = !empty($v['attributes']) ? ' ' . ltrim($v['attributes']) : '';
 
 			// Custom icon (see #5541)
-			if ($v['icon'])
+			if ($v['icon'] ?? null)
 			{
-				$v['class'] = trim($v['class'] . ' header_icon');
+				$v['class'] = trim(($v['class'] ?? '') . ' header_icon');
 
 				// Add the theme path if only the file name is given
 				if (strpos($v['icon'], '/') === false)
@@ -919,14 +1030,14 @@ abstract class DataContainer extends Backend
 			}
 
 			// Call a custom function instead of using the default button
-			if (\is_array($v['button_callback']))
+			if (\is_array($v['button_callback'] ?? null))
 			{
 				$this->import($v['button_callback'][0]);
 				$return .= $this->{$v['button_callback'][0]}->{$v['button_callback'][1]}($v['href'], $label, $title, $v['class'], $attributes, $this->strTable, $this->root);
 				continue;
 			}
 
-			if (\is_callable($v['button_callback']))
+			if (\is_callable($v['button_callback'] ?? null))
 			{
 				$return .= $v['button_callback']($v['href'], $label, $title, $v['class'], $attributes, $this->strTable, $this->root);
 				continue;
@@ -957,7 +1068,7 @@ abstract class DataContainer extends Backend
 	 */
 	protected function generateHeaderButtons($arrRow, $strPtable)
 	{
-		if (empty($GLOBALS['TL_DCA'][$strPtable]['list']['operations']) || !\is_array($GLOBALS['TL_DCA'][$strPtable]['list']['operations']))
+		if (!\is_array($GLOBALS['TL_DCA'][$strPtable]['list']['operations'] ?? null))
 		{
 			return '';
 		}
@@ -966,7 +1077,7 @@ abstract class DataContainer extends Backend
 
 		foreach ($GLOBALS['TL_DCA'][$strPtable]['list']['operations'] as $k=> $v)
 		{
-			if (empty($v['showInHeader']) || (Input::get('act') == 'select' && !$v['showOnSelect']))
+			if (empty($v['showInHeader']) || (Input::get('act') == 'select' && !($v['showOnSelect'] ?? null)))
 			{
 				continue;
 			}
@@ -1011,14 +1122,14 @@ abstract class DataContainer extends Backend
 			}
 
 			// Call a custom function instead of using the default button
-			if (\is_array($v['button_callback']))
+			if (\is_array($v['button_callback'] ?? null))
 			{
 				$this->import($v['button_callback'][0]);
 				$return .= $this->{$v['button_callback'][0]}->{$v['button_callback'][1]}($arrRow, $v['href'], $label, $title, $v['icon'], $attributes, $strPtable, array(), null, false, null, null, $this);
 				continue;
 			}
 
-			if (\is_callable($v['button_callback']))
+			if (\is_callable($v['button_callback'] ?? null))
 			{
 				$return .= $v['button_callback']($arrRow, $v['href'], $label, $title, $v['icon'], $attributes, $strPtable, array(), null, false, null, null, $this);
 				continue;
@@ -1035,7 +1146,7 @@ abstract class DataContainer extends Backend
 					$href = $this->addToUrl($v['href'] . '&amp;id=' . $arrRow['id'] . '&amp;popup=1');
 				}
 
-				$return .= '<a href="' . $href . '" title="' . StringUtil::specialchars($title) . '" onclick="Backend.openModalIframe({\'title\':\'' . StringUtil::specialchars(str_replace("'", "\\'", sprintf(\is_array($GLOBALS['TL_LANG'][$strPtable]['show']) ? $GLOBALS['TL_LANG'][$strPtable]['show'][1] : $GLOBALS['TL_LANG'][$strPtable]['show'], $arrRow['id']))) . '\',\'url\':this.href});return false"' . $attributes . '>' . Image::getHtml($v['icon'], $label) . '</a> ';
+				$return .= '<a href="' . $href . '" title="' . StringUtil::specialchars($title) . '" onclick="Backend.openModalIframe({\'title\':\'' . StringUtil::specialchars(str_replace("'", "\\'", sprintf(\is_array($GLOBALS['TL_LANG'][$strPtable]['show'] ?? null) ? $GLOBALS['TL_LANG'][$strPtable]['show'][1] : ($GLOBALS['TL_LANG'][$strPtable]['show'] ?? ''), $arrRow['id']))) . '\',\'url\':this.href});return false"' . $attributes . '>' . Image::getHtml($v['icon'], $label) . '</a> ';
 			}
 			else
 			{
@@ -1104,10 +1215,10 @@ abstract class DataContainer extends Backend
 		switch ($this->strPickerFieldType)
 		{
 			case 'checkbox':
-				return ' <input type="checkbox" name="picker[]" id="picker_' . $id . '" class="tl_tree_checkbox" value="' . StringUtil::specialchars(\call_user_func($this->objPickerCallback, $value)) . '" onfocus="Backend.getScrollOffset()"' . Widget::optionChecked($value, $this->arrPickerValue) . $attributes . '>';
+				return ' <input type="checkbox" name="picker[]" id="picker_' . $id . '" class="tl_tree_checkbox" value="' . StringUtil::specialchars(($this->objPickerCallback)($value)) . '" onfocus="Backend.getScrollOffset()"' . Widget::optionChecked($value, $this->arrPickerValue) . $attributes . '>';
 
 			case 'radio':
-				return ' <input type="radio" name="picker" id="picker_' . $id . '" class="tl_tree_radio" value="' . StringUtil::specialchars(\call_user_func($this->objPickerCallback, $value)) . '" onfocus="Backend.getScrollOffset()"' . Widget::optionChecked($value, $this->arrPickerValue) . $attributes . '>';
+				return ' <input type="radio" name="picker" id="picker_' . $id . '" class="tl_tree_radio" value="' . StringUtil::specialchars(($this->objPickerCallback)($value)) . '" onfocus="Backend.getScrollOffset()"' . Widget::optionChecked($value, $this->arrPickerValue) . $attributes . '>';
 		}
 
 		return '';
@@ -1141,7 +1252,7 @@ abstract class DataContainer extends Backend
 	 */
 	protected function panel()
 	{
-		if (!$GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['panelLayout'])
+		if (!($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['panelLayout'] ?? null))
 		{
 			return '';
 		}
@@ -1168,7 +1279,7 @@ abstract class DataContainer extends Backend
 
 		$intFilterPanel = 0;
 		$arrPanels = array();
-		$arrPanes = StringUtil::trimsplit(';', $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['panelLayout']);
+		$arrPanes = StringUtil::trimsplit(';', $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['panelLayout'] ?? '');
 
 		foreach ($arrPanes as $strPanel)
 		{
@@ -1179,32 +1290,41 @@ abstract class DataContainer extends Backend
 			{
 				$panel = '';
 
-				// Regular panels
-				if ($strSubPanel == 'search' || $strSubPanel == 'limit' || $strSubPanel == 'sort')
+				switch ($strSubPanel)
 				{
-					$panel = $this->{$strSubPanel . 'Menu'}();
-				}
+					case 'limit':
+						// The limit menu depends on other panels that may set a filter query, e.g. search and filter.
+						// In order to correctly calculate the total row count, the limit menu must be compiled last.
+						// We insert a placeholder here and compile the limit menu after all other panels.
+						$panel = '###limit_menu###';
+						break;
 
-				// Multiple filter subpanels can be defined to split the fields across panels
-				elseif ($strSubPanel == 'filter')
-				{
-					$panel = $this->{$strSubPanel . 'Menu'}(++$intFilterPanel);
-				}
+					case 'search':
+						$panel = $this->searchMenu();
+						break;
 
-				// Call the panel_callback
-				else
-				{
-					$arrCallback = $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['panel_callback'][$strSubPanel];
+					case 'sort':
+						$panel = $this->sortMenu();
+						break;
 
-					if (\is_array($arrCallback))
-					{
-						$this->import($arrCallback[0]);
-						$panel = $this->{$arrCallback[0]}->{$arrCallback[1]}($this);
-					}
-					elseif (\is_callable($arrCallback))
-					{
-						$panel = $arrCallback($this);
-					}
+					case 'filter':
+						// Multiple filter subpanels can be defined to split the fields across panels
+						$panel = $this->filterMenu(++$intFilterPanel);
+						break;
+
+					default:
+						// Call the panel_callback
+						$arrCallback = $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['panel_callback'][$strSubPanel] ?? null;
+
+						if (\is_array($arrCallback))
+						{
+							$this->import($arrCallback[0]);
+							$panel = $this->{$arrCallback[0]}->{$arrCallback[1]}($this);
+						}
+						elseif (\is_callable($arrCallback))
+						{
+							$panel = $arrCallback($this);
+						}
 				}
 
 				// Add the panel if it is not empty
@@ -1224,6 +1344,17 @@ abstract class DataContainer extends Backend
 		if (empty($arrPanels))
 		{
 			return '';
+		}
+
+		// Compile limit menu if placeholder is present
+		foreach ($arrPanels as $key => $strPanel)
+		{
+			if (strpos($strPanel, '###limit_menu###') === false)
+			{
+				continue;
+			}
+
+			$arrPanels[$key] = str_replace('###limit_menu###', $this->limitMenu(), $strPanel);
 		}
 
 		if (Input::post('FORM_SUBMIT') == 'tl_filters')
@@ -1284,7 +1415,7 @@ abstract class DataContainer extends Backend
 		$this->addCtableTags($this->table, $this->id, $tags);
 
 		// Trigger the oninvalidate_cache_tags_callback
-		if (\is_array($GLOBALS['TL_DCA'][$this->table]['config']['oninvalidate_cache_tags_callback']))
+		if (\is_array($GLOBALS['TL_DCA'][$this->table]['config']['oninvalidate_cache_tags_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA'][$this->table]['config']['oninvalidate_cache_tags_callback'] as $callback)
 			{
@@ -1345,7 +1476,7 @@ abstract class DataContainer extends Backend
 		{
 			Controller::loadDataContainer($ctable);
 
-			if ($GLOBALS['TL_DCA'][$ctable]['config']['dynamicPtable'])
+			if ($GLOBALS['TL_DCA'][$ctable]['config']['dynamicPtable'] ?? null)
 			{
 				$objIds = $this->Database->prepare('SELECT id FROM ' . Database::quoteIdentifier($ctable) . ' WHERE pid=? AND ptable=?')
 										 ->execute($intId, $strTable);
@@ -1371,6 +1502,16 @@ abstract class DataContainer extends Backend
 	}
 
 	/**
+	 * Return the form field suffix
+	 *
+	 * @return integer|string
+	 */
+	protected function getFormFieldSuffix()
+	{
+		return $this->intId;
+	}
+
+	/**
 	 * Return the name of the current palette
 	 *
 	 * @return string
@@ -1385,6 +1526,25 @@ abstract class DataContainer extends Backend
 	 * @throws \Exception
 	 */
 	abstract protected function save($varValue);
+
+	/**
+	 * Return the class name of the DataContainer driver for the given table.
+	 *
+	 * @param string $table
+	 *
+	 * @return string
+	 */
+	public static function getDriverForTable(string $table): string
+	{
+		$dataContainer = $GLOBALS['TL_DCA'][$table]['config']['dataContainer'];
+
+		if (false === strpos($dataContainer, '\\'))
+		{
+			$dataContainer = 'DC_' . $dataContainer;
+		}
+
+		return $dataContainer;
+	}
 }
 
 class_alias(DataContainer::class, 'DataContainer');

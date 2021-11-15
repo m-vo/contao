@@ -23,71 +23,30 @@ use Contao\Image\ResizeConfiguration;
 use Contao\Image\ResizeOptions;
 use Contao\Image\ResizerInterface;
 use Contao\ImageSizeModel;
+use Contao\StringUtil;
 use Imagine\Image\ImagineInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Filesystem\Filesystem;
+use Webmozart\PathUtil\Path;
 
 class ImageFactory implements ImageFactoryInterface
 {
-    /**
-     * @var ResizerInterface
-     */
-    private $resizer;
-
-    /**
-     * @var ImagineInterface
-     */
-    private $imagine;
-
-    /**
-     * @var ImagineInterface
-     */
-    private $imagineSvg;
-
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
-
-    /**
-     * @var Filesystem
-     */
-    private $filesystem;
-
-    /**
-     * @var bool
-     */
-    private $bypassCache;
-
-    /**
-     * @var array
-     */
-    private $imagineOptions;
-
-    /**
-     * @var array
-     */
-    private $validExtensions;
-
-    /**
-     * @var string
-     */
-    private $uploadDir;
-
-    /**
-     * @var array
-     */
-    private $predefinedSizes = [];
-
-    /**
-     * @var ?LoggerInterface
-     */
-    private $logger;
+    private ResizerInterface $resizer;
+    private ImagineInterface $imagine;
+    private ImagineInterface $imagineSvg;
+    private ContaoFramework $framework;
+    private Filesystem $filesystem;
+    private bool $bypassCache;
+    private array $imagineOptions;
+    private array $validExtensions;
+    private string $uploadDir;
+    private array $predefinedSizes = [];
+    private ?LoggerInterface $logger;
 
     /**
      * @internal Do not inherit from this class; decorate the "contao.image.image_factory" service instead
      */
-    public function __construct(ResizerInterface $resizer, ImagineInterface $imagine, ImagineInterface $imagineSvg, Filesystem $filesystem, ContaoFramework $framework, bool $bypassCache, array $imagineOptions, array $validExtensions, string $uploadDir, ?LoggerInterface $logger = null)
+    public function __construct(ResizerInterface $resizer, ImagineInterface $imagine, ImagineInterface $imagineSvg, Filesystem $filesystem, ContaoFramework $framework, bool $bypassCache, array $imagineOptions, array $validExtensions, string $uploadDir, LoggerInterface $logger = null)
     {
         $this->resizer = $resizer;
         $this->imagine = $imagine;
@@ -109,6 +68,9 @@ class ImageFactory implements ImageFactoryInterface
         $this->predefinedSizes = $predefinedSizes;
     }
 
+    /**
+     * @param int|array|string|ResizeConfiguration|null $size
+     */
     public function create($path, $size = null, $options = null): ImageInterface
     {
         if (null !== $options && !\is_string($options) && !$options instanceof ResizeOptions) {
@@ -119,7 +81,7 @@ class ImageFactory implements ImageFactoryInterface
             $image = $path;
         } else {
             $path = (string) $path;
-            $fileExtension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $fileExtension = Path::getExtension($path, true);
 
             if (\in_array($fileExtension, ['svg', 'svgz'], true)) {
                 $imagine = $this->imagineSvg;
@@ -131,7 +93,7 @@ class ImageFactory implements ImageFactoryInterface
                 throw new \InvalidArgumentException(sprintf('Image type "%s" was not allowed to be processed', $fileExtension));
             }
 
-            if (!$this->filesystem->isAbsolutePath($path)) {
+            if (!Path::isAbsolute($path)) {
                 throw new \InvalidArgumentException(sprintf('Image path "%s" must be absolute', $path));
             }
 
@@ -147,6 +109,9 @@ class ImageFactory implements ImageFactoryInterface
         }
 
         $targetPath = $options instanceof ResizeOptions ? $options->getTargetPath() : $options;
+
+        // Support arrays in a serialized form
+        $size = StringUtil::deserialize($size);
 
         if ($size instanceof ResizeConfiguration) {
             $resizeConfig = $size;
@@ -301,7 +266,7 @@ class ImageFactory implements ImageFactoryInterface
      */
     private function createImportantPart(ImageInterface $image): ?ImportantPart
     {
-        if (0 !== strncmp($image->getPath(), $this->uploadDir.'/', \strlen($this->uploadDir) + 1)) {
+        if (!Path::isBasePath($this->uploadDir, $image->getPath())) {
             return null;
         }
 
@@ -325,7 +290,7 @@ class ImageFactory implements ImageFactoryInterface
             (float) $file->importantPartX + (float) $file->importantPartWidth >= 2
             || (float) $file->importantPartY + (float) $file->importantPartHeight >= 2
         ) {
-            @trigger_error(sprintf('Defining the important part in absolute pixels has been deprecated and will no longer work in Contao 5.0. Run the database migration to migrate to the new format.'), E_USER_DEPRECATED);
+            trigger_deprecation('contao/core-bundle', '4.8', 'Defining the important part in absolute pixels has been deprecated and will no longer work in Contao 5.0. Run the database migration to migrate to the new format.');
 
             if ($this->logger) {
                 $this->logger->warning(

@@ -13,6 +13,8 @@ namespace Contao;
 use Contao\CoreBundle\Exception\AccessDeniedException;
 use Contao\CoreBundle\Exception\InsufficientAuthenticationException;
 use Contao\CoreBundle\Exception\PageNotFoundException;
+use Contao\CoreBundle\Security\ContaoCorePermissions;
+use Contao\CoreBundle\Util\LocaleUtil;
 use Contao\Model\Collection;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -42,8 +44,9 @@ class FrontendIndex extends Frontend
 	 */
 	public function run()
 	{
+		trigger_deprecation('contao/core-bundle', '4.10', 'Using "Contao\FrontendIndex::run()" has been deprecated and will no longer work in Contao 5.0. Use the Symfony routing instead.');
+
 		$pageId = $this->getPageIdFromUrl();
-		$objRootPage = null;
 
 		// Load a website root page object if there is no page ID
 		if ($pageId === null)
@@ -85,6 +88,7 @@ class FrontendIndex extends Frontend
 	 */
 	public function renderPage($pageModel)
 	{
+		/** @var PageModel $objPage */
 		global $objPage;
 
 		$objPage = $pageModel;
@@ -92,9 +96,8 @@ class FrontendIndex extends Frontend
 		// Check the URL and language of each page if there are multiple results
 		if ($objPage instanceof Collection && $objPage->count() > 1)
 		{
-			@trigger_error('Using FrontendIndex::renderPage() with a model collection has been deprecated and will no longer work Contao 5.0. Use the Symfony routing instead.', E_USER_DEPRECATED);
+			trigger_deprecation('contao/core-bundle', '4.7', 'Using "Contao\FrontendIndex::renderPage()" with a model collection has been deprecated and will no longer work Contao 5.0. Use the Symfony routing instead.');
 
-			$objNewPage = null;
 			$arrPages = array();
 
 			// Order by domain and language
@@ -126,7 +129,7 @@ class FrontendIndex extends Frontend
 			}
 
 			// Use the first result (see #4872)
-			if (!Config::get('addLanguageToUrl'))
+			if (!System::getContainer()->getParameter('contao.legacy_routing') || !System::getContainer()->getParameter('contao.prepend_locale'))
 			{
 				$objNewPage = current($arrLangs);
 			}
@@ -173,8 +176,8 @@ class FrontendIndex extends Frontend
 		// If the page has an alias, it can no longer be called via ID (see #7661)
 		if ($objPage->alias)
 		{
-			$language = Config::get('addLanguageToUrl') ? '[a-z]{2}(-[A-Z]{2})?/' : '';
-			$suffix = preg_quote(Config::get('urlSuffix'), '#');
+			$language = $objPage->urlPrefix ? preg_quote($objPage->urlPrefix . '/', '#') : '';
+			$suffix = preg_quote($objPage->urlSuffix, '#');
 
 			if (preg_match('#^' . $language . $objPage->id . '(' . $suffix . '($|\?)|/)#', Environment::get('relativeRequest')))
 			{
@@ -243,8 +246,8 @@ class FrontendIndex extends Frontend
 			throw new PageNotFoundException('Page not found: ' . Environment::get('uri'));
 		}
 
-		// Check wether the language matches the root page language
-		if (isset($_GET['language']) && Config::get('addLanguageToUrl') && Input::get('language') != $objPage->rootLanguage)
+		// Check whether the language matches the root page language
+		if (isset($_GET['language']) && $objPage->urlPrefix && Input::get('language') != LocaleUtil::formatAsLanguageTag($objPage->rootLanguage))
 		{
 			throw new PageNotFoundException('Page not found: ' . Environment::get('uri'));
 		}
@@ -260,84 +263,56 @@ class FrontendIndex extends Frontend
 		// Authenticate the user if the page is protected
 		if ($objPage->protected)
 		{
-			$container = System::getContainer();
-			$token = $container->get('security.token_storage')->getToken();
+			$security = System::getContainer()->get('security.helper');
 
-			if ($container->get('security.authentication.trust_resolver')->isAnonymous($token))
+			if (!$security->isGranted(ContaoCorePermissions::MEMBER_IN_GROUPS, $objPage->groups))
 			{
-				throw new InsufficientAuthenticationException('Not authenticated: ' . Environment::get('uri'));
-			}
+				if (($token = $security->getToken()) === null || System::getContainer()->get('security.authentication.trust_resolver')->isAnonymous($token))
+				{
+					throw new InsufficientAuthenticationException('Not authenticated: ' . Environment::get('uri'));
+				}
 
-			if (!$container->get('security.authorization_checker')->isGranted('ROLE_MEMBER'))
-			{
-				throw new AccessDeniedException('Access denied: ' . Environment::get('uri'));
-			}
+				$user = $security->getUser();
 
-			$arrGroups = $objPage->groups; // required for empty()
-
-			// Check the user groups
-			if (empty($arrGroups) || !\is_array($arrGroups) || !\is_array($this->User->groups) || !\count(array_intersect($arrGroups, $this->User->groups)))
-			{
-				$this->log('Page ID "' . $objPage->id . '" can only be accessed by groups "' . implode(', ', (array) $objPage->groups) . '" (current user groups: ' . implode(', ', $this->User->groups) . ')', __METHOD__, TL_ERROR);
+				if ($user instanceof FrontendUser)
+				{
+					$this->log('Page ID "' . $objPage->id . '" can only be accessed by groups "' . implode(', ', $objPage->groups) . '" (current user groups: ' . implode(', ', StringUtil::deserialize($user->groups, true)) . ')', __METHOD__, TL_ERROR);
+				}
 
 				throw new AccessDeniedException('Access denied: ' . Environment::get('uri'));
 			}
 		}
 
 		// Backup some globals (see #7659)
-		$arrHead = $GLOBALS['TL_HEAD'];
-		$arrBody = $GLOBALS['TL_BODY'];
-		$arrMootools = $GLOBALS['TL_MOOTOOLS'];
-		$arrJquery = $GLOBALS['TL_JQUERY'];
+		$arrHead = $GLOBALS['TL_HEAD'] ?? null;
+		$arrBody = $GLOBALS['TL_BODY'] ?? null;
+		$arrMootools = $GLOBALS['TL_MOOTOOLS'] ?? null;
+		$arrJquery = $GLOBALS['TL_JQUERY'] ?? null;
 
 		try
 		{
-			// Generate the page
-			switch ($objPage->type)
+			$pageType = $GLOBALS['TL_PTY'][$objPage->type] ?? PageRegular::class;
+			$objHandler = new $pageType();
+
+			// Backwards compatibility
+			if (!method_exists($objHandler, 'getResponse'))
 			{
-				case 'error_401':
-					$objHandler = new $GLOBALS['TL_PTY']['error_401']();
+				ob_start();
 
-					/** @var PageError401 $objHandler */
-					return $objHandler->getResponse($objPage->rootId);
+				try
+				{
+					$objHandler->generate($objPage, true);
+					$objResponse = new Response(ob_get_contents(), http_response_code());
+				}
+				finally
+				{
+					ob_end_clean();
+				}
 
-				case 'error_403':
-					$objHandler = new $GLOBALS['TL_PTY']['error_403']();
-
-					/** @var PageError403 $objHandler */
-					return $objHandler->getResponse($objPage->rootId);
-
-				case 'error_404':
-					$objHandler = new $GLOBALS['TL_PTY']['error_404']();
-
-					/** @var PageError404 $objHandler */
-					return $objHandler->getResponse();
-
-				default:
-					$objHandler = new $GLOBALS['TL_PTY'][$objPage->type]();
-
-					// Backwards compatibility
-					if (!method_exists($objHandler, 'getResponse'))
-					{
-						ob_start();
-
-						try
-						{
-							/** @var PageRegular $objHandler */
-							$objHandler->generate($objPage, true);
-							$objResponse = new Response(ob_get_contents(), http_response_code());
-						}
-						finally
-						{
-							ob_end_clean();
-						}
-
-						return $objResponse;
-					}
-
-					/** @var PageRegular $objHandler */
-					return $objHandler->getResponse($objPage, true);
+				return $objResponse;
 			}
+
+			return $objHandler->getResponse($objPage, true);
 		}
 
 		// Render the error page (see #5570)
@@ -349,10 +324,7 @@ class FrontendIndex extends Frontend
 			$GLOBALS['TL_MOOTOOLS'] = $arrMootools;
 			$GLOBALS['TL_JQUERY'] = $arrJquery;
 
-			/** @var PageError404 $objHandler */
-			$objHandler = new $GLOBALS['TL_PTY']['error_404']();
-
-			return $objHandler->getResponse();
+			throw $e;
 		}
 	}
 
@@ -364,7 +336,7 @@ class FrontendIndex extends Frontend
 	 */
 	protected function outputFromCache()
 	{
-		@trigger_error('Using FrontendIndex::outputFromCache() has been deprecated and will no longer work in Contao 5.0. Use the kernel.request event instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.0', 'Using "Contao\FrontendIndex::outputFromCache()" has been deprecated and will no longer work in Contao 5.0. Use the "kernel.request" event instead.');
 	}
 }
 

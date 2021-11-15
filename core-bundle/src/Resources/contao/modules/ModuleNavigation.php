@@ -10,8 +10,6 @@
 
 namespace Contao;
 
-use Patchwork\Utf8;
-
 /**
  * Front end module "navigation".
  *
@@ -37,7 +35,7 @@ class ModuleNavigation extends Module
 		if ($request && System::getContainer()->get('contao.routing.scope_matcher')->isBackendRequest($request))
 		{
 			$objTemplate = new BackendTemplate('be_wildcard');
-			$objTemplate->wildcard = '### ' . Utf8::strtoupper($GLOBALS['TL_LANG']['FMD']['navigation'][0]) . ' ###';
+			$objTemplate->wildcard = '### ' . $GLOBALS['TL_LANG']['FMD']['navigation'][0] . ' ###';
 			$objTemplate->title = $this->headline;
 			$objTemplate->id = $this->id;
 			$objTemplate->link = $this->name;
@@ -74,25 +72,16 @@ class ModuleNavigation extends Module
 		$lang = null;
 		$host = null;
 
-		// Overwrite the domain and language if the reference page belongs to a differnt root page (see #3765)
+		// Overwrite the domain and language if the reference page belongs to a different root page (see #3765)
 		if ($this->defineRoot && $this->rootPage > 0)
 		{
 			$objRootPage = PageModel::findWithDetails($this->rootPage);
 
-			// Set the language
-			if ($objRootPage->rootLanguage != $objPage->rootLanguage && Config::get('addLanguageToUrl'))
-			{
-				$lang = $objRootPage->rootLanguage;
-			}
-
-			// Set the domain
-			if ($objRootPage->rootId != $objPage->rootId && $objRootPage->domain && $objRootPage->domain != $objPage->domain)
-			{
-				$host = $objRootPage->domain;
-			}
+			$lang = $objRootPage->rootLanguage;
+			$host = $objRootPage->domain;
 		}
 
-		$this->Template->request = ampersand(Environment::get('indexFreeRequest'));
+		$this->Template->request = StringUtil::ampersand(Environment::get('indexFreeRequest'));
 		$this->Template->skipId = 'skipNavigation' . $this->id;
 		$this->Template->skipNavigation = StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['skipNavigation']);
 		$this->Template->items = $this->renderNavigation($trail[$level], 1, $host, $lang);

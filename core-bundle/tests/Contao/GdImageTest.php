@@ -259,6 +259,9 @@ class GdImageTest extends TestCase
         $this->assertFalse($image->isSemitransparent());
     }
 
+    /**
+     * @psalm-suppress UndefinedClass
+     */
     private function assertIsGdResource($resource): void
     {
         if (PHP_MAJOR_VERSION >= 8) {

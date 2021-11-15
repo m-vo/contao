@@ -28,15 +28,8 @@ class LogoutHandler implements LogoutHandlerInterface
 {
     use TargetPathTrait;
 
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
-
-    /**
-     * @var LoggerInterface|null
-     */
-    private $logger;
+    private ContaoFramework $framework;
+    private ?LoggerInterface $logger;
 
     /**
      * @internal Do not inherit from this class; decorate the "contao.security.logout_handler" service instead
@@ -47,10 +40,10 @@ class LogoutHandler implements LogoutHandlerInterface
         $this->logger = $logger;
     }
 
-    public function logout(Request $request, Response $response, TokenInterface $token): void
+    public function logout(Request $request, ?Response $response, TokenInterface $token): void
     {
-        if ($request->hasSession() && method_exists($token, 'getProviderKey')) {
-            $this->removeTargetPath($request->getSession(), $token->getProviderKey());
+        if ($request->hasSession() && method_exists($token, 'getFirewallName')) {
+            $this->removeTargetPath($request->getSession(), $token->getFirewallName());
         }
 
         $user = $token->getUser();
@@ -77,12 +70,12 @@ class LogoutHandler implements LogoutHandlerInterface
             return;
         }
 
-        @trigger_error('Using the "postLogout" hook has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+        trigger_deprecation('contao/core-bundle', '4.5', 'Using the "postLogout" hook has been deprecated and will no longer work in Contao 5.0.');
 
         /** @var System $system */
         $system = $this->framework->getAdapter(System::class);
 
-        $GLOBALS['TL_USERNAME'] = $user->getUsername();
+        $GLOBALS['TL_USERNAME'] = $user->getUserIdentifier();
 
         foreach ($GLOBALS['TL_HOOKS']['postLogout'] as $callback) {
             $system->importStatic($callback[0])->{$callback[1]}($user);

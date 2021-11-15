@@ -72,6 +72,12 @@
         <source>Do not embed images in HTML newsletters.</source>
         <target>不要在HTML新闻通讯页面中嵌入图片。</target>
       </trans-unit>
+      <trans-unit id="tl_newsletter.mailerTransport.0">
+        <source>Mailer transport</source>
+      </trans-unit>
+      <trans-unit id="tl_newsletter.mailerTransport.1">
+        <source>Here you can override the default mailer transport of the channel.</source>
+      </trans-unit>
       <trans-unit id="tl_newsletter.sender.0">
         <source>Custom sender e-mail address</source>
         <target>自定义发件人电子邮箱地址</target>

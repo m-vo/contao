@@ -1,9 +1,9 @@
 <p align="center"><img src="https://contao.org/files/contao/logo/contao-logo-corporate.svg"></p>
 
 <p align="center">
-<a href="https://github.com/contao/contao/actions"><img src="https://img.shields.io/github/workflow/status/contao/contao/CI/4.9.svg" alt="GitHub"></a>
-<a href="https://codecov.io/gh/contao/contao"><img src="https://img.shields.io/codecov/c/gh/contao/contao/4.9.svg" alt="Codecov"></a>
-<a href="https://packagist.org/packages/contao/contao"><img src="https://img.shields.io/packagist/v/contao/contao.svg" alt="Packagist"></a>
+<a href="https://github.com/contao/contao/actions"><img src="https://github.com/contao/contao/actions/workflows/ci.yml/badge.svg?branch=4.x" alt></a>
+<a href="https://codecov.io/gh/contao/contao"><img src="https://codecov.io/gh/contao/contao/branch/4.x/graph/badge.svg" alt></a>
+<a href="https://packagist.org/packages/contao/contao"><img src="https://img.shields.io/packagist/v/contao/contao.svg" alt></a>
 </p>
 
 ## About
@@ -43,9 +43,9 @@ composer create-project --no-install contao/managed-edition <directory> <branch>
 ```
 
 Replace `<directory>` with the directory you want to install the Managed
-Edition in (use `.` for the current one). Replace `<branch>` with `dev-master`
-if you want to add a new feature or with `<lts-version>.x-dev` (currently
-`4.4.x-dev` and `4.9.x-dev`) if you want to fix a bug.
+Edition in (use `.` for the current one). Replace `<branch>` with `4.x-dev` if
+you want to add a new feature or with `<lts-version>.x-dev` (currently
+`4.9.x-dev`) if you want to fix a bug.
 
 Then adjust the `require` section in your `composer.json` file so Composer
 loads the monorepo instead of the individual bundles:
@@ -53,12 +53,12 @@ loads the monorepo instead of the individual bundles:
 ```json
 "require": {
     "php": "^7.2",
-    "contao/contao": "dev-master"
+    "contao/contao": "4.x-dev"
 },
 ```
 
-Again, use `dev-master` if you want to add a new feature or
-`<lts-version>.x-dev` if you want to fix a bug.
+Again, use `4.x-dev` if you want to add a new feature or `<lts-version>.x-dev`
+if you want to fix a bug.
 
 Next, install the dependencies:
 
@@ -70,7 +70,7 @@ Composer will automatically clone the Git repo into the `vendor/contao/contao`
 folder. You can finish your setup by opening
 `https://your-domain.local/contao/install` in your browser.
 
-All the changes you make in `vendor/contao/contao` are be tracked via Git, so
+All the changes you make in `vendor/contao/contao` are tracked via Git, so
 you can submit your pull request directly from within your application.
 
 ## Running scripts
@@ -88,6 +88,7 @@ composer run all
 composer run unit-tests
 composer run cs-fixer
 composer run phpstan
+composer run psalm
 ```
 
 If you want to pass additional flags to the underlying commands, you can use
@@ -100,12 +101,10 @@ composer run cs-fixer -- --clear-cache
 
 ## Functional tests
 
-To set up functional tests, create a database named `contao_test` and import
-the `core-bundle/tests/Functional/app/Resources/contao_test.sql` file.
+To set up functional tests, create a database named `contao_test`:
 
 ```bash
 mysql -e "CREATE DATABASE contao_test"
-mysql contao_test < core-bundle/tests/Functional/app/Resources/contao_test.sql
 ```
 
 If your database uses credentials, copy the file `core-bundle/phpunit.xml.dist`

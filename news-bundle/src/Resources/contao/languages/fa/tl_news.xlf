@@ -49,6 +49,14 @@
         <source>Here you can add a custom meta title to overwrite the default page title.</source>
         <target>اینجا می‌توانید عنوان متا دلخواه را برای جایگزینی عنوان پیش‌فرض برگه اضافه کنید.</target>
       </trans-unit>
+      <trans-unit id="tl_news.robots.0">
+        <source>Robots tag</source>
+        <target>برچسب روبوت‌ها</target>
+      </trans-unit>
+      <trans-unit id="tl_news.robots.1">
+        <source>Here you can overwrite how search engines handle the news item.</source>
+        <target>اینجا می‌توانید نحوه‌ی عملکرد موتورهای جستجو با آیتم خبر را بازنویسی کنید.</target>
+      </trans-unit>
       <trans-unit id="tl_news.description.0">
         <source>Meta description</source>
         <target>توضیحات متا</target>
@@ -246,8 +254,8 @@
         <target>مقصد بازگردانی</target>
       </trans-unit>
       <trans-unit id="tl_news.meta_legend">
-        <source>Meta data</source>
-        <target>اطلاعات متا</target>
+        <source>Metadata</source>
+        <target>فراداده</target>
       </trans-unit>
       <trans-unit id="tl_news.expert_legend">
         <source>Expert settings</source>

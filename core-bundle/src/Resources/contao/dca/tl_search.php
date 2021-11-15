@@ -70,6 +70,14 @@ $GLOBALS['TL_DCA']['tl_search'] = array
 		'language' => array
 		(
 			'sql'                     => "varchar(5) NOT NULL default ''"
-		)
+		),
+		'vectorLength' => array
+		(
+			'sql'                     => "double NOT NULL default 0"
+		),
+		'meta' => array
+		(
+			'sql'                     => "mediumtext NULL"
+		),
 	)
 );

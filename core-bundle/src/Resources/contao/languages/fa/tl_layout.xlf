@@ -135,6 +135,7 @@
       </trans-unit>
       <trans-unit id="tl_layout.sections.1">
         <source>Here you can define custom layout sections.</source>
+        <target>اینجا می‌توانید بخش‌های چیدمان اختصاصی را تعریف کنید.</target>
       </trans-unit>
       <trans-unit id="tl_layout.stylesheet.0">
         <source>Internal style sheets</source>
@@ -182,7 +183,7 @@
       </trans-unit>
       <trans-unit id="tl_layout.reset.css.1">
         <source>Removes the inconsistent default styling of HTML elements in different browsers.</source>
-        <target>سبک‌های پیش‌فرض متناقض عنصر‌های HTML را در مرورگرهای متفاوت حذف می‌نماید.</target>
+        <target>سبک‌های پیش‌فرض متناقض المان‌های HTML را در مرورگرهای متفاوت حذف می‌نماید.</target>
       </trans-unit>
       <trans-unit id="tl_layout.form.css.0">
         <source>Basic forms</source>
@@ -190,7 +191,7 @@
       </trans-unit>
       <trans-unit id="tl_layout.form.css.1">
         <source>Adds basic form elements and buttons formatting.</source>
-        <target>افزودن عنصر‌های فرم ساده و قالب‌های دکمه.</target>
+        <target>افزودن المان‌های فرم ساده و قالب‌های دکمه.</target>
       </trans-unit>
       <trans-unit id="tl_layout.icons.css.0">
         <source>Basic icons</source>
@@ -222,6 +223,7 @@
       </trans-unit>
       <trans-unit id="tl_layout.combineScripts.1">
         <source>Combine the .css and .js files (recommended).</source>
+        <target>پرونده‌های .css و .js را ترکیب کن (توصیه‌شده).</target>
       </trans-unit>
       <trans-unit id="tl_layout.external_first">
         <source>Load external style sheets first</source>
@@ -231,20 +233,13 @@
         <source>Load internal style sheets first</source>
         <target>بارگذاری اول شیوه‌نامه‌های خارجی</target>
       </trans-unit>
-      <trans-unit id="tl_layout.webfonts.0">
-        <source>Google web fonts</source>
-        <target>قلم‌های وب گوگل</target>
-      </trans-unit>
-      <trans-unit id="tl_layout.webfonts.1">
-        <source>Here you can add Google web fonts to your website. Specify the font families without the base URL (e.g. &lt;em&gt;Ubuntu|Ubuntu+Mono&lt;/em&gt;).</source>
-        <target>اینجا می‌توانید قلم‌های وب گوگل را به وب‌سایت خود اضافه نمایید. خانواده‌های قلم را بدون نشانی وب مشخص نمایید (برای نمونه &lt;em&gt;Ubuntu|Ubuntu+Mono&lt;/em&gt;).</target>
-      </trans-unit>
       <trans-unit id="tl_layout.lightboxSize.0">
         <source>Lightbox image size</source>
         <target>اندازه تصویر Lightbox</target>
       </trans-unit>
       <trans-unit id="tl_layout.lightboxSize.1">
         <source>Here you can select an image size for the images shown in the lightbox.</source>
+        <target>اینجا می‌توانید یک اندازه‌ی تصویر برای تصاویر نمایش داده شده در lightbox انتخاب کنید.</target>
       </trans-unit>
       <trans-unit id="tl_layout.defaultImageDensities.0">
         <source>Default image pixel densities</source>
@@ -252,6 +247,7 @@
       </trans-unit>
       <trans-unit id="tl_layout.defaultImageDensities.1">
         <source>Here you can define the default pixel densities, e.g. &lt;em&gt;1x, 1.5x, 2x&lt;/em&gt;.</source>
+        <target>اینجا می‌توانید چگالی پیکسل پیش‌فرض را تعریف کنید، مثلا &lt;em&gt;1x, 1.5x, 2x&lt;/em&gt;.</target>
       </trans-unit>
       <trans-unit id="tl_layout.modules.0">
         <source>Included modules</source>
@@ -291,6 +287,7 @@
       </trans-unit>
       <trans-unit id="tl_layout.viewport.1">
         <source>Here you can set a custom viewport tag.</source>
+        <target>اینجا می‌توانید برچسب viewport را تنظیم کنید.</target>
       </trans-unit>
       <trans-unit id="tl_layout.titleTag.0">
         <source>Title tag</source>
@@ -298,6 +295,7 @@
       </trans-unit>
       <trans-unit id="tl_layout.titleTag.1">
         <source>Here you can overwrite the title tag.</source>
+        <target>اینجا می‌توانید برچسب عنوان را رونویسی کنید.</target>
       </trans-unit>
       <trans-unit id="tl_layout.onload.0">
         <source>Body onload</source>
@@ -305,7 +303,7 @@
       </trans-unit>
       <trans-unit id="tl_layout.onload.1">
         <source>Here you can add a body &lt;em&gt;onload&lt;/em&gt; attribute.</source>
-        <target>اینجا می‌توانید خصوصیت &lt;em&gt;onload&lt;/em&gt; body را اضافه نمایید.</target>
+        <target>اینجا می‌توانید ویژگی &lt;em&gt;onload&lt;/em&gt; body را اضافه نمایید.</target>
       </trans-unit>
       <trans-unit id="tl_layout.head.0">
         <source>Additional &amp;lt;head&amp;gt; tags</source>
@@ -323,14 +321,6 @@
         <source>Include the jQuery library in the layout.</source>
         <target>کتابخانه جی‌کوئری را در چیدمان می‌گنجاند.</target>
       </trans-unit>
-      <trans-unit id="tl_layout.jSource.0">
-        <source>jQuery source</source>
-        <target>منبع جی‌کوئری</target>
-      </trans-unit>
-      <trans-unit id="tl_layout.jSource.1">
-        <source>Here you can select from where to load the jQuery script.</source>
-        <target>اینجا می‌توانید جایی که اسکریپت جی‌کوئری باید بارگزاری شود را انتخاب نمایید.</target>
-      </trans-unit>
       <trans-unit id="tl_layout.jquery.0">
         <source>jQuery templates</source>
         <target>قالب‌های جی‌کوئری</target>
@@ -346,14 +336,6 @@
       <trans-unit id="tl_layout.addMooTools.1">
         <source>Include the MooTools library in the layout.</source>
         <target>کتابخانه موتولز را در چیدمان می‌گنجاند.</target>
-      </trans-unit>
-      <trans-unit id="tl_layout.mooSource.0">
-        <source>MooTools source</source>
-        <target>منبع موتولز</target>
-      </trans-unit>
-      <trans-unit id="tl_layout.mooSource.1">
-        <source>Here you can select from where to load the MooTools scripts.</source>
-        <target>اینجا می‌توانید یا از اسکریپت موتولز محلی و یا از شبکه‌های تحویل محتوا بارگذاری کنید.</target>
       </trans-unit>
       <trans-unit id="tl_layout.mootools.0">
         <source>MooTools templates</source>
@@ -385,6 +367,7 @@
       </trans-unit>
       <trans-unit id="tl_layout.externalJs.1">
         <source>Here you can add external JS files from the file system.</source>
+        <target>اینجا می‌توانید پرونده‌های JS خارجی را از سیستم پرونده اضافه کنید.</target>
       </trans-unit>
       <trans-unit id="tl_layout.script.0">
         <source>Custom JavaScript code</source>
@@ -434,10 +417,6 @@
         <source>Custom sections</source>
         <target>بخش‌های سفارشی</target>
       </trans-unit>
-      <trans-unit id="tl_layout.webfonts_legend">
-        <source>Web fonts</source>
-        <target>قلم‌های وبی</target>
-      </trans-unit>
       <trans-unit id="tl_layout.image_legend">
         <source>Image sizes</source>
         <target>اندازه‌های تصویر</target>
@@ -466,33 +445,9 @@
         <source>jQuery</source>
         <target>جی‌کوئری</target>
       </trans-unit>
-      <trans-unit id="tl_layout.j_local">
-        <source>Local file</source>
-        <target>پرونده محلی</target>
-      </trans-unit>
-      <trans-unit id="tl_layout.j_googleapis">
-        <source>CDN (code.jquery.com)</source>
-        <target>سی‌دی‌ان (code.jquery.com)</target>
-      </trans-unit>
-      <trans-unit id="tl_layout.j_fallback">
-        <source>CDN with local fallback</source>
-        <target>سی‌دی‌ان با یدکی محلی</target>
-      </trans-unit>
       <trans-unit id="tl_layout.mootools_legend">
         <source>MooTools</source>
         <target>موتولز</target>
-      </trans-unit>
-      <trans-unit id="tl_layout.moo_local">
-        <source>Local file</source>
-        <target>پرونده محلی</target>
-      </trans-unit>
-      <trans-unit id="tl_layout.moo_googleapis">
-        <source>CDN (googleapis.com)</source>
-        <target>سی‌دی‌ان (googleapis.com)</target>
-      </trans-unit>
-      <trans-unit id="tl_layout.moo_fallback">
-        <source>CDN with local fallback</source>
-        <target>سی‌دی‌ان با یدکی محلی</target>
       </trans-unit>
       <trans-unit id="tl_layout.html5">
         <source>HTML</source>
@@ -505,6 +460,14 @@
       <trans-unit id="tl_layout.edit_module">
         <source>Edit the module</source>
         <target>ویرایش ماژول</target>
+      </trans-unit>
+      <trans-unit id="tl_layout.analytics_google">
+        <source>Google Analytics</source>
+        <target>گوگل آنالیتیکز</target>
+      </trans-unit>
+      <trans-unit id="tl_layout.analytics_matomo">
+        <source>Matomo</source>
+        <target>Matomo</target>
       </trans-unit>
       <trans-unit id="tl_layout.new.0">
         <source>New</source>

@@ -73,22 +73,6 @@
         <source>Do not collapse elements in the back end preview.</source>
         <target>Nie zwijaj elementów zawartości i innych zasobów podczas podglądu w panelu admina.</target>
       </trans-unit>
-      <trans-unit id="tl_settings.doNotRedirectEmpty.0">
-        <source>Do not redirect empty URLs</source>
-        <target>Nie przekierowuj pustych URLi</target>
-      </trans-unit>
-      <trans-unit id="tl_settings.doNotRedirectEmpty.1">
-        <source>For an empty URL display the website instead of redirecting to the language root page (not recommended).</source>
-        <target>Dla pustego URLa wyświetl stronę, zamiast przekierowania do punktu startowego języka (niezalecane).</target>
-      </trans-unit>
-      <trans-unit id="tl_settings.folderUrl.0">
-        <source>Enable folder URLs</source>
-        <target>Włącz foldery URL</target>
-      </trans-unit>
-      <trans-unit id="tl_settings.folderUrl.1">
-        <source>Here you can enable folder-style page aliases like &lt;em&gt;docs/install/download.html&lt;/em&gt; instead of &lt;em&gt;docs-install-download.html&lt;/em&gt;.</source>
-        <target>Tutaj możesz włączyć folderowy styl aliasów stron, np. &lt;em&gt;docs/install/downloads.html&lt;/em&gt; zamiast &lt;em&gt;docs-install-download.html&lt;/em&gt;.</target>
-      </trans-unit>
       <trans-unit id="tl_settings.allowedTags.0">
         <source>Allowed HTML tags</source>
         <target>Dozwolone tagi HTML</target>
@@ -96,6 +80,18 @@
       <trans-unit id="tl_settings.allowedTags.1">
         <source>Here you can enter a list of allowed HTML tags that will not be stripped.</source>
         <target>Wpisz listę dozwolonych tagów HTML. Wszystkie inne tagi zostaną usunięte z wprowadzanych danych.</target>
+      </trans-unit>
+      <trans-unit id="tl_settings.allowedAttributes.0">
+        <source>Allowed HTML attributes</source>
+        <target>Dozwolone atrybuty HTML</target>
+      </trans-unit>
+      <trans-unit id="tl_settings.allowedAttributes.1">
+        <source>List of allowed HTML attributes that will not be stripped. The tag or attribute name &lt;code&gt;*&lt;/code&gt; stands for all tags or attributes. Wildcards can be used for attributes with dashes like &lt;code&gt;data-*&lt;/code&gt;.</source>
+        <target>Lista dozwolonych atrybutów HTML, które nie zostaną wyczyszczone. Nazwa znacznika lub atrybutu &lt;code&gt;*&lt;/code&gt; oznacza wszystkie znaczniki lub atrybuty. Gwiazdka (*) może być użyta dla atrybutów z myślnikiem, takich jak &lt;code&gt;data-*&lt;/code&gt;.</target>
+      </trans-unit>
+      <trans-unit id="tl_settings.allowedAttributesWarning">
+        <source>Allowing &lt;code&gt;*&lt;/code&gt; attributes can be exploited for XSS attacks. Only do this if all backend users are trusted!</source>
+        <target>Zezwolenie dla atrybutów &lt;code&gt;*&lt;/code&gt; może być wykorzystane do ataków XSS. Rób to tylko, jeśli wszyscy użytkownicy panelu są zaufani!</target>
       </trans-unit>
       <trans-unit id="tl_settings.disableRefererCheck.0">
         <source>Disable request tokens</source>
@@ -174,8 +170,8 @@
         <target>Domyślna strona grupy</target>
       </trans-unit>
       <trans-unit id="tl_settings.defaultGroup.1">
-        <source>Here you can select a group as the default owner of a page.</source>
-        <target>Domyślnie strona należy do tej samej grupy co strona nadrzędna. Jednakże, jeśli żadna grupa nie jest przydzielona, właścicielem strony zostanie grupa domyślna. Jeśli nie ma przydzielonej grupy i dodatkowo nie ma ustalonej domyślnej grupy, do strony nie zostaną zastosowane żadne ograniczenia dostępu!</target>
+        <source>Here you can select a user group as the default owner of a page.</source>
+        <target>Tu możesz wybrać grupę użytkowników, która będzie domyślnym właścicielem strony.</target>
       </trans-unit>
       <trans-unit id="tl_settings.defaultChmod.0">
         <source>Default access rights</source>
@@ -197,10 +193,6 @@
         <source>Back end configuration</source>
         <target>Konfiguracja panelu admina</target>
       </trans-unit>
-      <trans-unit id="tl_settings.frontend_legend">
-        <source>Front end configuration</source>
-        <target>Konfiguracja witryny</target>
-      </trans-unit>
       <trans-unit id="tl_settings.security_legend">
         <source>Security settings</source>
         <target>Ustawienia bezpieczeństwa</target>
@@ -220,6 +212,10 @@
       <trans-unit id="tl_settings.chmod_legend">
         <source>Default access rights</source>
         <target>Domyślne prawa dostępu</target>
+      </trans-unit>
+      <trans-unit id="tl_settings.configuredInApp">
+        <source>This setting has been defined in the app configuration and cannot be changed here anymore.</source>
+        <target>To ustawienie jest zdefiniowane w konfiguracji aplikacji (app) i nie może już być tutaj zmienione.</target>
       </trans-unit>
     </body>
   </file>

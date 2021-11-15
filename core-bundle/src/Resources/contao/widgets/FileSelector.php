@@ -63,6 +63,16 @@ class FileSelector extends Widget
 		parent::__construct($arrAttributes);
 	}
 
+	public function __set($strKey, $varValue)
+	{
+		if ($strKey === 'extensions' && \is_array($varValue))
+		{
+			$varValue = implode(',', $varValue);
+		}
+
+		parent::__set($strKey, $varValue);
+	}
+
 	/**
 	 * Generate the widget and return it as string
 	 *
@@ -221,7 +231,7 @@ class FileSelector extends Widget
 				if (empty($root))
 				{
 					// Set all folders inside the custom path as root nodes
-					$root = array_map(function ($el) { return $this->path . '/' . $el; }, scan($projectDir . '/' . $this->path));
+					$root = array_map(function ($el) { return $this->path . '/' . $el; }, Folder::scan($projectDir . '/' . $this->path));
 
 					// Hide the breadcrumb
 					$GLOBALS['TL_DCA']['tl_file']['list']['sorting']['breadcrumb'] = '';
@@ -245,7 +255,7 @@ class FileSelector extends Widget
 		// Start from root
 		elseif ($this->User->isAdmin)
 		{
-			$tree .= $this->renderFiletree($projectDir . '/' . Config::get('uploadPath'), 0, false, true, $arrFound);
+			$tree .= $this->renderFiletree($projectDir . '/' . System::getContainer()->getParameter('contao.upload_path'), 0, false, true, $arrFound);
 		}
 
 		// Show mounted files to regular users
@@ -297,7 +307,7 @@ class FileSelector extends Widget
 		$this->loadDataContainer($this->strTable);
 
 		// Load the current values
-		switch ($GLOBALS['TL_DCA'][$this->strTable]['config']['dataContainer'])
+		switch ($GLOBALS['TL_DCA'][$this->strTable]['config']['dataContainer'] ?? null)
 		{
 			case 'File':
 				if (Config::get($this->strField))
@@ -392,7 +402,7 @@ class FileSelector extends Widget
 		// Scan directory and sort the result
 		else
 		{
-			foreach (scan($path) as $v)
+			foreach (Folder::scan($path) as $v)
 			{
 				if (strncmp($v, '.', 1) === 0)
 				{
@@ -428,7 +438,7 @@ class FileSelector extends Widget
 		// Process folders
 		for ($f=0, $c=\count($folders); $f<$c; $f++)
 		{
-			$content = scan($folders[$f]);
+			$content = Folder::scan($folders[$f]);
 			$currentFolder = StringUtil::stripRootDir($folders[$f]);
 			$countFiles = \count($content);
 
@@ -461,7 +471,7 @@ class FileSelector extends Widget
 			$blnIsOpen = (!empty($arrFound) || $session[$node][$tid] == 1 || \count(preg_grep('/^' . preg_quote($currentFolder, '/') . '\//', $this->varValue)) > 0);
 			$return .= "\n    " . '<li class="' . $folderClass . ' toggle_select hover-div"><div class="tl_left" style="padding-left:' . $intMargin . 'px">';
 
-			// Add a toggle button if there are childs
+			// Add a toggle button if there are children
 			if ($countFiles > 0)
 			{
 				$folderAttribute = '';
@@ -556,7 +566,7 @@ class FileSelector extends Widget
 					}
 				}
 
-				$return .= Image::getHtml($objFile->icon, $objFile->mime) . ' ' . StringUtil::convertEncoding(StringUtil::specialchars(basename($currentFile)), Config::get('characterSet')) . $thumbnail . '</div> <div class="tl_right">';
+				$return .= Image::getHtml($objFile->icon, $objFile->mime) . ' ' . StringUtil::convertEncoding(StringUtil::specialchars(basename($currentFile)), System::getContainer()->getParameter('kernel.charset')) . $thumbnail . '</div> <div class="tl_right">';
 
 				// Add checkbox or radio button
 				switch ($this->fieldType)
@@ -603,7 +613,7 @@ class FileSelector extends Widget
 		}
 
 		// TinyMCE will pass the path instead of the ID
-		if (strpos($this->varValue[0], Config::get('uploadPath') . '/') === 0)
+		if (strpos($this->varValue[0], System::getContainer()->getParameter('contao.upload_path') . '/') === 0)
 		{
 			return;
 		}
@@ -615,7 +625,7 @@ class FileSelector extends Widget
 		}
 
 		// Return if the custom path is not within the upload path (see #8562)
-		if ($this->path && strpos($this->path, Config::get('uploadPath') . '/') !== 0)
+		if ($this->path && strpos($this->path, System::getContainer()->getParameter('contao.upload_path') . '/') !== 0)
 		{
 			return;
 		}

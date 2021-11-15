@@ -15,24 +15,25 @@ namespace Contao\CoreBundle\Tests\DependencyInjection;
 use Contao\CoreBundle\DependencyInjection\Configuration;
 use Contao\CoreBundle\Tests\TestCase;
 use Contao\Image\ResizeConfiguration;
+use Symfony\Bridge\PhpUnit\ExpectDeprecationTrait;
 use Symfony\Component\Config\Definition\ArrayNode;
 use Symfony\Component\Config\Definition\BaseNode;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\Config\Definition\PrototypedArrayNode;
+use Symfony\Component\Filesystem\Filesystem;
 
 class ConfigurationTest extends TestCase
 {
-    /**
-     * @var Configuration
-     */
-    private $configuration;
+    use ExpectDeprecationTrait;
+
+    private Configuration $configuration;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->configuration = new Configuration($this->getTempDir(), 'en');
+        $this->configuration = new Configuration($this->getTempDir());
     }
 
     public function testAddsTheImagineService(): void
@@ -55,11 +56,28 @@ class ConfigurationTest extends TestCase
         $this->assertSame('my_super_service', $configuration['image']['imagine_service']);
     }
 
+    public function testAdjustsTheDefaultWebDir(): void
+    {
+        $configuration = (new Processor())->processConfiguration($this->configuration, []);
+
+        $this->assertSame('public', basename($configuration['web_dir']));
+
+        (new Filesystem())->mkdir($this->getTempDir().'/web');
+
+        $configuration = (new Processor())->processConfiguration($this->configuration, []);
+
+        $this->assertSame('web', basename($configuration['web_dir']));
+    }
+
     /**
+     * @group legacy
+     *
      * @dataProvider getPaths
      */
     public function testResolvesThePaths(string $unix, string $windows): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.13: Setting the web directory in a config file is deprecated. Use the "extra.public-dir" config key in your root composer.json instead.');
+
         $params = [
             'contao' => [
                 'web_dir' => $unix,
@@ -72,7 +90,7 @@ class ConfigurationTest extends TestCase
         $configuration = (new Processor())->processConfiguration($this->configuration, $params);
 
         $this->assertSame('/tmp/contao', $configuration['web_dir']);
-        $this->assertSame('C:\Temp\contao', $configuration['image']['target_dir']);
+        $this->assertSame('C:/Temp/contao', $configuration['image']['target_dir']);
     }
 
     public function getPaths(): \Generator
@@ -113,6 +131,7 @@ class ConfigurationTest extends TestCase
         yield ['config'];
         yield ['contao'];
         yield ['plugins'];
+        yield ['public'];
         yield ['share'];
         yield ['system'];
         yield ['templates'];
@@ -194,11 +213,30 @@ class ConfigurationTest extends TestCase
 
     public function testAllowsOnlySnakeCaseKeys(): void
     {
+        /** @var ArrayNode $tree */
         $tree = $this->configuration->getConfigTreeBuilder()->buildTree();
 
         $this->assertInstanceOf(ArrayNode::class, $tree);
 
         $this->checkKeys($tree->getChildren());
+    }
+
+    public function testFailsIfABackendAttributeNameContainsInvalidCharacters(): void
+    {
+        $params = [
+            'contao' => [
+                'backend' => [
+                    'attributes' => [
+                        'data-App Name' => 'My App',
+                    ],
+                ],
+            ],
+        ];
+
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessageMatches('/The attribute name "data-App Name" must be a valid HTML attribute name./');
+
+        (new Processor())->processConfiguration($this->configuration, $params);
     }
 
     /**
@@ -213,6 +251,7 @@ class ConfigurationTest extends TestCase
                 $this->checkKeys($value->getChildren());
             }
 
+            /** @var ArrayNode $prototype */
             if ($value instanceof PrototypedArrayNode && ($prototype = $value->getPrototype()) instanceof ArrayNode) {
                 $this->checkKeys($prototype->getChildren());
             }

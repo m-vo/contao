@@ -10,6 +10,8 @@
 
 namespace Contao;
 
+use Symfony\Component\Routing\Exception\ExceptionInterface;
+
 /**
  * @property array    $titleFields
  * @property array    $descriptionFields
@@ -43,8 +45,15 @@ class SerpPreview extends Widget
 		$description = StringUtil::substr($this->getDescription($model), 160);
 		$alias = $this->getAlias($model);
 
-		// Get the URL with a %s placeholder for the alias or ID
-		$url = $this->getUrl($model);
+		try
+		{
+			// Get the URL with a %s placeholder for the alias or ID
+			$url = $this->getUrl($model);
+		}
+		catch (ExceptionInterface $routingException)
+		{
+			return '<div class="serp-preview"><p class="tl_info">' . $GLOBALS['TL_LANG']['MSC']['noSerpPreview'] . '</p></div>';
+		}
 
 		list($baseUrl) = explode('%s', $url);
 		$trail = implode(' › ', $this->convertUrlToItems($baseUrl));
@@ -74,26 +83,26 @@ class SerpPreview extends Widget
 		}
 
 		return <<<EOT
-<div class="serp-preview">
-  <p id="serp_url_$id" class="url">$url</p>
-  <p id="serp_title_$id" class="title">$title</p>
-  <p id="serp_description_$id" class="description">$description</p>
-</div>
-<script>
-  window.addEvent('domready', function() {
-    new Contao.SerpPreview({
-      id: '$id',
-      trail: '$trail',
-      titleField: '$titleField',
-      titleFallbackField: '$titleFallbackField',
-      aliasField: '$aliasField',
-      descriptionField: '$descriptionField',
-      descriptionFallbackField: '$descriptionFallbackField',
-      titleTag: '$titleTag'
-    });
-  });
-</script>
-EOT;
+			<div class="serp-preview">
+			  <p id="serp_url_$id" class="url">$url</p>
+			  <p id="serp_title_$id" class="title">$title</p>
+			  <p id="serp_description_$id" class="description">$description</p>
+			</div>
+			<script>
+			  window.addEvent('domready', function() {
+			    new Contao.SerpPreview({
+			      id: '$id',
+			      trail: '$trail',
+			      titleField: '$titleField',
+			      titleFallbackField: '$titleFallbackField',
+			      aliasField: '$aliasField',
+			      descriptionField: '$descriptionField',
+			      descriptionFallbackField: '$descriptionFallbackField',
+			      titleTag: '$titleTag'
+			    });
+			  });
+			</script>
+			EOT;
 	}
 
 	private function getTitle(Model $model)
@@ -151,7 +160,7 @@ EOT;
 		}
 		elseif (\is_callable($this->url_callback))
 		{
-			$url = \call_user_func($this->url_callback, $tempModel);
+			$url = ($this->url_callback)($tempModel);
 		}
 		else
 		{
@@ -175,7 +184,7 @@ EOT;
 
 		if (\is_callable($this->title_tag_callback))
 		{
-			return \call_user_func($this->title_tag_callback, $model);
+			return ($this->title_tag_callback)($model);
 		}
 
 		return '';

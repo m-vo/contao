@@ -31,10 +31,7 @@ class DataContainerCallbackListener
         'title_tag_callback',
     ];
 
-    /**
-     * @var array
-     */
-    private $callbacks = [];
+    private array $callbacks = [];
 
     public function setCallbacks(array $callbacks): void
     {
@@ -86,7 +83,10 @@ class DataContainerCallbackListener
         }
     }
 
-    private function addCallbacks(?array &$dcaRef, array $callbacks): void
+    /**
+     * @param array|callable|null $dcaRef
+     */
+    private function addCallbacks(&$dcaRef, array $callbacks): void
     {
         if (null === $dcaRef) {
             $dcaRef = [];
@@ -98,9 +98,7 @@ class DataContainerCallbackListener
             [],
             ...array_filter(
                 $callbacks,
-                static function ($priority) {
-                    return $priority >= 0;
-                },
+                static fn ($priority) => $priority >= 0,
                 ARRAY_FILTER_USE_KEY
             )
         );
@@ -109,9 +107,7 @@ class DataContainerCallbackListener
             [],
             ...array_filter(
                 $callbacks,
-                static function ($priority) {
-                    return $priority < 0;
-                },
+                static fn ($priority) => $priority < 0,
                 ARRAY_FILTER_USE_KEY
             )
         );

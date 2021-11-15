@@ -37,10 +37,7 @@ class LegacyResizer extends ImageResizer implements FrameworkAwareInterface
 {
     use FrameworkAwareTrait;
 
-    /**
-     * @var LegacyImage|null
-     */
-    private $legacyImage;
+    private ?LegacyImage $legacyImage = null;
 
     public function resize(ImageInterface $image, ResizeConfiguration $config, ResizeOptions $options): ImageInterface
     {
@@ -49,13 +46,13 @@ class LegacyResizer extends ImageResizer implements FrameworkAwareInterface
         $projectDir = System::getContainer()->getParameter('kernel.project_dir');
 
         if ($this->hasExecuteResizeHook() || $this->hasGetImageHook()) {
-            @trigger_error('Using the "executeResize" and "getImage" hooks has been deprecated and will no longer work in Contao 5.0. Replace the "contao.image.resizer" service instead.', E_USER_DEPRECATED);
+            trigger_deprecation('contao/core-bundle', '4.0', 'Using the "executeResize" and "getImage" hooks has been deprecated and will no longer work in Contao 5.0. Replace the "contao.image.resizer" service instead.');
 
             $this->legacyImage = null;
             $legacyPath = $image->getPath();
 
             if (Path::isBasePath($projectDir, $legacyPath)) {
-                $legacyPath = substr($legacyPath, \strlen($projectDir) + 1);
+                $legacyPath = Path::makeRelative($legacyPath, $projectDir);
                 $this->legacyImage = new LegacyImage(new File($legacyPath));
                 $this->legacyImage->setTargetWidth($config->getWidth());
                 $this->legacyImage->setTargetHeight($config->getHeight());
@@ -63,7 +60,7 @@ class LegacyResizer extends ImageResizer implements FrameworkAwareInterface
                 $this->legacyImage->setZoomLevel($config->getZoomLevel());
 
                 if (($targetPath = $options->getTargetPath()) && Path::isBasePath($projectDir, $targetPath)) {
-                    $this->legacyImage->setTargetPath(substr($targetPath, \strlen($projectDir) + 1));
+                    $this->legacyImage->setTargetPath(Path::makeRelative($targetPath, $projectDir));
                 }
 
                 $importantPart = $image->getImportantPart();
@@ -83,7 +80,7 @@ class LegacyResizer extends ImageResizer implements FrameworkAwareInterface
                 $return = System::importStatic($callback[0])->{$callback[1]}($this->legacyImage);
 
                 if (\is_string($return)) {
-                    return $this->createImage($image, $projectDir.'/'.$return);
+                    return $this->createImage($image, Path::join($projectDir, $return));
                 }
             }
         }
@@ -122,7 +119,7 @@ class LegacyResizer extends ImageResizer implements FrameworkAwareInterface
                 );
 
                 if (\is_string($return)) {
-                    return $this->createImage($image, $projectDir.'/'.$return);
+                    return $this->createImage($image, Path::join($projectDir, $return));
                 }
             }
         }

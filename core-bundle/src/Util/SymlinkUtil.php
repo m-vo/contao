@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace Contao\CoreBundle\Util;
 
 use Symfony\Component\Filesystem\Filesystem;
+use Webmozart\PathUtil\Path;
 
 class SymlinkUtil
 {
@@ -26,20 +27,15 @@ class SymlinkUtil
     {
         static::validateSymlink($target, $link, $projectDir);
 
+        $target = Path::makeAbsolute($target, $projectDir);
+        $link = Path::makeAbsolute($link, $projectDir);
+
         $fs = new Filesystem();
-
-        if (!$fs->isAbsolutePath($target)) {
-            $target = $projectDir.'/'.$target;
-        }
-
-        if (!$fs->isAbsolutePath($link)) {
-            $link = $projectDir.'/'.$link;
-        }
 
         if ('\\' === \DIRECTORY_SEPARATOR) {
             $fs->symlink($target, $link);
         } else {
-            $fs->symlink(rtrim($fs->makePathRelative($target, \dirname($link)), '/'), $link);
+            $fs->symlink(Path::makeRelative($target, Path::getDirectory($link)), $link);
         }
     }
 
@@ -59,13 +55,15 @@ class SymlinkUtil
             throw new \InvalidArgumentException('The symlink path must not be empty.');
         }
 
+        $link = Path::normalize($link);
+
         if (false !== strpos($link, '../')) {
             throw new \InvalidArgumentException('The symlink path must not be relative.');
         }
 
-        $fs = new Filesystem();
+        $linkPath = Path::join($projectDir, $link);
 
-        if ($fs->exists($projectDir.'/'.$link) && !is_link($projectDir.'/'.$link)) {
+        if (!is_link($linkPath) && (new Filesystem())->exists($linkPath)) {
             throw new \LogicException(sprintf('The path "%s" exists and is not a symlink.', $link));
         }
     }

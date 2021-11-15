@@ -8,10 +8,17 @@
  * @license LGPL-3.0-or-later
  */
 
-// Dynamically add the permission check and parent table
-if (Contao\Input::get('do') == 'calendar')
+use Contao\Backend;
+use Contao\BackendUser;
+use Contao\Calendar;
+use Contao\CoreBundle\Exception\AccessDeniedException;
+use Contao\Input;
+use Contao\System;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
+
+// Dynamically add the permission check and other callbacks
+if (Input::get('do') == 'calendar')
 {
-	$GLOBALS['TL_DCA']['tl_content']['config']['ptable'] = 'tl_calendar_events';
 	array_unshift($GLOBALS['TL_DCA']['tl_content']['config']['onload_callback'], array('tl_content_calendar', 'checkPermission'));
 	$GLOBALS['TL_DCA']['tl_content']['config']['onload_callback'][] = array('tl_content_calendar', 'generateFeed');
 }
@@ -19,11 +26,11 @@ if (Contao\Input::get('do') == 'calendar')
 /**
  * Provide miscellaneous methods that are used by the data configuration array.
  *
- * @property Contao\Calendar $Calendar
+ * @property Calendar $Calendar
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
-class tl_content_calendar extends Contao\Backend
+class tl_content_calendar extends Backend
 {
 	/**
 	 * Import the back end user object
@@ -31,7 +38,7 @@ class tl_content_calendar extends Contao\Backend
 	public function __construct()
 	{
 		parent::__construct();
-		$this->import('Contao\BackendUser', 'User');
+		$this->import(BackendUser::class, 'User');
 	}
 
 	/**
@@ -55,7 +62,7 @@ class tl_content_calendar extends Contao\Backend
 		}
 
 		// Check the current action
-		switch (Contao\Input::get('act'))
+		switch (Input::get('act'))
 		{
 			case '': // empty
 			case 'paste':
@@ -71,16 +78,16 @@ class tl_content_calendar extends Contao\Backend
 			case 'cutAll':
 			case 'copyAll':
 				// Check access to the parent element if a content element is moved
-				if (in_array(Contao\Input::get('act'), array('cutAll', 'copyAll')))
+				if (in_array(Input::get('act'), array('cutAll', 'copyAll')))
 				{
-					$this->checkAccessToElement(Contao\Input::get('pid'), $root, (Contao\Input::get('mode') == 2));
+					$this->checkAccessToElement(Input::get('pid'), $root, (Input::get('mode') == 2));
 				}
 
 				$objCes = $this->Database->prepare("SELECT id FROM tl_content WHERE ptable='tl_calendar_events' AND pid=?")
 										 ->execute(CURRENT_ID);
 
-				/** @var Symfony\Component\HttpFoundation\Session\SessionInterface $objSession */
-				$objSession = Contao\System::getContainer()->get('session');
+				/** @var SessionInterface $objSession */
+				$objSession = System::getContainer()->get('session');
 
 				$session = $objSession->all();
 				$session['CURRENT']['IDS'] = array_intersect((array) $session['CURRENT']['IDS'], $objCes->fetchEach('id'));
@@ -90,12 +97,12 @@ class tl_content_calendar extends Contao\Backend
 			case 'cut':
 			case 'copy':
 				// Check access to the parent element if a content element is moved
-				$this->checkAccessToElement(Contao\Input::get('pid'), $root, (Contao\Input::get('mode') == 2));
+				$this->checkAccessToElement(Input::get('pid'), $root, (Input::get('mode') == 2));
 				// no break
 
 			default:
 				// Check access to the content element
-				$this->checkAccessToElement(Contao\Input::get('id'), $root);
+				$this->checkAccessToElement(Input::get('id'), $root);
 				break;
 		}
 	}
@@ -107,7 +114,7 @@ class tl_content_calendar extends Contao\Backend
 	 * @param array   $root
 	 * @param boolean $blnIsPid
 	 *
-	 * @throws Contao\CoreBundle\Exception\AccessDeniedException
+	 * @throws AccessDeniedException
 	 */
 	protected function checkAccessToElement($id, $root, $blnIsPid=false)
 	{
@@ -127,13 +134,13 @@ class tl_content_calendar extends Contao\Backend
 		// Invalid ID
 		if ($objCalendar->numRows < 1)
 		{
-			throw new Contao\CoreBundle\Exception\AccessDeniedException('Invalid event content element ID ' . $id . '.');
+			throw new AccessDeniedException('Invalid event content element ID ' . $id . '.');
 		}
 
 		// The calendar is not mounted
 		if (!in_array($objCalendar->id, $root))
 		{
-			throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to modify article ID ' . $objCalendar->nid . ' in calendar ID ' . $objCalendar->id . '.');
+			throw new AccessDeniedException('Not enough permissions to modify article ID ' . $objCalendar->nid . ' in calendar ID ' . $objCalendar->id . '.');
 		}
 	}
 
@@ -142,8 +149,8 @@ class tl_content_calendar extends Contao\Backend
 	 */
 	public function generateFeed()
 	{
-		/** @var Symfony\Component\HttpFoundation\Session\SessionInterface $objSession */
-		$objSession = Contao\System::getContainer()->get('session');
+		/** @var SessionInterface $objSession */
+		$objSession = System::getContainer()->get('session');
 
 		$session = $objSession->get('calendar_feed_updater');
 
@@ -152,7 +159,7 @@ class tl_content_calendar extends Contao\Backend
 			return;
 		}
 
-		$request = Contao\System::getContainer()->get('request_stack')->getCurrentRequest();
+		$request = System::getContainer()->get('request_stack')->getCurrentRequest();
 
 		if ($request)
 		{
@@ -160,15 +167,12 @@ class tl_content_calendar extends Contao\Backend
 			$request->attributes->set('_scope', 'frontend');
 		}
 
-		$this->import('Contao\Calendar', 'Calendar');
+		$this->import(Calendar::class, 'Calendar');
 
 		foreach ($session as $id)
 		{
 			$this->Calendar->generateFeedsByCalendar($id);
 		}
-
-		$this->import('Contao\Automator', 'Automator');
-		$this->Automator->generateSitemap();
 
 		if ($request)
 		{

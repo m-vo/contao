@@ -10,6 +10,9 @@
 
 namespace Contao;
 
+use Contao\CoreBundle\Security\ContaoCorePermissions;
+use Contao\CoreBundle\String\HtmlDecoder;
+
 /**
  * Provide methods to get all events of a certain period from the database.
  *
@@ -63,29 +66,18 @@ abstract class Events extends Module
 			return $arrCalendars;
 		}
 
-		$this->import(FrontendUser::class, 'User');
 		$objCalendar = CalendarModel::findMultipleByIds($arrCalendars);
 		$arrCalendars = array();
 
 		if ($objCalendar !== null)
 		{
-			$blnFeUserLoggedIn = System::getContainer()->get('contao.security.token_checker')->hasFrontendUser();
+			$security = System::getContainer()->get('security.helper');
 
 			while ($objCalendar->next())
 			{
-				if ($objCalendar->protected)
+				if ($objCalendar->protected && !$security->isGranted(ContaoCorePermissions::MEMBER_IN_GROUPS, StringUtil::deserialize($objCalendar->groups, true)))
 				{
-					if (!$blnFeUserLoggedIn || !\is_array($this->User->groups))
-					{
-						continue;
-					}
-
-					$groups = StringUtil::deserialize($objCalendar->groups);
-
-					if (empty($groups) || !\is_array($groups) || \count(array_intersect($groups, $this->User->groups)) < 1)
-					{
-						continue;
-					}
+					continue;
 				}
 
 				$arrCalendars[] = $objCalendar->id;
@@ -101,10 +93,11 @@ abstract class Events extends Module
 	 * @param array   $arrCalendars
 	 * @param integer $intStart
 	 * @param integer $intEnd
+	 * @param boolean $blnFeatured
 	 *
 	 * @return array
 	 */
-	protected function getAllEvents($arrCalendars, $intStart, $intEnd)
+	protected function getAllEvents($arrCalendars, $intStart, $intEnd, $blnFeatured = null)
 	{
 		if (!\is_array($arrCalendars))
 		{
@@ -116,7 +109,7 @@ abstract class Events extends Module
 		foreach ($arrCalendars as $id)
 		{
 			// Get the events of the current period
-			$objEvents = CalendarEventsModel::findCurrentByPid($id, $intStart, $intEnd);
+			$objEvents = CalendarEventsModel::findCurrentByPid($id, $intStart, $intEnd, array('showFeatured' => $blnFeatured));
 
 			if ($objEvents === null)
 			{
@@ -207,7 +200,7 @@ abstract class Events extends Module
 		// Backwards compatibility (4th argument was $strUrl)
 		if (\func_num_args() > 6)
 		{
-			@trigger_error('Calling Events::addEvent() with 7 arguments has been deprecated and will no longer work in Contao 5.0. Do not pass $strUrl as 4th argument anymore.', E_USER_DEPRECATED);
+			trigger_deprecation('contao/calendar-bundle', '4.0', 'Calling "Contao\Events::addEvent()" with 7 arguments has been deprecated and will no longer work in Contao 5.0. Do not pass $strUrl as 4th argument anymore.');
 
 			$intLimit = func_get_arg(5);
 			$intCalendar = func_get_arg(6);
@@ -361,7 +354,7 @@ abstract class Events extends Module
 			};
 		}
 
-		// Get todays start and end timestamp
+		// Get today's start and end timestamp
 		if ($this->intTodayBegin === null)
 		{
 			$this->intTodayBegin = strtotime('00:00:00');
@@ -384,6 +377,11 @@ abstract class Events extends Module
 		else
 		{
 			$arrEvent['class'] .= ' current';
+		}
+
+		if ($arrEvent['featured'] == 1)
+		{
+			$arrEvent['class'] .= ' featured';
 		}
 
 		$this->arrEvents[$intKey][$intStart][] = $arrEvent;
@@ -439,7 +437,7 @@ abstract class Events extends Module
 				}
 				else
 				{
-					self::$arrUrlCache[$strCacheKey] = ampersand($objEvent->url);
+					self::$arrUrlCache[$strCacheKey] = StringUtil::ampersand($objEvent->url);
 				}
 				break;
 
@@ -448,7 +446,7 @@ abstract class Events extends Module
 				if (($objTarget = $objEvent->getRelated('jumpTo')) instanceof PageModel)
 				{
 					/** @var PageModel $objTarget */
-					self::$arrUrlCache[$strCacheKey] = ampersand($blnAbsolute ? $objTarget->getAbsoluteUrl() : $objTarget->getFrontendUrl());
+					self::$arrUrlCache[$strCacheKey] = StringUtil::ampersand($blnAbsolute ? $objTarget->getAbsoluteUrl() : $objTarget->getFrontendUrl());
 				}
 				break;
 
@@ -459,7 +457,7 @@ abstract class Events extends Module
 					$params = '/articles/' . ($objArticle->alias ?: $objArticle->id);
 
 					/** @var PageModel $objPid */
-					self::$arrUrlCache[$strCacheKey] = ampersand($blnAbsolute ? $objPid->getAbsoluteUrl($params) : $objPid->getFrontendUrl($params));
+					self::$arrUrlCache[$strCacheKey] = StringUtil::ampersand($blnAbsolute ? $objPid->getAbsoluteUrl($params) : $objPid->getFrontendUrl($params));
 				}
 				break;
 		}
@@ -471,17 +469,60 @@ abstract class Events extends Module
 
 			if (!$objPage instanceof PageModel)
 			{
-				self::$arrUrlCache[$strCacheKey] = ampersand(Environment::get('request'));
+				self::$arrUrlCache[$strCacheKey] = StringUtil::ampersand(Environment::get('request'));
 			}
 			else
 			{
 				$params = (Config::get('useAutoItem') ? '/' : '/events/') . ($objEvent->alias ?: $objEvent->id);
 
-				self::$arrUrlCache[$strCacheKey] = ampersand($blnAbsolute ? $objPage->getAbsoluteUrl($params) : $objPage->getFrontendUrl($params));
+				self::$arrUrlCache[$strCacheKey] = StringUtil::ampersand($blnAbsolute ? $objPage->getAbsoluteUrl($params) : $objPage->getFrontendUrl($params));
 			}
 		}
 
 		return self::$arrUrlCache[$strCacheKey];
+	}
+
+	/**
+	 * Return the schema.org data from an event
+	 *
+	 * @param CalendarEventsModel $objEvent
+	 *
+	 * @return array
+	 */
+	public static function getSchemaOrgData(CalendarEventsModel $objEvent): array
+	{
+		$htmlDecoder = System::getContainer()->get(HtmlDecoder::class);
+
+		$jsonLd = array(
+			'@type' => 'Event',
+			'identifier' => '#/schema/events/' . $objEvent->id,
+			'name' => $htmlDecoder->inputEncodedToPlainText($objEvent->title),
+			'url' => self::generateEventUrl($objEvent),
+			'startDate' => $objEvent->addTime ? date('Y-m-d\TH:i:sP', $objEvent->startTime) : date('Y-m-d', $objEvent->startTime)
+		);
+
+		if ($objEvent->teaser)
+		{
+			$jsonLd['description'] = $objEvent->teaser;
+		}
+
+		if ($objEvent->location)
+		{
+			$jsonLd['location'] = array(
+				'@type' => 'Place',
+				'name' => $htmlDecoder->inputEncodedToPlainText($objEvent->location)
+			);
+
+			if ($objEvent->address)
+			{
+				$jsonLd['location']['address'] = array(
+					'@type' => 'PostalAddress',
+					'description' => $htmlDecoder->inputEncodedToPlainText($objEvent->address)
+				);
+			}
+		}
+
+		return $jsonLd;
 	}
 
 	/**

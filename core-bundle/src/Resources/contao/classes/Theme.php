@@ -11,8 +11,8 @@
 namespace Contao;
 
 use Contao\Database\Result;
-use Patchwork\Utf8;
 use Symfony\Component\HttpFoundation\Session\Session;
+use Symfony\Component\String\UnicodeString;
 
 /**
  * Provide methods to handle themes.
@@ -123,7 +123,7 @@ class Theme extends Backend
 		// Return the form
 		return Message::generate() . '
 <div id="tl_buttons">
-<a href="' . ampersand(str_replace('&key=importTheme', '', Environment::get('request'))) . '" class="header_back" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']) . '" accesskey="b">' . $GLOBALS['TL_LANG']['MSC']['backBT'] . '</a>
+<a href="' . StringUtil::ampersand(str_replace('&key=importTheme', '', Environment::get('request'))) . '" class="header_back" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']) . '" accesskey="b">' . $GLOBALS['TL_LANG']['MSC']['backBT'] . '</a>
 </div>
 <form id="tl_theme_import" class="tl_form tl_edit_form" method="post" enctype="multipart/form-data">
 <div class="tl_formbody_edit">
@@ -162,7 +162,7 @@ class Theme extends Backend
 	{
 		$return = Message::generate() . '
 <div id="tl_buttons">
-<a href="' . ampersand(str_replace('&key=importTheme', '', Environment::get('request'))) . '" class="header_back" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']) . '" accesskey="b">' . $GLOBALS['TL_LANG']['MSC']['backBT'] . '</a>
+<a href="' . StringUtil::ampersand(str_replace('&key=importTheme', '', Environment::get('request'))) . '" class="header_back" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']) . '" accesskey="b">' . $GLOBALS['TL_LANG']['MSC']['backBT'] . '</a>
 </div>
 <form id="tl_theme_import" class="tl_form tl_edit_form" method="post">
 <div class="tl_formbody_edit">
@@ -584,7 +584,7 @@ class Theme extends Backend
 						}
 
 						// Replace the file paths in singleSRC fields with their tl_files ID
-						elseif ($GLOBALS['TL_DCA'][$table]['fields'][$name]['inputType'] == 'fileTree' && !$GLOBALS['TL_DCA'][$table]['fields'][$name]['eval']['multiple'])
+						elseif (($GLOBALS['TL_DCA'][$table]['fields'][$name]['inputType'] ?? null) == 'fileTree' && !($GLOBALS['TL_DCA'][$table]['fields'][$name]['eval']['multiple'] ?? null))
 						{
 							if (!$value)
 							{
@@ -602,7 +602,7 @@ class Theme extends Backend
 						}
 
 						// Replace the file paths in multiSRC fields with their tl_files ID
-						elseif ($GLOBALS['TL_DCA'][$table]['fields'][$name]['inputType'] == 'fileTree' || \in_array($name, $arrOrder))
+						elseif (($GLOBALS['TL_DCA'][$table]['fields'][$name]['inputType'] ?? null) == 'fileTree' || \in_array($name, $arrOrder))
 						{
 							$tmp = StringUtil::deserialize($value);
 
@@ -623,7 +623,7 @@ class Theme extends Backend
 						}
 
 						// Adjust the imageSize widget data
-						elseif ($GLOBALS['TL_DCA'][$table]['fields'][$name]['inputType'] == 'imageSize')
+						elseif (($GLOBALS['TL_DCA'][$table]['fields'][$name]['inputType'] ?? null) == 'imageSize')
 						{
 							$imageSizes = StringUtil::deserialize($value, true);
 
@@ -706,7 +706,7 @@ class Theme extends Backend
 	 */
 	public function exportTheme(DataContainer $dc)
 	{
-		// Get the theme meta data
+		// Get the theme metadata
 		$objTheme = $this->Database->prepare("SELECT * FROM tl_theme WHERE id=?")
 								   ->limit(1)
 								   ->execute($dc->id);
@@ -717,7 +717,7 @@ class Theme extends Backend
 		}
 
 		// Romanize the name
-		$strName = Utf8::toAscii($objTheme->name);
+		$strName = (new UnicodeString($objTheme->name))->ascii()->toString();
 		$strName = strtolower(str_replace(' ', '_', $strName));
 		$strName = preg_replace('/[^A-Za-z0-9._-]/', '', $strName);
 		$strName = basename($strName);
@@ -1019,7 +1019,7 @@ class Theme extends Backend
 			}
 
 			// Replace the IDs of singleSRC fields with their path (see #4952)
-			elseif ($GLOBALS['TL_DCA'][$t]['fields'][$k]['inputType'] == 'fileTree' && !$GLOBALS['TL_DCA'][$t]['fields'][$k]['eval']['multiple'])
+			elseif (($GLOBALS['TL_DCA'][$t]['fields'][$k]['inputType'] ?? null) == 'fileTree' && !($GLOBALS['TL_DCA'][$t]['fields'][$k]['eval']['multiple'] ?? null))
 			{
 				$objFile = FilesModel::findByUuid($v);
 
@@ -1034,7 +1034,7 @@ class Theme extends Backend
 			}
 
 			// Replace the IDs of multiSRC fields with their paths (see #4952)
-			elseif ($GLOBALS['TL_DCA'][$t]['fields'][$k]['inputType'] == 'fileTree' || \in_array($k, $arrOrder))
+			elseif (($GLOBALS['TL_DCA'][$t]['fields'][$k]['inputType'] ?? null) == 'fileTree' || \in_array($k, $arrOrder))
 			{
 				$arrFiles = StringUtil::deserialize($v);
 
@@ -1082,19 +1082,21 @@ class Theme extends Backend
 	 */
 	protected function addFolderToArchive(ZipWriter $objArchive, $strFolder, \DOMDocument $xml, \DOMElement $table, array $arrOrder=array())
 	{
+		$strUploadPath = System::getContainer()->getParameter('contao.upload_path');
+
 		// Strip the custom upload folder name
-		$strFolder = preg_replace('@^' . preg_quote(Config::get('uploadPath'), '@') . '/@', '', $strFolder);
+		$strFolder = preg_replace('@^' . preg_quote($strUploadPath, '@') . '/@', '', $strFolder);
 
 		// Add the default upload folder name
 		if (!$strFolder)
 		{
 			$strTarget = 'files';
-			$strFolder = Config::get('uploadPath');
+			$strFolder = $strUploadPath;
 		}
 		else
 		{
 			$strTarget = 'files/' . $strFolder;
-			$strFolder = Config::get('uploadPath') . '/' . $strFolder;
+			$strFolder = $strUploadPath . '/' . $strFolder;
 		}
 
 		if (Validator::isInsecurePath($strFolder))
@@ -1109,7 +1111,7 @@ class Theme extends Backend
 		}
 
 		// Recursively add the files and subfolders
-		foreach (scan($this->strRootDir . '/' . $strFolder) as $strFile)
+		foreach (Folder::scan($this->strRootDir . '/' . $strFolder) as $strFile)
 		{
 			// Skip hidden resources
 			if (strncmp($strFile, '.', 1) === 0)
@@ -1183,7 +1185,7 @@ class Theme extends Backend
 		}
 
 		// Add all template files to the archive (see #7048)
-		foreach (scan($this->strRootDir . '/' . $strFolder) as $strFile)
+		foreach (Folder::scan($this->strRootDir . '/' . $strFolder) as $strFile)
 		{
 			if (preg_match('/\.(html5|sql)$/', $strFile) && strncmp($strFile, 'be_', 3) !== 0 && strncmp($strFile, 'nl_', 3) !== 0)
 			{
@@ -1206,7 +1208,7 @@ class Theme extends Backend
 			return '';
 		}
 
-		return preg_replace('@^(tl_)?files/@', Config::get('uploadPath') . '/', $strPath);
+		return preg_replace('@^(tl_)?files/@', System::getContainer()->getParameter('contao.upload_path') . '/', $strPath);
 	}
 
 	/**
@@ -1223,7 +1225,7 @@ class Theme extends Backend
 			return '';
 		}
 
-		return preg_replace('@^' . preg_quote(Config::get('uploadPath'), '@') . '/@', 'files/', $strPath);
+		return preg_replace('@^' . preg_quote(System::getContainer()->getParameter('contao.upload_path'), '@') . '/@', 'files/', $strPath);
 	}
 }
 

@@ -10,8 +10,8 @@
 
 namespace Contao;
 
-use Patchwork\Utf8;
-use Psr\Log\LogLevel;
+use Contao\CoreBundle\String\HtmlDecoder;
+use Contao\CoreBundle\String\SimpleTokenParser;
 use Webmozart\PathUtil\Path;
 
 /**
@@ -44,7 +44,7 @@ class StringUtil
 		$strString = preg_replace('/[\t\n\r]+/', ' ', $strString);
 		$strString = strip_tags($strString);
 
-		if (Utf8::strlen($strString) <= $intNumberOfChars)
+		if (mb_strlen($strString) <= $intNumberOfChars)
 		{
 			return $strString;
 		}
@@ -52,11 +52,10 @@ class StringUtil
 		$intCharCount = 0;
 		$arrWords = array();
 		$arrChunks = preg_split('/\s+/', $strString);
-		$blnAddEllipsis = false;
 
 		foreach ($arrChunks as $strChunk)
 		{
-			$intCharCount += Utf8::strlen(static::decodeEntities($strChunk));
+			$intCharCount += mb_strlen(static::decodeEntities($strChunk));
 
 			if ($intCharCount++ <= $intNumberOfChars)
 			{
@@ -65,33 +64,33 @@ class StringUtil
 			}
 
 			// If the first word is longer than $intNumberOfChars already, shorten it
-			// with Utf8::substr() so the method does not return an empty string.
+			// with mb_substr() so the method does not return an empty string.
 			if (empty($arrWords))
 			{
-				$arrWords[] = Utf8::substr($strChunk, 0, $intNumberOfChars);
-			}
-
-			if ($strEllipsis !== false)
-			{
-				$blnAddEllipsis = true;
+				$arrWords[] = mb_substr($strChunk, 0, $intNumberOfChars);
 			}
 
 			break;
 		}
 
+		if ($strEllipsis === false)
+		{
+			trigger_deprecation('contao/core-bundle', '4.0', 'Passing "false" as third argument to "Contao\StringUtil::substr()" has been deprecated and will no longer work in Contao 5.0. Pass an empty string instead.');
+			$strEllipsis = '';
+		}
+
 		// Deprecated since Contao 4.0, to be removed in Contao 5.0
 		if ($strEllipsis === true)
 		{
-			@trigger_error('Passing "true" as third argument to StringUtil::substr() has been deprecated and will no longer work in Contao 5.0. Pass the ellipsis string instead.', E_USER_DEPRECATED);
-
+			trigger_deprecation('contao/core-bundle', '4.0', 'Passing "true" as third argument to "Contao\StringUtil::substr()" has been deprecated and will no longer work in Contao 5.0. Pass the ellipsis string instead.');
 			$strEllipsis = ' …';
 		}
 
-		return implode(' ', $arrWords) . ($blnAddEllipsis ? $strEllipsis : '');
+		return implode(' ', $arrWords) . $strEllipsis;
 	}
 
 	/**
-	 * Shorten a HTML string to a given number of characters
+	 * Shorten an HTML string to a given number of characters
 	 *
 	 * The function preserves words, so the result might be a bit shorter or
 	 * longer than the number of characters given. It preserves allowed tags.
@@ -113,7 +112,7 @@ class StringUtil
 		$strString = strip_tags($strString, Config::get('allowedTags'));
 		$strString = preg_replace('/ +/', ' ', $strString);
 
-		// Seperate tags and text
+		// Separate tags and text
 		$arrChunks = preg_split('/(<[^>]+>)/', $strString, -1, PREG_SPLIT_DELIM_CAPTURE|PREG_SPLIT_NO_EMPTY);
 
 		for ($i=0, $c=\count($arrChunks); $i<$c; $i++)
@@ -134,7 +133,7 @@ class StringUtil
 			}
 
 			$blnModified = ($buffer !== $arrChunks[$i]);
-			$intCharCount += Utf8::strlen(static::decodeEntities($arrChunks[$i]));
+			$intCharCount += mb_strlen(static::decodeEntities($arrChunks[$i]));
 
 			if ($intCharCount <= $intNumberOfChars)
 			{
@@ -218,13 +217,13 @@ class StringUtil
 	/**
 	 * Decode all entities
 	 *
-	 * @param string  $strString     The string to decode
-	 * @param integer $strQuoteStyle The quote style (defaults to ENT_COMPAT)
+	 * @param mixed   $strString     The string to decode
+	 * @param integer $strQuoteStyle The quote style (defaults to ENT_QUOTES)
 	 * @param string  $strCharset    An optional charset
 	 *
 	 * @return string The decoded string
 	 */
-	public static function decodeEntities($strString, $strQuoteStyle=ENT_COMPAT, $strCharset=null)
+	public static function decodeEntities($strString, $strQuoteStyle=ENT_QUOTES, $strCharset=null)
 	{
 		if ((string) $strString === '')
 		{
@@ -233,7 +232,11 @@ class StringUtil
 
 		if ($strCharset === null)
 		{
-			$strCharset = Config::get('characterSet');
+			$strCharset = 'UTF-8';
+		}
+		else
+		{
+			trigger_deprecation('contao/core-bundle', '4.13', 'Passing a charset to StringUtil::decodeEntities() has been deprecated and will no longer work in Contao 5.0. Always use UTF-8 instead.');
 		}
 
 		$strString = preg_replace('/(&#*\w+)[\x00-\x20]+;/i', '$1;', $strString);
@@ -245,9 +248,9 @@ class StringUtil
 	/**
 	 * Restore basic entities
 	 *
-	 * @param string $strBuffer The string with the tags to be replaced
+	 * @param string|array $strBuffer The string with the tags to be replaced
 	 *
-	 * @return string The string with the original entities
+	 * @return string|array The string with the original entities
 	 */
 	public static function restoreBasicEntities($strBuffer)
 	{
@@ -330,11 +333,11 @@ class StringUtil
 		foreach ($arrEmails as $strEmail)
 		{
 			$strEncoded = '';
-			$arrCharacters = Utf8::str_split($strEmail);
+			$arrCharacters = mb_str_split($strEmail);
 
 			foreach ($arrCharacters as $index => $strCharacter)
 			{
-				$strEncoded .= sprintf(($index % 2) ? '&#x%X;' : '&#%s;', Utf8::ord($strCharacter));
+				$strEncoded .= sprintf(($index % 2) ? '&#x%X;' : '&#%s;', mb_ord($strCharacter));
 			}
 
 			$strString = str_replace($strEmail, $strEncoded, $strString);
@@ -484,9 +487,13 @@ class StringUtil
 	 * @param string $strString The HTML5 string
 	 *
 	 * @return string The XHTML string
+	 *
+	 * @deprecated Deprecated since Contao 4.13, to be removed in Contao 5.0
 	 */
 	public static function toXhtml($strString)
 	{
+		trigger_deprecation('contao/core-bundle', '4.13', 'The "StringUtil::toXhtml()" method has been deprecated and will no longer work in Contao 5.0.');
+
 		$arrPregReplace = array
 		(
 			'/<(br|hr|img)([^>]*)>/i' => '<$1$2 />', // Close stand-alone tags
@@ -547,189 +554,23 @@ class StringUtil
 	/**
 	 * Parse simple tokens
 	 *
-	 * @param string $strString The string to be parsed
-	 * @param array  $arrData   The replacement data
+	 * @param string $strString    The string to be parsed
+	 * @param array  $arrData      The replacement data
+	 * @param array  $blnAllowHtml Whether HTML should be decoded inside conditions
 	 *
 	 * @return string The converted string
 	 *
-	 * @throws \Exception                If $strString cannot be parsed
+	 * @throws \RuntimeException         If $strString cannot be parsed
 	 * @throws \InvalidArgumentException If there are incorrectly formatted if-tags
+	 *
+	 * @deprecated Deprecated since Contao 4.10, to be removed in Contao 5.
+	 *             Use the SimpleTokenParser::class service instead.
 	 */
-	public static function parseSimpleTokens($strString, $arrData)
+	public static function parseSimpleTokens($strString, $arrData, $blnAllowHtml = true)
 	{
-		$strReturn = '';
+		trigger_deprecation('contao/core-bundle', '4.10', 'Using "Contao\StringUtil::parseSimpleTokens()" has been deprecated and will no longer work in Contao 5.0. Use the "SimpleTokenParser::class" service instead.');
 
-		$replaceTokens = static function ($strSubject) use ($arrData)
-		{
-			// Replace tokens
-			return preg_replace_callback
-			(
-				'/##([^=!<>\s]+?)##/',
-				static function (array $matches) use ($arrData)
-				{
-					if (!\array_key_exists($matches[1], $arrData))
-					{
-						System::getContainer()
-							->get('monolog.logger.contao')
-							->log(LogLevel::INFO, sprintf('Tried to parse unknown simple token "%s".', $matches[1]))
-						;
-
-						return '##' . $matches[1] . '##';
-					}
-
-					return $arrData[$matches[1]];
-				},
-				$strSubject
-			);
-		};
-
-		$evaluateExpression = static function ($strExpression) use ($arrData)
-		{
-			if (!preg_match('/^([^=!<>\s]+) *([=!<>]+)(.+)$/s', $strExpression, $arrMatches))
-			{
-				return false;
-			}
-
-			$strToken = $arrMatches[1];
-			$strOperator = $arrMatches[2];
-			$strValue = trim($arrMatches[3], ' ');
-
-			if (!\array_key_exists($strToken, $arrData))
-			{
-				System::getContainer()
-					->get('monolog.logger.contao')
-					->log(LogLevel::INFO, sprintf('Tried to evaluate unknown simple token "%s".', $strToken))
-				;
-
-				$varTokenValue = null;
-			}
-			else
-			{
-				$varTokenValue = $arrData[$strToken];
-			}
-
-			if (is_numeric($strValue))
-			{
-				if (strpos($strValue, '.') === false)
-				{
-					$varValue = (int) $strValue;
-				}
-				else
-				{
-					$varValue = (float) $strValue;
-				}
-			}
-			elseif (strtolower($strValue) === 'true')
-			{
-				$varValue = true;
-			}
-			elseif (strtolower($strValue) === 'false')
-			{
-				$varValue = false;
-			}
-			elseif (strtolower($strValue) === 'null')
-			{
-				$varValue = null;
-			}
-			elseif (0 === strncmp($strValue, '"', 1) && substr($strValue, -1) === '"')
-			{
-				$varValue = str_replace('\"', '"', substr($strValue, 1, -1));
-			}
-			elseif (0 === strncmp($strValue, "'", 1) && substr($strValue, -1) === "'")
-			{
-				$varValue = str_replace("\\'", "'", substr($strValue, 1, -1));
-			}
-			else
-			{
-				throw new \InvalidArgumentException(sprintf('Unknown data type of comparison value "%s".', $strValue));
-			}
-
-			switch ($strOperator)
-			{
-				case '==':
-					return $varTokenValue == $varValue;
-
-				case '!=':
-					return $varTokenValue != $varValue;
-
-				case '===':
-					return $varTokenValue === $varValue;
-
-				case '!==':
-					return $varTokenValue !== $varValue;
-
-				case '<':
-					return $varTokenValue < $varValue;
-
-				case '>':
-					return $varTokenValue > $varValue;
-
-				case '<=':
-					return $varTokenValue <= $varValue;
-
-				case '>=':
-					return $varTokenValue >= $varValue;
-
-				default:
-					throw new \InvalidArgumentException(sprintf('Unknown simple token comparison operator "%s".', $strOperator));
-			}
-		};
-
-		// The last item is true if it is inside a matching if-tag
-		$arrStack = array(true);
-
-		// The last item is true if any if/elseif at that level was true
-		$arrIfStack = array(true);
-
-		// Tokenize the string into tag and text blocks
-		$arrTags = preg_split('/({[^{}]+})\n?/', $strString, -1, PREG_SPLIT_DELIM_CAPTURE|PREG_SPLIT_NO_EMPTY);
-
-		// Parse the tokens
-		foreach ($arrTags as $strTag)
-		{
-			// True if it is inside a matching if-tag
-			$blnCurrent = $arrStack[\count($arrStack) - 1];
-			$blnCurrentIf = $arrIfStack[\count($arrIfStack) - 1];
-
-			if (strncmp($strTag, '{if ', 4) === 0)
-			{
-				$blnExpression = $evaluateExpression(substr($strTag, 4, -1));
-				$arrStack[] = $blnCurrent && $blnExpression;
-				$arrIfStack[] = $blnExpression;
-			}
-			elseif (strncmp($strTag, '{elseif ', 8) === 0)
-			{
-				$blnExpression = $evaluateExpression(substr($strTag, 8, -1));
-				array_pop($arrStack);
-				array_pop($arrIfStack);
-				$arrStack[] = !$blnCurrentIf && $arrStack[\count($arrStack) - 1] && $blnExpression;
-				$arrIfStack[] = $blnCurrentIf || $blnExpression;
-			}
-			elseif (strncmp($strTag, '{else}', 6) === 0)
-			{
-				array_pop($arrStack);
-				array_pop($arrIfStack);
-				$arrStack[] = !$blnCurrentIf && $arrStack[\count($arrStack) - 1];
-				$arrIfStack[] = true;
-			}
-			elseif (strncmp($strTag, '{endif}', 7) === 0)
-			{
-				array_pop($arrStack);
-				array_pop($arrIfStack);
-			}
-			elseif ($blnCurrent)
-			{
-				$strReturn .= $replaceTokens($strTag);
-			}
-		}
-
-		// Throw an exception if there is an error
-		if (\count($arrStack) !== 1)
-		{
-			throw new \Exception('Error parsing simple tokens');
-		}
-
-		return $strReturn;
+		return System::getContainer()->get(SimpleTokenParser::class)->parse($strString, $arrData, $blnAllowHtml);
 	}
 
 	/**
@@ -802,7 +643,7 @@ class StringUtil
 	public static function insertTagToSrc($data)
 	{
 		$return = '';
-		$paths = preg_split('/((src|href)="([^"]*){{file::([^"}]+)}}")/i', $data, -1, PREG_SPLIT_DELIM_CAPTURE);
+		$paths = preg_split('/((src|href)="([^"]*){{file::([^"}|]+)[^"}]*}}")/i', $data, -1, PREG_SPLIT_DELIM_CAPTURE);
 
 		for ($i=0, $c=\count($paths); $i<$c; $i+=5)
 		{
@@ -846,9 +687,7 @@ class StringUtil
 		}
 
 		// Remove special characters not supported on e.g. Windows
-		$strName = str_replace(array('\\', '/', ':', '*', '?', '"', '<', '>', '|'), '-', $strName);
-
-		return $strName;
+		return str_replace(array('\\', '/', ':', '*', '?', '"', '<', '>', '|'), '-', $strName);
 	}
 
 	/**
@@ -914,9 +753,18 @@ class StringUtil
 	 */
 	public static function convertEncoding($str, $to, $from=null)
 	{
-		if (!$str)
+		if ($str !== null && !is_scalar($str) && !(\is_object($str) && method_exists($str, '__toString')))
 		{
+			@trigger_error('Passing a non-stringable argument to StringUtil::convertEncoding() has been deprecated an will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+
 			return '';
+		}
+
+		$str = (string) $str;
+
+		if ('' === $str)
+		{
+			return $str;
 		}
 
 		if (!$from)
@@ -958,8 +806,78 @@ class StringUtil
 			$strString = static::stripInsertTags($strString);
 		}
 
-		// Use ENT_COMPAT here (see #4889)
-		return htmlspecialchars($strString, ENT_COMPAT, Config::get('characterSet'), $blnDoubleEncode);
+		return htmlspecialchars((string) $strString, ENT_QUOTES, $GLOBALS['TL_CONFIG']['characterSet'] ?? 'UTF-8', $blnDoubleEncode);
+	}
+
+	/**
+	 * Encodes specialchars and nested insert tags for attributes
+	 *
+	 * @param string  $strString          The input string
+	 * @param boolean $blnStripInsertTags True to strip insert tags
+	 * @param boolean $blnDoubleEncode    True to encode existing html entities
+	 *
+	 * @return string The converted string
+	 */
+	public static function specialcharsAttribute($strString, $blnStripInsertTags=false, $blnDoubleEncode=false)
+	{
+		$strString = self::specialchars($strString, $blnStripInsertTags, $blnDoubleEncode);
+
+		// Improve compatibility with JSON in attributes if no insert tags are present
+		if ($strString === self::stripInsertTags($strString))
+		{
+			$strString = str_replace('}}', '&#125;&#125;', $strString);
+		}
+
+		// Encode insert tags too
+		$strString = preg_replace('/(?:\|attr)?}}/', '|attr}}', $strString);
+		$strString = str_replace('|urlattr|attr}}', '|urlattr}}', $strString);
+
+		// Encode all remaining single closing curly braces
+		return preg_replace_callback('/}}?/', static fn ($match) => \strlen($match[0]) === 2 ? $match[0] : '&#125;', $strString);
+	}
+
+	/**
+	 * Encodes disallowed protocols and specialchars for URL attributes
+	 *
+	 * @param string  $strString          The input string
+	 * @param boolean $blnStripInsertTags True to strip insert tags
+	 * @param boolean $blnDoubleEncode    True to encode existing html entities
+	 *
+	 * @return string The converted string
+	 */
+	public static function specialcharsUrl($strString, $blnStripInsertTags=false, $blnDoubleEncode=false)
+	{
+		$strString = self::specialchars($strString, $blnStripInsertTags, $blnDoubleEncode);
+
+		// Encode insert tags too
+		$strString = preg_replace('/(?:\|urlattr|\|attr)?}}/', '|urlattr}}', $strString);
+
+		// Encode all remaining single closing curly braces
+		$strString = preg_replace_callback('/}}?/', static fn ($match) => \strlen($match[0]) === 2 ? $match[0] : '&#125;', $strString);
+
+		$colonRegEx = '('
+			. ':'                 // Plain text colon
+			. '|'                 // OR
+			. '&colon;'           // Named entity
+			. '|'                 // OR
+			. '&#(?:'             // Start of entity
+				. 'x0*+3a'        // Hex number 3A
+				. '(?![0-9a-f])'  // Must not be followed by another hex digit
+				. '|'             // OR
+				. '0*+58'         // Decimal number 58
+				. '(?![0-9])'     // Must not be followed by another digit
+			. ');?'               // Optional semicolon
+		. ')i';
+
+		// URL-encode colon to prevent disallowed protocols
+		if (
+			!preg_match('@^(?:https?|ftp|mailto|tel|data):@i', self::decodeEntities($strString))
+			&& preg_match($colonRegEx, self::stripInsertTags($strString))
+		) {
+			$strString = preg_replace($colonRegEx, '%3A', $strString);
+		}
+
+		return $strString;
 	}
 
 	/**
@@ -994,7 +912,7 @@ class StringUtil
 		$arrSearch = array('/[^\pN\pL \.\&\/_-]+/u', '/[ \.\&\/-]+/');
 		$arrReplace = array('', '-');
 
-		$strString = html_entity_decode($strString, ENT_QUOTES, $GLOBALS['TL_CONFIG']['characterSet']);
+		$strString = html_entity_decode($strString, ENT_QUOTES, $GLOBALS['TL_CONFIG']['characterSet'] ?? 'UTF-8');
 		$strString = static::stripInsertTags($strString);
 		$strString = preg_replace($arrSearch, $arrReplace, $strString);
 
@@ -1005,7 +923,7 @@ class StringUtil
 
 		if (!$blnPreserveUppercase)
 		{
-			$strString = Utf8::strtolower($strString);
+			$strString = mb_strtolower($strString);
 		}
 
 		return trim($strString, '-');
@@ -1017,7 +935,7 @@ class StringUtil
 	 * @param mixed   $varValue      The serialized string
 	 * @param boolean $blnForceArray True to always return an array
 	 *
-	 * @return array|string|null The array, an empty string or null
+	 * @return mixed The unserialized array or the unprocessed input value
 	 */
 	public static function deserialize($varValue, $blnForceArray=false)
 	{
@@ -1124,6 +1042,79 @@ class StringUtil
 		}
 
 		return (string) substr($path, $length + 1);
+	}
+
+	/**
+	 * Convert all ampersands into their HTML entity (default) or unencoded value
+	 *
+	 * @param string  $strString
+	 * @param boolean $blnEncode
+	 *
+	 * @return string
+	 */
+	public static function ampersand($strString, $blnEncode=true): string
+	{
+		return preg_replace('/&(amp;)?/i', ($blnEncode ? '&amp;' : '&'), $strString);
+	}
+
+	/**
+	 * Convert an input-encoded string back to the raw UTF-8 value it originated from
+	 *
+	 * It handles all Contao input encoding specifics like basic entities and encoded entities.
+	 */
+	public static function revertInputEncoding(string $strValue): string
+	{
+		$strValue = static::restoreBasicEntities($strValue);
+		$strValue = static::decodeEntities($strValue);
+
+		// Ensure valid UTF-8
+		if (preg_match('//u', $strValue) !== 1)
+		{
+			$substituteCharacter = mb_substitute_character();
+			mb_substitute_character(0xFFFD);
+
+			$strValue = mb_convert_encoding($strValue, 'UTF-8', 'UTF-8');
+
+			mb_substitute_character($substituteCharacter);
+		}
+
+		return $strValue;
+	}
+
+	/**
+	 * Convert an input-encoded string to plain text UTF-8
+	 *
+	 * Strips or replaces insert tags, strips HTML tags, decodes entities, escapes insert tag braces.
+	 *
+	 * @param bool $blnRemoveInsertTags True to remove insert tags instead of replacing them
+	 *
+	 * @deprecated Deprecated since Contao 4.13, to be removed in Contao 5;
+	 *             use the Contao\CoreBundle\String\HtmlDecoder service instead
+	 */
+	public static function inputEncodedToPlainText(string $strValue, bool $blnRemoveInsertTags = false): string
+	{
+		trigger_deprecation('contao/core-bundle', '4.13', 'Using "StringUtil::inputEncodedToPlainText()" has been deprecated and will no longer work in Contao 5.0. Use the "Contao\CoreBundle\String\HtmlDecoder" service instead.');
+
+		return System::getContainer()->get(HtmlDecoder::class)->inputEncodedToPlainText($strValue, $blnRemoveInsertTags);
+	}
+
+	/**
+	 * Convert an HTML string to plain text with normalized white space
+	 *
+	 * It handles all Contao input encoding specifics like insert tags, basic
+	 * entities and encoded entities and is meant to be used with content from
+	 * fields that have the allowHtml flag enabled.
+	 *
+	 * @param bool $blnRemoveInsertTags True to remove insert tags instead of replacing them
+	 *
+	 * @deprecated Deprecated since Contao 4.13, to be removed in Contao 5;
+	 *             use the Contao\CoreBundle\String\HtmlDecoder service instead
+	 */
+	public static function htmlToPlainText(string $strValue, bool $blnRemoveInsertTags = false): string
+	{
+		trigger_deprecation('contao/core-bundle', '4.13', 'Using "StringUtil::htmlToPlainText()" has been deprecated and will no longer work in Contao 5.0. Use the "Contao\CoreBundle\String\HtmlDecoder" service instead.');
+
+		return System::getContainer()->get(HtmlDecoder::class)->htmlToPlainText($strValue, $blnRemoveInsertTags);
 	}
 }
 

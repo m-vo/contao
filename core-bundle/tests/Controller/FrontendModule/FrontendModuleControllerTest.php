@@ -14,6 +14,7 @@ namespace Contao\CoreBundle\Tests\Controller\FrontendModule;
 
 use Contao\CoreBundle\Fixtures\Controller\FrontendModule\TestController;
 use Contao\CoreBundle\Tests\TestCase;
+use Contao\FragmentTemplate;
 use Contao\FrontendTemplate;
 use Contao\ModuleModel;
 use Contao\System;
@@ -25,11 +26,18 @@ use Symfony\Component\HttpFoundation\RequestStack;
 
 class FrontendModuleControllerTest extends TestCase
 {
+    /**
+     * @var ContainerBuilder
+     */
+    private $container;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        System::setContainer($this->getContainerWithContaoConfiguration());
+        $this->container = $this->getContainerWithContaoConfiguration();
+
+        System::setContainer($this->container);
     }
 
     public function testCreatesTheTemplateFromTheClassName(): void
@@ -37,7 +45,7 @@ class FrontendModuleControllerTest extends TestCase
         $controller = new TestController();
         $controller->setContainer($this->mockContainerWithFrameworkTemplate('mod_test'));
 
-        $controller(new Request([], [], ['_scope' => 'frontend']), $this->createMock(ModuleModel::class), 'main');
+        $controller(new Request([], [], ['_scope' => 'frontend']), $this->getModuleModel(), 'main');
     }
 
     public function testCreatesTheTemplateFromTheTypeFragmentOption(): void
@@ -46,7 +54,7 @@ class FrontendModuleControllerTest extends TestCase
         $controller->setContainer($this->mockContainerWithFrameworkTemplate('mod_foo'));
         $controller->setFragmentOptions(['type' => 'foo']);
 
-        $controller(new Request(), $this->createMock(ModuleModel::class), 'main');
+        $controller(new Request(), $this->getModuleModel(), 'main');
     }
 
     public function testCreatesTheTemplateFromTheTemplateFragmentOption(): void
@@ -55,13 +63,12 @@ class FrontendModuleControllerTest extends TestCase
         $controller->setContainer($this->mockContainerWithFrameworkTemplate('mod_bar'));
         $controller->setFragmentOptions(['template' => 'mod_bar']);
 
-        $controller(new Request(), $this->createMock(ModuleModel::class), 'main');
+        $controller(new Request(), $this->getModuleModel(), 'main');
     }
 
     public function testCreatesTheTemplateFromACustomTpl(): void
     {
-        /** @var ModuleModel&MockObject $model */
-        $model = $this->mockClassWithProperties(ModuleModel::class);
+        $model = $this->getModuleModel();
         $model->customTpl = 'mod_bar';
 
         $container = $this->mockContainerWithFrameworkTemplate('mod_bar');
@@ -81,7 +88,7 @@ class FrontendModuleControllerTest extends TestCase
         $controller = new TestController();
         $controller->setContainer($this->mockContainerWithFrameworkTemplate('mod_test'));
 
-        $response = $controller(new Request(), $this->createMock(ModuleModel::class), 'main');
+        $response = $controller(new Request(), $this->getModuleModel(), 'main');
         $template = json_decode($response->getContent(), true);
 
         $this->assertSame('', $template['cssID']);
@@ -90,8 +97,7 @@ class FrontendModuleControllerTest extends TestCase
 
     public function testSetsTheHeadlineFromTheModel(): void
     {
-        /** @var ModuleModel&MockObject $model */
-        $model = $this->mockClassWithProperties(ModuleModel::class);
+        $model = $this->getModuleModel();
         $model->headline = serialize(['unit' => 'h6', 'value' => 'foobar']);
 
         $controller = new TestController();
@@ -106,8 +112,7 @@ class FrontendModuleControllerTest extends TestCase
 
     public function testSetsTheCssIdAndClassFromTheModel(): void
     {
-        /** @var ModuleModel&MockObject $model */
-        $model = $this->mockClassWithProperties(ModuleModel::class);
+        $model = $this->getModuleModel();
         $model->cssID = serialize(['foo', 'bar']);
 
         $controller = new TestController();
@@ -125,7 +130,7 @@ class FrontendModuleControllerTest extends TestCase
         $controller = new TestController();
         $controller->setContainer($this->mockContainerWithFrameworkTemplate('mod_test'));
 
-        $response = $controller(new Request(), $this->createMock(ModuleModel::class), 'left');
+        $response = $controller(new Request(), $this->getModuleModel(), 'left');
         $template = json_decode($response->getContent(), true);
 
         $this->assertSame('left', $template['inColumn']);
@@ -133,8 +138,7 @@ class FrontendModuleControllerTest extends TestCase
 
     public function testAddsTheCacheTags(): void
     {
-        /** @var ModuleModel&MockObject $model */
-        $model = $this->mockClassWithProperties(ModuleModel::class);
+        $model = $this->getModuleModel();
         $model->id = 42;
 
         $responseTagger = $this->createMock(ResponseTagger::class);
@@ -153,6 +157,31 @@ class FrontendModuleControllerTest extends TestCase
         $controller(new Request(), $model, 'main');
     }
 
+    public function testUsesFragmentTemplateForSubrequests(): void
+    {
+        $framework = $this->mockContaoFramework();
+        $framework
+            ->expects($this->once())
+            ->method('createInstance')
+            ->with(FragmentTemplate::class, ['mod_test'])
+            ->willReturn(new FragmentTemplate('mod_test'))
+        ;
+
+        $this->container->set('contao.framework', $framework);
+        $this->container->set('contao.routing.scope_matcher', $this->mockScopeMatcher());
+
+        $currentRequest = new Request([], [], ['_scope' => 'frontend']);
+
+        $requestStack = $this->container->get('request_stack');
+        $requestStack->push(new Request()); // Main request
+        $requestStack->push($currentRequest); // Sub request
+
+        $controller = new TestController();
+        $controller->setContainer($this->container);
+
+        $controller($currentRequest, $this->getModuleModel(), 'main');
+    }
+
     private function mockContainerWithFrameworkTemplate(string $templateName): ContainerBuilder
     {
         $framework = $this->mockContaoFramework();
@@ -163,10 +192,17 @@ class FrontendModuleControllerTest extends TestCase
             ->willReturn(new FrontendTemplate($templateName))
         ;
 
-        $container = new ContainerBuilder();
-        $container->set('contao.framework', $framework);
-        $container->set('contao.routing.scope_matcher', $this->mockScopeMatcher());
+        $this->container->set('contao.framework', $framework);
+        $this->container->set('contao.routing.scope_matcher', $this->mockScopeMatcher());
 
-        return $container;
+        return $this->container;
+    }
+
+    /**
+     * @return ModuleModel&MockObject
+     */
+    private function getModuleModel(): ModuleModel
+    {
+        return $this->mockClassWithProperties(ModuleModel::class);
     }
 }

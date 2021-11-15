@@ -31,7 +31,7 @@
       </trans-unit>
       <trans-unit id="tl_image_size_item.source_legend">
         <source>Image source settings</source>
-        <target>Paramètres de l'image source</target>
+        <target>Source de l'image</target>
       </trans-unit>
       <trans-unit id="tl_image_size_item.visibility_legend">
         <source>Visibility</source>
@@ -43,15 +43,15 @@
       </trans-unit>
       <trans-unit id="tl_image_size_item.new.1">
         <source>Create a new media query</source>
-        <target>Créer une nouvelle media query</target>
+        <target>Créer un nouveau media query</target>
       </trans-unit>
       <trans-unit id="tl_image_size_item.show">
         <source>Show the details of media query ID %s</source>
-        <target>Afficher les détails de la media query ID %s</target>
+        <target>Afficher les détails du media query ID %s</target>
       </trans-unit>
       <trans-unit id="tl_image_size_item.edit">
         <source>Edit media query ID %s</source>
-        <target>Éditer la media query ID %s</target>
+        <target>Éditer le media query ID %s</target>
       </trans-unit>
       <trans-unit id="tl_image_size_item.editheader">
         <source>Edit the image size settings</source>
@@ -59,15 +59,15 @@
       </trans-unit>
       <trans-unit id="tl_image_size_item.cut">
         <source>Move media query ID %s</source>
-        <target>Déplacer la media query ID %s</target>
+        <target>Déplacer le media query ID %s</target>
       </trans-unit>
       <trans-unit id="tl_image_size_item.copy">
         <source>Duplicate media query ID %s</source>
-        <target>Dupliquer la media query ID %s</target>
+        <target>Dupliquer le media query ID %s</target>
       </trans-unit>
       <trans-unit id="tl_image_size_item.delete">
         <source>Delete media query ID %s</source>
-        <target>Supprimer la media query ID %s</target>
+        <target>Supprimer le media query ID %s</target>
       </trans-unit>
       <trans-unit id="tl_image_size_item.toggle">
         <source>Activate/deactivate media query ID %s</source>

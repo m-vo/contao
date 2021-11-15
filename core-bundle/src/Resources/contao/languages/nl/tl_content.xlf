@@ -42,12 +42,12 @@
         <target>Toon het bestand in de browser in plaats van het download dialoogvenster te openen.</target>
       </trans-unit>
       <trans-unit id="tl_content.overwriteMeta.0">
-        <source>Overwrite meta data</source>
-        <target>Overschrijf metadata</target>
+        <source>Overwrite metadata</source>
+        <target>Metadata overschrijven</target>
       </trans-unit>
       <trans-unit id="tl_content.overwriteMeta.1">
-        <source>Overwrite the meta data from the file manager.</source>
-        <target>Overschrijf de metadata van de bestandsbeheerder.</target>
+        <source>Overwrite the metadata from the file manager.</source>
+        <target>Overschrijf de metadata uit de bestandsbeheerder.</target>
       </trans-unit>
       <trans-unit id="tl_content.singleSRC.0">
         <source>Source file</source>
@@ -289,6 +289,22 @@
         <source>Note that the code will not be executed. Use F11 to toggle the fullscreen mode if you are using the code editor.</source>
         <target>NB. Deze code wordt niet uitgevoerd.Gebruik F11 om over te schakelen op fullscreen mode als u de code editor gebruikt.</target>
       </trans-unit>
+      <trans-unit id="tl_content.markdownSource.0">
+        <source>Markdown source</source>
+        <target>Markdown-bron</target>
+      </trans-unit>
+      <trans-unit id="tl_content.markdownSource.1">
+        <source>Please choose the Markdown source.</source>
+        <target>Kies de Markdown-bron.</target>
+      </trans-unit>
+      <trans-unit id="tl_content.markdownSource.sourceText">
+        <source>Text</source>
+        <target>Tekst</target>
+      </trans-unit>
+      <trans-unit id="tl_content.markdownSource.sourceFile">
+        <source>File</source>
+        <target>Bestand</target>
+      </trans-unit>
       <trans-unit id="tl_content.linkTitle.0">
         <source>Link text</source>
         <target>Link titel</target>
@@ -361,14 +377,6 @@
         <source>The number of items per page. Set to 0 to disable pagination.</source>
         <target>Het aantal items per pagina. Stel in op 0 om paginering uit te schakelen.</target>
       </trans-unit>
-      <trans-unit id="tl_content.numberOfItems.0">
-        <source>Total number of images</source>
-        <target>Totaal aantal afbeeldingen</target>
-      </trans-unit>
-      <trans-unit id="tl_content.numberOfItems.1">
-        <source>Here you can limit the total number of images. Set to 0 to show all.</source>
-        <target>Hier kunt u het totale aantal beelden instellen. Zet op 0 om alles te tonen.</target>
-      </trans-unit>
       <trans-unit id="tl_content.sortBy.0">
         <source>Order by</source>
         <target>Sorteer op</target>
@@ -378,12 +386,12 @@
         <target>Kies de sorteervolgorde.</target>
       </trans-unit>
       <trans-unit id="tl_content.metaIgnore.0">
-        <source>Ignore files without meta data</source>
-        <target>Negeer bestanden zonder meta data</target>
+        <source>Ignore files without metadata</source>
+        <target>Negeer bestanden zonder metadata</target>
       </trans-unit>
       <trans-unit id="tl_content.metaIgnore.1">
-        <source>Do not show files without meta data matching the page language.</source>
-        <target>Bestanden zonder meta data die overeenkomen met de pagina taal niet weergeven.</target>
+        <source>Do not show files without metadata matching the page language.</source>
+        <target>Toon geen bestanden zonder metadata die overeenkomen met de paginataal.</target>
       </trans-unit>
       <trans-unit id="tl_content.galleryTpl.0">
         <source>Gallery template</source>
@@ -391,12 +399,15 @@
       </trans-unit>
       <trans-unit id="tl_content.galleryTpl.1">
         <source>Here you can select a gallery template.</source>
+        <target>Hier kunt u een galerijsjabloon selecteren.</target>
       </trans-unit>
       <trans-unit id="tl_content.customTpl.0">
         <source>Content element template</source>
+        <target>Sjabloon voor inhoudselement</target>
       </trans-unit>
       <trans-unit id="tl_content.customTpl.1">
         <source>Here you can select the content element template.</source>
+        <target>Hier kunt u de sjabloon voor het inhoudselement selecteren.</target>
       </trans-unit>
       <trans-unit id="tl_content.playerSRC.0">
         <source>Video/audio files</source>
@@ -775,8 +786,8 @@
         <target>Inline afspelen (geen volledig scherm)</target>
       </trans-unit>
       <trans-unit id="tl_content.player_preload.auto">
-        <source>Auto (preload the entiry video)</source>
-        <target>Auto (vooraf laden van gehele video)</target>
+        <source>Auto (preload the entire video)</source>
+        <target>Automatisch (preload de hele video vooraf)</target>
       </trans-unit>
       <trans-unit id="tl_content.player_preload.metadata">
         <source>Metadata (preload the metadata only)</source>
@@ -816,10 +827,7 @@
       </trans-unit>
       <trans-unit id="tl_content.youtube_rel">
         <source>Limit related videos to the same channel</source>
-      </trans-unit>
-      <trans-unit id="tl_content.youtube_showinfo">
-        <source>Hide the top bar in the preview</source>
-        <target>Verberg de bovenste balk in de preview</target>
+        <target>Beperk gerelateerde video's tot hetzelfde kanaal</target>
       </trans-unit>
       <trans-unit id="tl_content.youtube_nocookie">
         <source>Use the youtube-nocookie.com domain</source>

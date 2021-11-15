@@ -11,8 +11,12 @@
 namespace Contao;
 
 use Contao\CoreBundle\Exception\NoLayoutSpecifiedException;
-use Contao\CoreBundle\Util\PackageUtil;
-use Symfony\Component\Cache\Adapter\AdapterInterface;
+use Contao\CoreBundle\Routing\ResponseContext\CoreResponseContextFactory;
+use Contao\CoreBundle\Routing\ResponseContext\HtmlHeadBag\HtmlHeadBag;
+use Contao\CoreBundle\Routing\ResponseContext\JsonLd\JsonLdManager;
+use Contao\CoreBundle\Routing\ResponseContext\ResponseContext;
+use Contao\CoreBundle\Routing\ResponseContext\ResponseContextAccessor;
+use Contao\CoreBundle\Util\LocaleUtil;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -22,6 +26,11 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class PageRegular extends Frontend
 {
+	/**
+	 * @var ResponseContext
+	 */
+	protected $responseContext;
+
 	/**
 	 * Generate a regular page
 	 *
@@ -47,7 +56,12 @@ class PageRegular extends Frontend
 	{
 		$this->prepare($objPage);
 
-		return $this->Template->getResponse($blnCheckRequest);
+		$response = $this->Template->getResponse($blnCheckRequest);
+
+		// Finalize the response context so it cannot be used anymore
+		System::getContainer()->get(ResponseContextAccessor::class)->finalizeCurrentContext($response);
+
+		return $response;
 	}
 
 	/**
@@ -60,13 +74,17 @@ class PageRegular extends Frontend
 	protected function prepare($objPage)
 	{
 		$GLOBALS['TL_KEYWORDS'] = '';
-		$GLOBALS['TL_LANGUAGE'] = $objPage->language;
+		$GLOBALS['TL_LANGUAGE'] = LocaleUtil::formatAsLanguageTag($objPage->language);
 
-		$locale = str_replace('-', '_', $objPage->language);
+		$locale = LocaleUtil::formatAsLocale($objPage->language);
 
 		$container = System::getContainer();
-		$container->get('request_stack')->getCurrentRequest()->setLocale($locale);
 		$container->get('translator')->setLocale($locale);
+
+		$request = $container->get('request_stack')->getCurrentRequest();
+		$request->setLocale($locale);
+
+		$this->responseContext = $container->get(CoreResponseContextFactory::class)->createContaoWebpageResponseContext($objPage);
 
 		System::loadLanguageFile('default');
 
@@ -87,7 +105,7 @@ class PageRegular extends Frontend
 
 		// Set the layout template and template group
 		$objPage->template = $objLayout->template ?: 'fe_page';
-		$objPage->templateGroup = $objTheme->templates;
+		$objPage->templateGroup = $objTheme->templates ?? null;
 
 		// Minify the markup
 		$objPage->minifyMarkup = $objLayout->minifyMarkup;
@@ -99,13 +117,12 @@ class PageRegular extends Frontend
 		$arrCustomSections = array();
 		$arrSections = array('header', 'left', 'right', 'main', 'footer');
 		$arrModules = StringUtil::deserialize($objLayout->modules);
-
 		$arrModuleIds = array();
 
 		// Filter the disabled modules
 		foreach ($arrModules as $module)
 		{
-			if ($module['enable'])
+			if ($module['enable'] ?? null)
 			{
 				$arrModuleIds[] = (int) $module['mod'];
 			}
@@ -130,7 +147,7 @@ class PageRegular extends Frontend
 			foreach ($arrModules as $arrModule)
 			{
 				// Disabled module
-				if (!BE_USER_LOGGED_IN && !$arrModule['enable'])
+				if (!BE_USER_LOGGED_IN && !($arrModule['enable'] ?? null))
 				{
 					continue;
 				}
@@ -169,6 +186,11 @@ class PageRegular extends Frontend
 				}
 				else
 				{
+					if (!isset($arrCustomSections[$arrModule['col']]))
+					{
+						$arrCustomSections[$arrModule['col']] = '';
+					}
+
 					$arrCustomSections[$arrModule['col']] .= $this->getFrontendModule($arrModule['mod'], $arrModule['col']);
 				}
 			}
@@ -176,8 +198,8 @@ class PageRegular extends Frontend
 
 		$this->Template->sections = $arrCustomSections;
 
-		// Mark RTL languages (see #7171)
-		if ($GLOBALS['TL_LANG']['MSC']['textDirection'] == 'rtl')
+		// Mark RTL languages (see #7171, #3360)
+		if ((\ResourceBundle::create($locale, 'ICUDATA', true)['layout']['characters'] ?? null) == 'right-to-left')
 		{
 			$this->Template->isRTL = true;
 		}
@@ -192,16 +214,24 @@ class PageRegular extends Frontend
 			}
 		}
 
+		$headBag = $this->responseContext->get(HtmlHeadBag::class);
+
 		// Set the page title and description AFTER the modules have been generated
 		$this->Template->mainTitle = $objPage->rootPageTitle;
-		$this->Template->pageTitle = $objPage->pageTitle ?: $objPage->title;
-
-		// Meta robots tag
-		$this->Template->robots = $objPage->robots ?: 'index,follow';
+		$this->Template->pageTitle = htmlspecialchars($headBag->getTitle());
 
 		// Remove shy-entities (see #2709)
 		$this->Template->mainTitle = str_replace('[-]', '', $this->Template->mainTitle);
 		$this->Template->pageTitle = str_replace('[-]', '', $this->Template->pageTitle);
+
+		// Meta robots tag
+		$this->Template->robots = $headBag->getMetaRobots();
+
+		// Canonical
+		if ($objPage->enableCanonical)
+		{
+			$this->Template->canonical = $headBag->getCanonicalUriForRequest($request);
+		}
 
 		// Fall back to the default title tag
 		if (!$objLayout->titleTag)
@@ -211,7 +241,7 @@ class PageRegular extends Frontend
 
 		// Assign the title and description
 		$this->Template->title = strip_tags($this->replaceInsertTags($objLayout->titleTag));
-		$this->Template->description = str_replace(array("\n", "\r", '"'), array(' ', '', ''), $objPage->description);
+		$this->Template->description = htmlspecialchars($headBag->getMetaDescription());
 
 		// Body onload and body classes
 		$this->Template->onload = trim($objLayout->onload);
@@ -374,81 +404,16 @@ class PageRegular extends Frontend
 			$GLOBALS['TL_JAVASCRIPT'] = array();
 		}
 
-		$container = System::getContainer();
-		$projectDir = $container->getParameter('kernel.project_dir');
-
 		// jQuery scripts
 		if ($objLayout->addJQuery)
 		{
-			if ($objLayout->jSource == 'j_googleapis' || $objLayout->jSource == 'j_fallback')
-			{
-				try
-				{
-					/** @var AdapterInterface $cache */
-					$cache = $container->get('cache.system');
-					$hash = $cache->getItem('contao.jquery_hash');
-
-					if (!$hash->isHit())
-					{
-						$hash->set('sha256-' . base64_encode(hash_file('sha256', $projectDir . '/assets/jquery/js/jquery.min.js', true)));
-						$cache->save($hash);
-					}
-
-					$this->Template->mooScripts .= Template::generateScriptTag('https://code.jquery.com/jquery-' . PackageUtil::getNormalizedVersion('contao-components/jquery') . '.min.js', false, false, $hash->get(), 'anonymous', 'no-referrer') . "\n";
-
-					// Local fallback (thanks to DyaGa)
-					if ($objLayout->jSource == 'j_fallback')
-					{
-						$this->Template->mooScripts .= Template::generateInlineScript('window.jQuery || document.write(\'<script src="' . Controller::addAssetsUrlTo('assets/jquery/js/jquery.min.js') . '">\x3C/script>\')') . "\n";
-					}
-				}
-				catch (\OutOfBoundsException $e)
-				{
-					$GLOBALS['TL_JAVASCRIPT'][] = 'assets/jquery/js/jquery.min.js|static';
-				}
-			}
-			else
-			{
-				$GLOBALS['TL_JAVASCRIPT'][] = 'assets/jquery/js/jquery.min.js|static';
-			}
+			$GLOBALS['TL_JAVASCRIPT'][] = 'assets/jquery/js/jquery.min.js|static';
 		}
 
 		// MooTools scripts
 		if ($objLayout->addMooTools)
 		{
-			if ($objLayout->mooSource == 'moo_googleapis' || $objLayout->mooSource == 'moo_fallback')
-			{
-				try
-				{
-					$version = PackageUtil::getNormalizedVersion('contao-components/mootools');
-
-					if (version_compare($version, '1.5.1', '>'))
-					{
-						$this->Template->mooScripts .= Template::generateScriptTag('https://ajax.googleapis.com/ajax/libs/mootools/' . $version . '/mootools.min.js', false, false, null, 'anonymous', 'no-referrer') . "\n";
-					}
-					else
-					{
-						$this->Template->mooScripts .= Template::generateScriptTag('https://ajax.googleapis.com/ajax/libs/mootools/' . $version . '/mootools-yui-compressed.js', false, false, null, 'anonymous', 'no-referrer') . "\n";
-					}
-
-					// Local fallback (thanks to DyaGa)
-					if ($objLayout->mooSource == 'moo_fallback')
-					{
-						$this->Template->mooScripts .= Template::generateInlineScript('window.MooTools || document.write(\'<script src="' . Controller::addAssetsUrlTo('assets/mootools/js/mootools-core.min.js') . '">\x3C/script>\')') . "\n";
-					}
-
-					$GLOBALS['TL_JAVASCRIPT'][] = 'assets/mootools/js/mootools-more.min.js|static';
-					$GLOBALS['TL_JAVASCRIPT'][] = 'assets/mootools/js/mootools-mobile.min.js|static';
-				}
-				catch (\OutOfBoundsException $e)
-				{
-					$GLOBALS['TL_JAVASCRIPT'][] = 'assets/mootools/js/mootools.min.js|static';
-				}
-			}
-			else
-			{
-				$GLOBALS['TL_JAVASCRIPT'][] = 'assets/mootools/js/mootools.min.js|static';
-			}
+			$GLOBALS['TL_JAVASCRIPT'][] = 'assets/mootools/js/mootools.min.js|static';
 		}
 
 		// Check whether TL_APPEND_JS exists (see #4890)
@@ -494,7 +459,7 @@ class PageRegular extends Frontend
 		// Default settings
 		$this->Template->layout = $objLayout;
 		$this->Template->language = $GLOBALS['TL_LANGUAGE'];
-		$this->Template->charset = Config::get('characterSet');
+		$this->Template->charset = System::getContainer()->getParameter('kernel.charset');
 		$this->Template->base = Environment::get('base');
 		$this->Template->isRTL = false;
 	}
@@ -512,12 +477,6 @@ class PageRegular extends Frontend
 		$arrStyleSheets = StringUtil::deserialize($objLayout->stylesheet);
 		$arrFramework = StringUtil::deserialize($objLayout->framework);
 
-		// Google web fonts
-		if ($objLayout->webfonts)
-		{
-			$strStyleSheets .= Template::generateStyleTag('https://fonts.googleapis.com/css?family=' . str_replace('|', '%7C', $objLayout->webfonts), 'all') . "\n";
-		}
-
 		// Add the Contao CSS framework style sheets
 		if (\is_array($arrFramework))
 		{
@@ -531,7 +490,7 @@ class PageRegular extends Frontend
 		}
 
 		// Make sure TL_USER_CSS is set
-		if (!\is_array($GLOBALS['TL_USER_CSS']))
+		if (!isset($GLOBALS['TL_USER_CSS']) || !\is_array($GLOBALS['TL_USER_CSS']))
 		{
 			$GLOBALS['TL_USER_CSS'] = array();
 		}
@@ -602,38 +561,6 @@ class PageRegular extends Frontend
 		// External style sheets
 		if (!empty($arrExternal) && \is_array($arrExternal))
 		{
-			// Consider the sorting order (see #5038)
-			if ($objLayout->orderExt)
-			{
-				$tmp = StringUtil::deserialize($objLayout->orderExt);
-
-				if (!empty($tmp) && \is_array($tmp))
-				{
-					// Remove all values
-					$arrOrder = array_map(static function () {}, array_flip($tmp));
-
-					// Move the matching elements to their position in $arrOrder
-					foreach ($arrExternal as $k=>$v)
-					{
-						if (\array_key_exists($v, $arrOrder))
-						{
-							$arrOrder[$v] = $v;
-							unset($arrExternal[$k]);
-						}
-					}
-
-					// Append the left-over style sheets at the end
-					if (!empty($arrExternal))
-					{
-						$arrOrder = array_merge($arrOrder, array_values($arrExternal));
-					}
-
-					// Remove empty (unreplaced) entries
-					$arrExternal = array_values(array_filter($arrOrder));
-					unset($arrOrder);
-				}
-			}
-
 			// Get the file entries from the database
 			$objFiles = FilesModel::findMultipleByUuids($arrExternal);
 			$projectDir = System::getContainer()->getParameter('kernel.project_dir');
@@ -687,7 +614,7 @@ class PageRegular extends Frontend
 		}
 
 		// Add the user <head> tags
-		if ($strHead = trim($objLayout->head))
+		if ($strHead = trim($objLayout->head ?? ''))
 		{
 			$strHeadTags .= $strHead . "\n";
 		}
@@ -765,38 +692,6 @@ class PageRegular extends Frontend
 		// Add the external JavaScripts
 		$arrExternalJs = StringUtil::deserialize($objLayout->externalJs);
 
-		// Consider the sorting order (see #5038)
-		if (!empty($arrExternalJs) && \is_array($arrExternalJs) && $objLayout->orderExtJs)
-		{
-			$tmp = StringUtil::deserialize($objLayout->orderExtJs);
-
-			if (!empty($tmp) && \is_array($tmp))
-			{
-				// Remove all values
-				$arrOrder = array_map(static function () {}, array_flip($tmp));
-
-				// Move the matching elements to their position in $arrOrder
-				foreach ($arrExternalJs as $k=>$v)
-				{
-					if (\array_key_exists($v, $arrOrder))
-					{
-						$arrOrder[$v] = $v;
-						unset($arrExternalJs[$k]);
-					}
-				}
-
-				// Append the left-over JavaScripts at the end
-				if (!empty($arrExternalJs))
-				{
-					$arrOrder = array_merge($arrOrder, array_values($arrExternalJs));
-				}
-
-				// Remove empty (unreplaced) entries
-				$arrExternalJs = array_values(array_filter($arrOrder));
-				unset($arrOrder);
-			}
-		}
-
 		// Get the file entries from the database
 		$objFiles = FilesModel::findMultipleByUuids($arrExternalJs);
 		$projectDir = System::getContainer()->getParameter('kernel.project_dir');
@@ -812,32 +707,6 @@ class PageRegular extends Frontend
 			}
 		}
 
-		// Add search index meta data
-		if ($objPage !== null)
-		{
-			$noSearch = (bool) $objPage->noSearch;
-
-			// Do not search the page if the query has a key that is in TL_NOINDEX_KEYS
-			if (preg_grep('/^(' . implode('|', $GLOBALS['TL_NOINDEX_KEYS']) . ')$/', array_keys($_GET)))
-			{
-				$noSearch = true;
-			}
-
-			$meta = array
-			(
-				'@context' => array('contao' => 'https://schema.contao.org/'),
-				'@type' => 'contao:Page',
-				'contao:title' => $objPage->pageTitle ?: $objPage->title,
-				'contao:pageId' => (int) $objPage->id,
-				'contao:noSearch' => $noSearch,
-				'contao:protected' => (bool) $objPage->protected,
-				'contao:groups' => array_map('intval', array_filter((array) $objPage->groups)),
-				'contao:fePreview' => System::getContainer()->get('contao.security.token_checker')->isPreviewMode()
-			);
-
-			$strScripts .= '<script type="application/ld+json">' . json_encode($meta) . '</script>';
-		}
-
 		// Add the custom JavaScript
 		if ($objLayout->script)
 		{
@@ -845,6 +714,19 @@ class PageRegular extends Frontend
 		}
 
 		$this->Template->mootools = $strScripts;
+
+		$this->Template->jsonLdScripts = function ()
+		{
+			if (!$this->responseContext->isInitialized(JsonLdManager::class))
+			{
+				return '';
+			}
+
+			/** @var JsonLdManager $jsonLdManager */
+			$jsonLdManager = $this->responseContext->get(JsonLdManager::class);
+
+			return $jsonLdManager->collectFinalScriptFromGraphs();
+		};
 	}
 }
 

@@ -119,9 +119,6 @@
       <trans-unit id="ERR.passwordName">
         <source>Your username and password must not be the same!</source>
       </trans-unit>
-      <trans-unit id="ERR.passwordMatch">
-        <source>The passwords did not match!</source>
-      </trans-unit>
       <trans-unit id="ERR.accountLocked">
         <source>This account has been locked! You can log in again in %d minutes.</source>
       </trans-unit>
@@ -142,6 +139,18 @@
       </trans-unit>
       <trans-unit id="ERR.aliasNumeric">
         <source>Numeric aliases are not supported!</source>
+      </trans-unit>
+      <trans-unit id="ERR.urlPrefixExists">
+        <source>The URL prefix "%s" is already used by another root page with the same domain name!</source>
+      </trans-unit>
+      <trans-unit id="ERR.pageUrlExists">
+        <source>A page with the URL "%s" already exists!</source>
+      </trans-unit>
+      <trans-unit id="ERR.pageUrlSuffix">
+        <source>This URL suffix will lead to duplicate URLs (e.g. %s)!</source>
+      </trans-unit>
+      <trans-unit id="ERR.pageUrlPrefix">
+        <source>This URL prefix will lead to duplicate URLs (e.g. %s)!</source>
       </trans-unit>
       <trans-unit id="ERR.importFolder">
         <source>The folder "%s" cannot be imported!</source>
@@ -239,6 +248,21 @@
       <trans-unit id="ERR.moduleWithoutColumn">
         <source>Please assign all modules to a column!</source>
       </trans-unit>
+      <trans-unit id="ERR.invalidHttpUrl">
+        <source>Please enter an absolute URL starting with https:// or http://!</source>
+      </trans-unit>
+      <trans-unit id="ERR.customRgxp">
+        <source>Please enter a value that matches %s!</source>
+      </trans-unit>
+      <trans-unit id="ERR.invalidCustomRgxp">
+        <source>Invalid custom regular expression!</source>
+      </trans-unit>
+      <trans-unit id="ERR.applicationCache">
+        <source>Please run the "cache:clear" command or use the Contao Manager to rebuild your application cache.</source>
+      </trans-unit>
+      <trans-unit id="ERR.invalidThemeTemplatePath">
+        <source>The template path "%s" must not contain the following characters: %s</source>
+      </trans-unit>
       <trans-unit id="SEC.question1">
         <source>Please add %d and %d.</source>
       </trans-unit>
@@ -313,6 +337,12 @@
       </trans-unit>
       <trans-unit id="CTE.markdown.1">
         <source>Generates HTML code from a markdown text.</source>
+      </trans-unit>
+      <trans-unit id="CTE.template.0">
+        <source>Custom template</source>
+      </trans-unit>
+      <trans-unit id="CTE.template.1">
+        <source>Generates an element to insert a custom template.</source>
       </trans-unit>
       <trans-unit id="CTE.slider">
         <source>Content slider</source>
@@ -794,9 +824,6 @@
       <trans-unit id="MSC.target.1">
         <source>Open the link in a new browser window.</source>
       </trans-unit>
-      <trans-unit id="MSC.textDirection">
-        <source>ltr</source>
-      </trans-unit>
       <trans-unit id="MSC.decimalSeparator">
         <source>.</source>
       </trans-unit>
@@ -947,11 +974,8 @@
       <trans-unit id="MSC.aw_caption">
         <source>Caption</source>
       </trans-unit>
-      <trans-unit id="MSC.aw_delete">
-        <source>Delete the language</source>
-      </trans-unit>
-      <trans-unit id="MSC.aw_new">
-        <source>Add language</source>
+      <trans-unit id="MSC.aw_license">
+        <source>License</source>
       </trans-unit>
       <trans-unit id="MSC.sw_title">
         <source>Title</source>
@@ -1092,10 +1116,16 @@
         <source>Please enter a password.</source>
       </trans-unit>
       <trans-unit id="MSC.confirm.0">
-        <source>Confirmation</source>
+        <source>Confirm password</source>
       </trans-unit>
       <trans-unit id="MSC.confirm.1">
         <source>Please confirm the password.</source>
+      </trans-unit>
+      <trans-unit id="MSC.showPassword">
+        <source>Show password</source>
+      </trans-unit>
+      <trans-unit id="MSC.hidePassword">
+        <source>Hide password</source>
       </trans-unit>
       <trans-unit id="MSC.dateAdded.0">
         <source>Date added</source>
@@ -1410,7 +1440,7 @@
         <source>Relative path</source>
       </trans-unit>
       <trans-unit id="MSC.fileMeta">
-        <source>Meta data</source>
+        <source>Metadata</source>
       </trans-unit>
       <trans-unit id="MSC.versioning">
         <source>Version management</source>
@@ -1542,7 +1572,7 @@
         <source>protected</source>
       </trans-unit>
       <trans-unit id="MSC.guests">
-        <source>guests only</source>
+        <source>Guests</source>
       </trans-unit>
       <trans-unit id="MSC.updateMode">
         <source>Update mode</source>
@@ -1872,7 +1902,7 @@
         <source>Download %s</source>
       </trans-unit>
       <trans-unit id="MSC.metaNoLanguages">
-        <source>You have to add a root page in the site structure to enter file meta data.</source>
+        <source>You have to add a root page in the site structure to enter file metadata.</source>
       </trans-unit>
       <trans-unit id="MSC.breadcrumbMenu">
         <source>Breadcrumb menu</source>
@@ -1931,14 +1961,11 @@
       <trans-unit id="MSC.twoFactorBackupCodesLabel">
         <source>Backup codes</source>
       </trans-unit>
-      <trans-unit id="MSC.twoFactorBackupCodesShow">
-        <source>Show backup codes</source>
-      </trans-unit>
       <trans-unit id="MSC.twoFactorBackupCodesExplain">
         <source>Backup codes can be used to access your account if you have lost your authentication device and cannot generate two-factor codes anymore. Treat your backup codes with the same level of attention as your password! It is recommended to save them with a password manager such as Lastpass, 1Password or Keeper.</source>
       </trans-unit>
       <trans-unit id="MSC.twoFactorBackupCodesInfo">
-        <source>Put the codes in a safe spot. If you lose your authentication device and do not have backup codes, you cannot access your account anymore!</source>
+        <source>Make sure to copy the codes now. You will not be able to see them again!</source>
       </trans-unit>
       <trans-unit id="MSC.twoFactorBackupCodesGenerate">
         <source>Generate backup codes</source>
@@ -1964,6 +1991,9 @@
       <trans-unit id="MSC.groupThemeImport">
         <source>There is at least one user group granting permission to import themes. Since themes can contain arbitrary templates and templates are PHP files, users of these groups implicitly have full control over the system!</source>
       </trans-unit>
+      <trans-unit id="MSC.groupListingModule">
+        <source>There is at least one user group granting permission to the front end module "Listing" and its "list_*" fields. Since they can contain arbitrary SQL queries, users of these groups implicitly have full control over the system!</source>
+      </trans-unit>
       <trans-unit id="MSC.enable">
         <source>Enable</source>
       </trans-unit>
@@ -1977,7 +2007,13 @@
         <source>Google search results preview</source>
       </trans-unit>
       <trans-unit id="MSC.serpPreview.1">
-        <source>Here you can preview the meta data in the Google search results. Other search engines might show longer texts or crop at a different position.</source>
+        <source>Here you can preview the metadata in the Google search results. Other search engines might show longer texts or crop at a different position.</source>
+      </trans-unit>
+      <trans-unit id="MSC.numberOfItems.0">
+        <source>Number of items</source>
+      </trans-unit>
+      <trans-unit id="MSC.numberOfItems.1">
+        <source>Here you can limit the total number of items. Set to 0 to show all.</source>
       </trans-unit>
       <trans-unit id="MSC.clearTrustedDevices">
         <source>Clear trusted devices</source>
@@ -2003,8 +2039,14 @@
       <trans-unit id="MSC.closeToolbar">
         <source>Close the Contao toolbar</source>
       </trans-unit>
+      <trans-unit id="MSC.noSerpPreview">
+        <source>The preview URL cannot be generated, because the route has mandatory parameters.</source>
+      </trans-unit>
       <trans-unit id="MSC.unknownOption">
-        <source>Unknown option</source>
+        <source>Unknown option: %s</source>
+      </trans-unit>
+      <trans-unit id="MSC.copyURL">
+        <source>Copy URL</source>
       </trans-unit>
       <trans-unit id="UNITS.0">
         <source>Byte</source>

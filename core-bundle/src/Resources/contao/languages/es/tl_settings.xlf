@@ -73,22 +73,6 @@
         <source>Do not collapse elements in the back end preview.</source>
         <target>No desplegar los elementos de contenido y otros recursos cuando se previsualicen en el back end.</target>
       </trans-unit>
-      <trans-unit id="tl_settings.doNotRedirectEmpty.0">
-        <source>Do not redirect empty URLs</source>
-        <target>No redireccionar URLs vacías</target>
-      </trans-unit>
-      <trans-unit id="tl_settings.doNotRedirectEmpty.1">
-        <source>For an empty URL display the website instead of redirecting to the language root page (not recommended).</source>
-        <target>Para una URL vacia muerta la página en vez del redireccionameinte con el idioma de la página raíz (no recomendado).</target>
-      </trans-unit>
-      <trans-unit id="tl_settings.folderUrl.0">
-        <source>Enable folder URLs</source>
-        <target>Activar URLs decarpeta</target>
-      </trans-unit>
-      <trans-unit id="tl_settings.folderUrl.1">
-        <source>Here you can enable folder-style page aliases like &lt;em&gt;docs/install/download.html&lt;/em&gt; instead of &lt;em&gt;docs-install-download.html&lt;/em&gt;.</source>
-        <target>Aquí puedes habilitar aliases estilo-carpeta como &lt;em&gt;docs/install/download.html&lt;/em&gt; en lugar de &lt;em&gt;docs-install-download.html&lt;/em&gt;</target>
-      </trans-unit>
       <trans-unit id="tl_settings.allowedTags.0">
         <source>Allowed HTML tags</source>
         <target>Etiquetas HTML permitidas</target>
@@ -96,6 +80,15 @@
       <trans-unit id="tl_settings.allowedTags.1">
         <source>Here you can enter a list of allowed HTML tags that will not be stripped.</source>
         <target>Por favor introduce una lista de extensiones (separados por coma) de las etiquetas HTMl permitidas. Todas las otras etiquetas serán eliminadas de las entradas del usuario.</target>
+      </trans-unit>
+      <trans-unit id="tl_settings.allowedAttributes.0">
+        <source>Allowed HTML attributes</source>
+      </trans-unit>
+      <trans-unit id="tl_settings.allowedAttributes.1">
+        <source>List of allowed HTML attributes that will not be stripped. The tag or attribute name &lt;code&gt;*&lt;/code&gt; stands for all tags or attributes. Wildcards can be used for attributes with dashes like &lt;code&gt;data-*&lt;/code&gt;.</source>
+      </trans-unit>
+      <trans-unit id="tl_settings.allowedAttributesWarning">
+        <source>Allowing &lt;code&gt;*&lt;/code&gt; attributes can be exploited for XSS attacks. Only do this if all backend users are trusted!</source>
       </trans-unit>
       <trans-unit id="tl_settings.disableRefererCheck.0">
         <source>Disable request tokens</source>
@@ -174,8 +167,7 @@
         <target>Grupo de página por defecto</target>
       </trans-unit>
       <trans-unit id="tl_settings.defaultGroup.1">
-        <source>Here you can select a group as the default owner of a page.</source>
-        <target>Por defecto, una página pertenece al mismo grupo que la página madre. Sin embargo, si no hay grupo asignado, el grupo por defecto será el propietario de la página. Si no hay grupo ni grupo por defecto, no habrá ningún tipo de restricciones de acceso!</target>
+        <source>Here you can select a user group as the default owner of a page.</source>
       </trans-unit>
       <trans-unit id="tl_settings.defaultChmod.0">
         <source>Default access rights</source>
@@ -197,10 +189,6 @@
         <source>Back end configuration</source>
         <target>Configuración del back end</target>
       </trans-unit>
-      <trans-unit id="tl_settings.frontend_legend">
-        <source>Front end configuration</source>
-        <target>Configuración del front end</target>
-      </trans-unit>
       <trans-unit id="tl_settings.security_legend">
         <source>Security settings</source>
         <target>Ajustes de seguridad</target>
@@ -220,6 +208,10 @@
       <trans-unit id="tl_settings.chmod_legend">
         <source>Default access rights</source>
         <target>Privilegios de acceso por defecto</target>
+      </trans-unit>
+      <trans-unit id="tl_settings.configuredInApp">
+        <source>This setting has been defined in the app configuration and cannot be changed here anymore.</source>
+        <target>Esta configuración se ha definido en la configuración de la aplicación y ya no se puede cambiar aquí.</target>
       </trans-unit>
     </body>
   </file>

@@ -27,30 +27,11 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  */
 class BackendMenuListener
 {
-    /**
-     * @var Security
-     */
-    private $security;
-
-    /**
-     * @var RouterInterface
-     */
-    private $router;
-
-    /**
-     * @var RequestStack
-     */
-    private $requestStack;
-
-    /**
-     * @var TranslatorInterface
-     */
-    private $translator;
-
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
+    private Security $security;
+    private RouterInterface $router;
+    private RequestStack $requestStack;
+    private TranslatorInterface $translator;
+    private ContaoFramework $framework;
 
     public function __construct(Security $security, RouterInterface $router, RequestStack $requestStack, TranslatorInterface $translator, ContaoFramework $framework)
     {
@@ -146,7 +127,7 @@ class BackendMenuListener
 
         $submenu = $factory
             ->createItem('submenu')
-            ->setLabel($this->trans('MSC.user').' '.$user->username)
+            ->setLabel($this->translator->trans('MSC.user', [], 'contao_default').' '.$user->username)
             ->setAttribute('class', 'submenu')
             ->setLabelAttribute('class', 'h2')
             ->setExtra('translation_domain', false)
@@ -193,11 +174,6 @@ class BackendMenuListener
         ;
 
         $tree->addChild($buger);
-    }
-
-    private function trans(string $id): string
-    {
-        return $this->translator->trans($id, [], 'contao_default');
     }
 
     private function getAlertsLabel(string $systemMessages): string

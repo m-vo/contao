@@ -220,7 +220,8 @@ class BackendMenuListenerTest extends ContaoTestCase
 
         $this->assertSame('Contao Manager', $manager->getLabel());
         $this->assertSame('/contao-manager.phar.php', $manager->getUri());
-        $this->assertSame(['class' => 'navigation contao_manager'], $manager->getLinkAttributes());
+        $this->assertSame(['class' => 'navigation contao_manager', 'title' => 'contao_manager_title'], $manager->getLinkAttributes());
+        $this->assertSame(['translation_domain' => false], $manager->getExtras());
     }
 
     public function testDoesNotAddTheManagerLinkIfTheManagerPathIsEmpty(): void
@@ -282,11 +283,7 @@ class BackendMenuListenerTest extends ContaoTestCase
         $translator = $this->createMock(TranslatorInterface::class);
         $translator
             ->method('trans')
-            ->willReturnCallback(
-                static function (string $id): string {
-                    return $id;
-                }
-            )
+            ->willReturnCallback(static fn (string $id): string => $id)
         ;
 
         return $translator;

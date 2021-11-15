@@ -25,6 +25,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 class ImageSizesTest extends TestCase
 {
+    private ImageSizes $imageSizes;
+
     /**
      * @var Connection&MockObject
      */
@@ -34,11 +36,6 @@ class ImageSizesTest extends TestCase
      * @var EventDispatcherInterface&MockObject
      */
     private $eventDispatcher;
-
-    /**
-     * @var ImageSizes
-     */
-    private $imageSizes;
 
     protected function setUp(): void
     {
@@ -167,11 +164,11 @@ class ImageSizesTest extends TestCase
 
         $this->connection
             ->expects($this->exactly(2))
-            ->method('fetchAll')
+            ->method('fetchAllAssociative')
             ->willReturn([])
         ;
 
-        // Test that fetchAll() is only called once
+        // Test that fetchAllAssociative() is only called once
         $this->imageSizes->getAllOptions();
         $this->imageSizes->getAllOptions();
 
@@ -198,7 +195,7 @@ class ImageSizesTest extends TestCase
     {
         $this->connection
             ->expects($this->atLeastOnce())
-            ->method('fetchAll')
+            ->method('fetchAllAssociative')
             ->willReturn($imageSizes)
         ;
     }

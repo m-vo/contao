@@ -12,14 +12,14 @@ declare(strict_types=1);
 
 namespace Contao\InstallationBundle\Controller;
 
+use Contao\CoreBundle\Csrf\ContaoCsrfTokenManager;
 use Contao\Environment;
 use Contao\InstallationBundle\Config\ParameterDumper;
 use Contao\InstallationBundle\Database\ConnectionFactory;
 use Contao\InstallationBundle\Event\ContaoInstallationEvents;
 use Contao\InstallationBundle\Event\InitializeApplicationEvent;
 use Contao\Validator;
-use Doctrine\DBAL\DBALException;
-use Patchwork\Utf8;
+use Doctrine\DBAL\Exception;
 use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 use Symfony\Component\Filesystem\Filesystem;
@@ -28,6 +28,7 @@ use Symfony\Component\Finder\SplFileInfo;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Webmozart\PathUtil\Path;
 
 /**
  * @Route("/contao", defaults={"_scope" = "backend", "_token_check" = true})
@@ -38,10 +39,7 @@ class InstallationController implements ContainerAwareInterface
 {
     use ContainerAwareTrait;
 
-    /**
-     * @var array
-     */
-    private $context = [
+    private array $context = [
         'has_admin' => false,
         'hide_admin' => false,
         'sql_message' => '',
@@ -97,6 +95,8 @@ class InstallationController implements ContainerAwareInterface
         }
 
         $this->runDatabaseUpdates();
+
+        $installTool->checkStrictMode($this->context);
 
         if (null !== ($response = $this->adjustDatabaseTables())) {
             return $response;
@@ -172,20 +172,11 @@ class InstallationController implements ContainerAwareInterface
         }
 
         $password = $request->request->get('password');
-        $confirmation = $request->request->get('confirmation');
-
-        // The passwords do not match
-        if ($password !== $confirmation) {
-            return $this->render('password.html.twig', [
-                'error' => $this->trans('password_confirmation_mismatch'),
-            ]);
-        }
-
         $installTool = $this->container->get('contao.install_tool');
         $minlength = $installTool->getConfig('minPasswordLength');
 
-        // The passwords is too short
-        if (Utf8::strlen($password) < $minlength) {
+        // The password is too short
+        if (mb_strlen($password) < $minlength) {
             return $this->render('password.html.twig', [
                 'error' => sprintf($this->trans('password_too_short'), $minlength),
             ]);
@@ -247,7 +238,7 @@ class InstallationController implements ContainerAwareInterface
         $filesystem = new Filesystem();
         $cacheDir = $this->getContainerParameter('kernel.cache_dir');
         $ref = new \ReflectionObject($this->container);
-        $containerDir = basename(\dirname($ref->getFileName()));
+        $containerDir = Path::getFilename(Path::getDirectory($ref->getFileName()));
 
         /** @var array<SplFileInfo> $finder */
         $finder = Finder::create()
@@ -277,7 +268,7 @@ class InstallationController implements ContainerAwareInterface
     {
         $cacheDir = $this->getContainerParameter('kernel.cache_dir');
 
-        if (file_exists($cacheDir.'/contao/config/config.php')) {
+        if (file_exists(Path::join($cacheDir, 'contao/config/config.php'))) {
             return;
         }
 
@@ -436,7 +427,7 @@ class InstallationController implements ContainerAwareInterface
 
         try {
             $installTool->importTemplate($template, '1' === $request->request->get('preserve'));
-        } catch (DBALException $e) {
+        } catch (Exception $e) {
             $installTool->persistConfig('exampleWebsite', null);
             $installTool->logException($e);
 
@@ -485,13 +476,11 @@ class InstallationController implements ContainerAwareInterface
         $name = $request->request->get('name');
         $email = $request->request->get('email');
         $password = $request->request->get('password');
-        $confirmation = $request->request->get('confirmation');
 
         $this->context['admin_username_value'] = $username;
         $this->context['admin_name_value'] = $name;
         $this->context['admin_email_value'] = $email;
         $this->context['admin_password_value'] = $password;
-        $this->context['admin_confirmation_value'] = $confirmation;
 
         // All fields are mandatory
         if ('' === $username || '' === $name || '' === $email || '' === $password) {
@@ -521,17 +510,10 @@ class InstallationController implements ContainerAwareInterface
             return null;
         }
 
-        // The passwords do not match
-        if ($password !== $confirmation) {
-            $this->context['admin_password_error'] = $this->trans('admin_error_password_match');
-
-            return null;
-        }
-
         $minlength = $installTool->getConfig('minPasswordLength');
 
         // The password is too short
-        if (Utf8::strlen($password) < $minlength) {
+        if (mb_strlen($password) < $minlength) {
             $this->context['admin_password_error'] = sprintf($this->trans('password_too_short'), $minlength);
 
             return null;
@@ -633,7 +615,7 @@ class InstallationController implements ContainerAwareInterface
             return '';
         }
 
-        return $this->container->get('contao.csrf.token_manager')->getToken($tokenName)->getValue();
+        return $this->container->get(ContaoCsrfTokenManager::class)->getToken($tokenName)->getValue();
     }
 
     /**

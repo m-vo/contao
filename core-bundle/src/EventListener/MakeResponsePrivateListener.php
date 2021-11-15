@@ -25,10 +25,7 @@ class MakeResponsePrivateListener
 {
     public const DEBUG_HEADER = 'Contao-Private-Response-Reason';
 
-    /**
-     * @var ScopeMatcher
-     */
-    private $scopeMatcher;
+    private ScopeMatcher $scopeMatcher;
 
     public function __construct(ScopeMatcher $scopeMatcher)
     {
@@ -49,7 +46,7 @@ class MakeResponsePrivateListener
      */
     public function __invoke(ResponseEvent $event): void
     {
-        if (!$this->scopeMatcher->isContaoMasterRequest($event)) {
+        if (!$this->scopeMatcher->isContaoMainRequest($event)) {
             return;
         }
 
@@ -57,7 +54,7 @@ class MakeResponsePrivateListener
         $response = $event->getResponse();
 
         // Disable the default Symfony auto cache control
-        $response->headers->set(AbstractSessionListener::NO_AUTO_CACHE_CONTROL_HEADER, true);
+        $response->headers->set(AbstractSessionListener::NO_AUTO_CACHE_CONTROL_HEADER, '1');
 
         // If the response is not cacheable for a reverse proxy, we don't have to do anything anyway
         if (!$response->isCacheable()) {
@@ -84,12 +81,10 @@ class MakeResponsePrivateListener
         if (0 !== \count($cookies)) {
             $this->makePrivate(
                 $response,
-                sprintf('response-cookies (%s)', implode(', ', array_map(
-                    static function (Cookie $cookie) {
-                        return $cookie->getName();
-                    },
-                    $cookies
-                )))
+                sprintf(
+                    'response-cookies (%s)',
+                    implode(', ', array_map(static fn (Cookie $cookie) => $cookie->getName(), $cookies))
+                )
             );
 
             return;

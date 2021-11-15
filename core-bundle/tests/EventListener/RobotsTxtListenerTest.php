@@ -32,21 +32,13 @@ class RobotsTxtListenerTest extends TestCase
         $rootPage->id = 42;
         $rootPage->fallback = '1';
         $rootPage->dns = 'www.foobar.com';
+        $rootPage->useSSL = '1';
 
-        /** @var PageModel&MockObject $otherRootPage */
-        $otherRootPage = $this->mockClassWithProperties(PageModel::class);
-        $otherRootPage->id = 99;
-        $otherRootPage->fallback = '';
-        $otherRootPage->dns = 'www.foobar.com';
-        $otherRootPage->createSitemap = '1';
-        $otherRootPage->sitemapName = 'sitemap-name';
-        $otherRootPage->useSSL = '1';
-
-        $pageModelAdapter = $this->mockAdapter(['findPublishedRootPages']);
+        $pageModelAdapter = $this->mockAdapter(['findPublishedFallbackByHostname']);
         $pageModelAdapter
             ->expects($this->exactly(2))
-            ->method('findPublishedRootPages')
-            ->willReturn([$rootPage, $otherRootPage])
+            ->method('findPublishedFallbackByHostname')
+            ->willReturn($rootPage)
         ;
 
         $framework = $this->mockContaoFramework([PageModel::class => $pageModelAdapter]);
@@ -75,44 +67,44 @@ class RobotsTxtListenerTest extends TestCase
         yield 'Empty robots.txt content in root page' => [
             '',
             <<<'EOF'
-user-agent:*
-disallow:/contao/
+                user-agent:*
+                disallow:/contao/
 
-sitemap:https://www.foobar.com/share/sitemap-name.xml
-EOF
+                sitemap:https://www.foobar.com/sitemap.xml
+                EOF
         ];
 
         yield 'Tests merging with existing user-agent' => [
             <<<'EOF'
-user-agent:*
-allow:/
-EOF
+                user-agent:*
+                allow:/
+                EOF
             ,
             <<<'EOF'
-user-agent:*
-allow:/
-disallow:/contao/
+                user-agent:*
+                allow:/
+                disallow:/contao/
 
-sitemap:https://www.foobar.com/share/sitemap-name.xml
-EOF
+                sitemap:https://www.foobar.com/sitemap.xml
+                EOF
         ];
 
         yield 'Tests works with specific user-agent' => [
             <<<'EOF'
-user-agent:googlebot
-allow:/
-EOF
+                user-agent:googlebot
+                allow:/
+                EOF
             ,
             <<<'EOF'
-user-agent:googlebot
-allow:/
-disallow:/contao/
+                user-agent:googlebot
+                allow:/
+                disallow:/contao/
 
-user-agent:*
-disallow:/contao/
+                user-agent:*
+                disallow:/contao/
 
-sitemap:https://www.foobar.com/share/sitemap-name.xml
-EOF
+                sitemap:https://www.foobar.com/sitemap.xml
+                EOF
         ];
     }
 }

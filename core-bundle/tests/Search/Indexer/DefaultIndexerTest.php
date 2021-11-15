@@ -17,11 +17,14 @@ use Contao\CoreBundle\Search\Indexer\DefaultIndexer;
 use Contao\CoreBundle\Search\Indexer\IndexerException;
 use Contao\Search;
 use Contao\TestCase\ContaoTestCase;
-use Doctrine\DBAL\Driver\Connection;
+use Doctrine\DBAL\Connection;
 use Nyholm\Psr7\Uri;
+use Symfony\Bridge\PhpUnit\ExpectDeprecationTrait;
 
 class DefaultIndexerTest extends ContaoTestCase
 {
+    use ExpectDeprecationTrait;
+
     /**
      * @dataProvider indexProvider
      */
@@ -68,6 +71,12 @@ class DefaultIndexerTest extends ContaoTestCase
             'Cannot index empty response.',
         ];
 
+        yield 'Test does not index if rel="canonical" does not match current page' => [
+            new Document(new Uri('https://example.com/page'), 200, [], '<html><head><link rel="canonical" href="https://example.com/other-page" /></head><body></body></html>'),
+            null,
+            'Ignored because canonical URI "https://example.com/other-page" does not match document URI.',
+        ];
+
         yield 'Test does not index if page ID could not be determined' => [
             new Document(new Uri('https://example.com/no-page-id'), 200, [], '<html><body><script type="application/ld+json">{"@context":{"contao":"https:\/\/schema.contao.org\/"},"@type":"contao:Page","contao:noSearch":false,"contao:protected":false,"contao:groups":[],"contao:fePreview":false}</script></body></html>'),
             null,
@@ -99,15 +108,26 @@ class DefaultIndexerTest extends ContaoTestCase
         ];
 
         yield 'Test valid index when not protected' => [
-            new Document(new Uri('https://example.com/valid'), 200, [], '<html><body><script type="application/ld+json">{"@context":{"contao":"https:\/\/schema.contao.org\/"},"@type":"contao:Page","contao:pageId":2,"contao:noSearch":false,"contao:protected":false,"contao:groups":[],"contao:fePreview":false}</script></body></html>'),
+            new Document(new Uri('https://example.com/valid'), 200, [], '<html><body><script type="application/ld+json">{"@context":"https:\/\/schema.contao.org\/","@type":"Page","pageId":2,"noSearch":false,"protected":false,"groups":[],"fePreview":false}</script></body></html>'),
             [
                 'url' => 'https://example.com/valid',
-                'content' => '<html><body><script type="application/ld+json">{"@context":{"contao":"https:\/\/schema.contao.org\/"},"@type":"contao:Page","contao:pageId":2,"contao:noSearch":false,"contao:protected":false,"contao:groups":[],"contao:fePreview":false}</script></body></html>',
+                'content' => '<html><body><script type="application/ld+json">{"@context":"https:\/\/schema.contao.org\/","@type":"Page","pageId":2,"noSearch":false,"protected":false,"groups":[],"fePreview":false}</script></body></html>',
                 'protected' => '',
                 'groups' => [],
                 'pid' => 2,
                 'title' => 'undefined',
                 'language' => 'en',
+                'meta' => [
+                    [
+                        '@context' => 'https://schema.contao.org/',
+                        '@type' => 'https://schema.contao.org/Page',
+                        'https://schema.contao.org/pageId' => 2,
+                        'https://schema.contao.org/noSearch' => false,
+                        'https://schema.contao.org/protected' => false,
+                        'https://schema.contao.org/groups' => [],
+                        'https://schema.contao.org/fePreview' => false,
+                    ],
+                ],
             ],
         ];
 
@@ -121,6 +141,17 @@ class DefaultIndexerTest extends ContaoTestCase
                 'pid' => 2,
                 'title' => 'Foo title',
                 'language' => 'de',
+                'meta' => [
+                    [
+                        '@context' => ['contao' => 'https://schema.contao.org/'],
+                        '@type' => 'https://schema.contao.org/Page',
+                        'https://schema.contao.org/pageId' => 2,
+                        'https://schema.contao.org/noSearch' => false,
+                        'https://schema.contao.org/protected' => true,
+                        'https://schema.contao.org/groups' => [42],
+                        'https://schema.contao.org/fePreview' => false,
+                    ],
+                ],
             ],
             null,
             true,
@@ -136,6 +167,45 @@ class DefaultIndexerTest extends ContaoTestCase
                 'pid' => 2,
                 'title' => 'JSON-LD page title',
                 'language' => 'de',
+                'meta' => [
+                    [
+                        '@context' => ['contao' => 'https://schema.contao.org/'],
+                        '@type' => 'https://schema.contao.org/Page',
+                        'https://schema.contao.org/title' => 'JSON-LD page title',
+                        'https://schema.contao.org/pageId' => 2,
+                        'https://schema.contao.org/noSearch' => false,
+                        'https://schema.contao.org/protected' => true,
+                        'https://schema.contao.org/groups' => [42],
+                        'https://schema.contao.org/fePreview' => false,
+                    ],
+                ],
+            ],
+            null,
+            true,
+        ];
+
+        yield 'Test valid index with self-referencing rel="canonical"' => [
+            new Document(new Uri('https://example.com/valid'), 200, [], '<html lang="de"><head><title>HTML page title</title><link rel="canonical" href="https://example.com/valid" /></head><body><script type="application/ld+json">{"@context":{"contao":"https:\/\/schema.contao.org\/"},"@type":"contao:Page","contao:title":"JSON-LD page title","contao:pageId":2,"contao:noSearch":false,"contao:protected":true,"contao:groups":[42],"contao:fePreview":false}</script></body></html>'),
+            [
+                'url' => 'https://example.com/valid',
+                'content' => '<html lang="de"><head><title>HTML page title</title><link rel="canonical" href="https://example.com/valid" /></head><body><script type="application/ld+json">{"@context":{"contao":"https:\/\/schema.contao.org\/"},"@type":"contao:Page","contao:title":"JSON-LD page title","contao:pageId":2,"contao:noSearch":false,"contao:protected":true,"contao:groups":[42],"contao:fePreview":false}</script></body></html>',
+                'protected' => '1',
+                'groups' => [42],
+                'pid' => 2,
+                'title' => 'JSON-LD page title',
+                'language' => 'de',
+                'meta' => [
+                    [
+                        '@context' => ['contao' => 'https://schema.contao.org/'],
+                        '@type' => 'https://schema.contao.org/Page',
+                        'https://schema.contao.org/title' => 'JSON-LD page title',
+                        'https://schema.contao.org/pageId' => 2,
+                        'https://schema.contao.org/noSearch' => false,
+                        'https://schema.contao.org/protected' => true,
+                        'https://schema.contao.org/groups' => [42],
+                        'https://schema.contao.org/fePreview' => false,
+                    ],
+                ],
             ],
             null,
             true,
@@ -145,11 +215,11 @@ class DefaultIndexerTest extends ContaoTestCase
     /**
      * @group legacy
      * @dataProvider indexProviderDeprecated
-     *
-     * @expectedDeprecation Using the JSON-LD type "RegularPage" has been deprecated and will no longer work in Contao 5.0. Use "Page" instead.
      */
     public function testIndexesADocumentWithDeprecatedJsonLd(Document $document, ?array $expectedIndexParams, string $expectedMessage = null, bool $indexProtected = false): void
     {
+        $this->expectDeprecation('Using the JSON-LD type "RegularPage" has been deprecated and will no longer work in Contao 5.0. Use "Page" instead.');
+
         $this->testIndexesADocument($document, $expectedIndexParams, $expectedMessage, $indexProtected);
     }
 
@@ -165,6 +235,17 @@ class DefaultIndexerTest extends ContaoTestCase
                 'pid' => 2,
                 'title' => 'undefined',
                 'language' => 'en',
+                'meta' => [
+                    [
+                        '@context' => ['contao' => 'https://schema.contao.org/'],
+                        '@type' => 'https://schema.contao.org/RegularPage',
+                        'https://schema.contao.org/pageId' => 2,
+                        'https://schema.contao.org/noSearch' => false,
+                        'https://schema.contao.org/protected' => false,
+                        'https://schema.contao.org/groups' => [],
+                        'https://schema.contao.org/fePreview' => false,
+                    ],
+                ],
             ],
             null,
             false,
@@ -196,11 +277,12 @@ class DefaultIndexerTest extends ContaoTestCase
 
         $connection = $this->createMock(Connection::class);
         $connection
-            ->expects($this->exactly(2))
-            ->method('exec')
+            ->expects($this->exactly(3))
+            ->method('executeStatement')
             ->withConsecutive(
                 ['TRUNCATE TABLE tl_search'],
-                ['TRUNCATE TABLE tl_search_index']
+                ['TRUNCATE TABLE tl_search_index'],
+                ['TRUNCATE TABLE tl_search_term']
             )
         ;
 

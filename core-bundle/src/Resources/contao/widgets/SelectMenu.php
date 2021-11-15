@@ -37,6 +37,17 @@ class SelectMenu extends Widget
 	protected $strTemplate = 'be_widget';
 
 	/**
+	 * @param array $arrAttributes
+	 */
+	public function __construct($arrAttributes=null)
+	{
+		parent::__construct($arrAttributes);
+
+		$this->preserveTags = true;
+		$this->decodeEntities = true;
+	}
+
+	/**
 	 * Add specific attributes
 	 *
 	 * @param string $strKey
@@ -146,7 +157,7 @@ class SelectMenu extends Widget
 		// Add an unknown option, so it is not lost when saving the record (see #920)
 		if (isset($this->unknownOption[0]))
 		{
-			$arrAllOptions[] = array('value'=>$this->unknownOption[0], 'label'=>$GLOBALS['TL_LANG']['MSC']['unknownOption']);
+			$arrAllOptions[] = array('value' => $this->unknownOption[0], 'label' => sprintf($GLOBALS['TL_LANG']['MSC']['unknownOption'], $this->unknownOption[0]));
 		}
 
 		foreach ($arrAllOptions as $strKey=>$arrOption)
@@ -157,7 +168,7 @@ class SelectMenu extends Widget
 					'<option value="%s"%s>%s</option>',
 					StringUtil::specialchars($arrOption['value']),
 					$this->isSelected($arrOption),
-					$arrOption['label']
+					$arrOption['label'] ?? null
 				);
 			}
 			else
@@ -168,9 +179,9 @@ class SelectMenu extends Widget
 				{
 					$arrOptgroups[] = sprintf(
 						'<option value="%s"%s>%s</option>',
-						StringUtil::specialchars($arrOptgroup['value']),
+						StringUtil::specialchars($arrOptgroup['value'] ?? ''),
 						$this->isSelected($arrOptgroup),
-						$arrOptgroup['label']
+						$arrOptgroup['label'] ?? null
 					);
 				}
 

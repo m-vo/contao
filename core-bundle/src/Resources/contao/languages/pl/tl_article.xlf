@@ -83,7 +83,7 @@
       </trans-unit>
       <trans-unit id="tl_article.customTpl.0">
         <source>Article template</source>
-        <target>Szablon artykulu</target>
+        <target>Szablon artykułu</target>
       </trans-unit>
       <trans-unit id="tl_article.customTpl.1">
         <source>Here you can select the article template.</source>

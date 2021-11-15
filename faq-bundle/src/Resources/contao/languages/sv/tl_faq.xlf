@@ -41,6 +41,30 @@
         <source>Add an image to the FAQ.</source>
         <target>Markera detta alternativ för att lägga till en bild i svaret.</target>
       </trans-unit>
+      <trans-unit id="tl_faq.pageTitle.0">
+        <source>Meta title</source>
+        <target>Meta titel</target>
+      </trans-unit>
+      <trans-unit id="tl_faq.pageTitle.1">
+        <source>Here you can add a custom meta title to overwrite the default page title.</source>
+        <target>Här kan du lägga till en anpassad metatitel för att skriva över standard sidrubriken.</target>
+      </trans-unit>
+      <trans-unit id="tl_faq.robots.0">
+        <source>Robots tag</source>
+        <target>Robot-tag</target>
+      </trans-unit>
+      <trans-unit id="tl_faq.robots.1">
+        <source>Here you can overwrite how search engines handle the FAQ.</source>
+        <target>Här kan du skriva över hur sökmotorer hanterar FAQ.</target>
+      </trans-unit>
+      <trans-unit id="tl_faq.description.0">
+        <source>Meta description</source>
+        <target>Metabeskrivning</target>
+      </trans-unit>
+      <trans-unit id="tl_faq.description.1">
+        <source>Here you can add a custom meta description to overwrite the default page description.</source>
+        <target>Här kan du lägga till en anpassad metabeskrivning för att skriva över standardsidebeskrivningen.</target>
+      </trans-unit>
       <trans-unit id="tl_faq.addEnclosure.0">
         <source>Add enclosures</source>
         <target>Bifoga fil</target>
@@ -81,6 +105,10 @@
         <source>Answer</source>
         <target>Svar</target>
       </trans-unit>
+      <trans-unit id="tl_faq.meta_legend">
+        <source>Metadata</source>
+        <target>Metadata</target>
+      </trans-unit>
       <trans-unit id="tl_faq.image_legend">
         <source>Image settings</source>
         <target>Bildinställningar</target>
@@ -99,6 +127,7 @@
       </trans-unit>
       <trans-unit id="tl_faq.new.0">
         <source>New</source>
+        <target>Ny</target>
       </trans-unit>
       <trans-unit id="tl_faq.new.1">
         <source>Create a new question</source>
@@ -138,9 +167,11 @@
       </trans-unit>
       <trans-unit id="tl_faq.pastenew.0">
         <source>Create a new question at the top</source>
+        <target>Skapa en ny fråga högst upp</target>
       </trans-unit>
       <trans-unit id="tl_faq.pastenew.1">
         <source>Create a new question after question ID %s</source>
+        <target>Skapa en ny fråga efter fråga ID %s</target>
       </trans-unit>
     </body>
   </file>

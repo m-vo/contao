@@ -33,6 +33,14 @@
         <source>Send the submitted data to an e-mail address.</source>
         <target>Envoyer les données soumises vers une adresse e-mail.</target>
       </trans-unit>
+      <trans-unit id="tl_form.mailerTransport.0">
+        <source>Mailer transport</source>
+        <target>Envoi d'e-mail</target>
+      </trans-unit>
+      <trans-unit id="tl_form.mailerTransport.1">
+        <source>Here you can override the mailer transport used to send the form via e-mail.</source>
+        <target>Ici, vous pouvez remplacer la passerelle de messagerie utilisée pour envoyer le formulaire par e-mail.</target>
+      </trans-unit>
       <trans-unit id="tl_form.recipient.0">
         <source>Recipient address</source>
         <target>Adresse du/des destinataire(s)</target>
@@ -80,6 +88,14 @@
       <trans-unit id="tl_form.csv.1">
         <source>The form data will be attached to the e-mail as a CSV file.</source>
         <target>Les données du formulaire seront attachées à l'e-mail sous forme de fichier CSV (valeurs séparées par des virgules).</target>
+      </trans-unit>
+      <trans-unit id="tl_form.csv_excel.0">
+        <source>CSV file (Microsoft Excel)</source>
+        <target>Fichier CSV (Microsoft Excel)</target>
+      </trans-unit>
+      <trans-unit id="tl_form.csv_excel.1">
+        <source>The form data will be attached to the e-mail as a CSV file readable by Microsoft Excel.</source>
+        <target>Les données du formulaire seront jointes à l'e-mail sous forme de fichier CSV lisible par Microsoft Excel.</target>
       </trans-unit>
       <trans-unit id="tl_form.skipEmpty.0">
         <source>Skip empty fields</source>
@@ -228,6 +244,9 @@
       <trans-unit id="tl_form.delete">
         <source>Delete form ID %s</source>
         <target>Supprimer le formulaire ID %s</target>
+      </trans-unit>
+      <trans-unit id="tl_form.targetTableMissingAllowlist">
+        <source>Define the available tables in the following DCA configuration: &lt;code&gt;%s&lt;/code&gt;.</source>
       </trans-unit>
     </body>
   </file>

@@ -192,11 +192,24 @@ class ExceptionConverterListenerTest extends TestCase
         $this->assertInstanceOf(PageNotFoundException::class, $exception->getPrevious());
     }
 
+    public function testConvertsUnusedArgumentsExceptions(): void
+    {
+        $event = $this->getResponseEvent(new \UnusedArgumentsException());
+
+        $listener = new ExceptionConverterListener();
+        $listener($event);
+
+        $exception = $event->getThrowable();
+
+        $this->assertInstanceOf(NotFoundHttpException::class, $exception);
+        $this->assertInstanceOf(\UnusedArgumentsException::class, $exception->getPrevious());
+    }
+
     private function getResponseEvent(\Exception $exception): ExceptionEvent
     {
         $kernel = $this->createMock(KernelInterface::class);
         $request = new Request();
 
-        return new ExceptionEvent($kernel, $request, HttpKernelInterface::MASTER_REQUEST, $exception);
+        return new ExceptionEvent($kernel, $request, HttpKernelInterface::MAIN_REQUEST, $exception);
     }
 }

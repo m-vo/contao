@@ -10,8 +10,12 @@
 
 namespace Contao;
 
+use Contao\CoreBundle\Routing\ResponseContext\HtmlHeadBag\HtmlHeadBag;
+use Contao\CoreBundle\Routing\ResponseContext\ResponseContextAccessor;
+use Contao\CoreBundle\String\HtmlDecoder;
+
 /**
- * Provides methodes to handle articles.
+ * Provides methods to handle articles.
  *
  * @property integer $tstamp
  * @property string  $title
@@ -113,7 +117,7 @@ class ModuleArticle extends Module
 		// Generate the CSS ID if it is not set
 		if (empty($this->cssID[0]))
 		{
-			$this->cssID = array($id, $this->cssID[1]);
+			$this->cssID = array($id, $this->cssID[1] ?? null);
 		}
 
 		$this->Template->column = $this->inColumn;
@@ -124,7 +128,7 @@ class ModuleArticle extends Module
 		$this->Template->date = Date::parse($objPage->datimFormat, $this->tstamp);
 
 		// Clean the RTE output
-		$this->teaser = StringUtil::toHtml5($this->teaser);
+		$this->teaser = StringUtil::toHtml5($this->teaser ?? '');
 
 		// Show the teaser only
 		if ($this->multiMode && $this->showTeaser)
@@ -157,21 +161,27 @@ class ModuleArticle extends Module
 		}
 
 		// Get section and article alias
-		list($strSection, $strArticle) = explode(':', Input::get('articles'));
+		$chunks = explode(':', Input::get('articles') ?? '');
+		$strSection = $chunks[0] ?? null;
+		$strArticle = $chunks[1] ?? $strSection;
 
-		if ($strArticle === null)
-		{
-			$strArticle = $strSection;
-		}
-
-		// Overwrite the page title (see #2853 and #4955)
+		// Overwrite the page meta data (see #2853, #4955 and #87)
 		if (!$this->blnNoMarkup && $strArticle && ($strArticle == $this->id || $strArticle == $this->alias) && $this->title)
 		{
-			$objPage->pageTitle = strip_tags(StringUtil::stripInsertTags($this->title));
+			$responseContext = System::getContainer()->get(ResponseContextAccessor::class)->getResponseContext();
 
-			if ($this->teaser)
+			if ($responseContext && $responseContext->has(HtmlHeadBag::class))
 			{
-				$objPage->description = $this->prepareMetaDescription($this->teaser);
+				$htmlDecoder = System::getContainer()->get(HtmlDecoder::class);
+
+				/** @var HtmlHeadBag $htmlHeadBag */
+				$htmlHeadBag = $responseContext->get(HtmlHeadBag::class);
+				$htmlHeadBag->setTitle($htmlDecoder->inputEncodedToPlainText($this->title ?? ''));
+
+				if ($this->teaser)
+				{
+					$htmlHeadBag->setMetaDescription($htmlDecoder->htmlToPlainText($this->teaser));
+				}
 			}
 		}
 
@@ -190,39 +200,16 @@ class ModuleArticle extends Module
 
 		if ($objCte !== null)
 		{
-			$intCount = 0;
-			$intLast = $objCte->count() - 1;
-
 			while ($objCte->next())
 			{
-				$arrCss = array();
-
-				/** @var ContentModel $objRow */
-				$objRow = $objCte->current();
-
-				// Add the "first" and "last" classes (see #2583)
-				if ($intCount == 0 || $intCount == $intLast)
-				{
-					if ($intCount == 0)
-					{
-						$arrCss[] = 'first';
-					}
-
-					if ($intCount == $intLast)
-					{
-						$arrCss[] = 'last';
-					}
-				}
-
-				$objRow->classes = $arrCss;
-				$arrElements[] = $this->getContentElement($objRow, $this->strColumn);
-				++$intCount;
+				$arrElements[] = $this->getContentElement($objCte->current(), $this->strColumn);
 			}
 		}
 
 		$this->Template->teaser = $this->teaser;
 		$this->Template->elements = $arrElements;
 
+		// Backwards compatibility
 		if ($this->keywords)
 		{
 			$GLOBALS['TL_KEYWORDS'] .= ($GLOBALS['TL_KEYWORDS'] ? ', ' : '') . $this->keywords;
@@ -231,7 +218,7 @@ class ModuleArticle extends Module
 		// Deprecated since Contao 4.0, to be removed in Contao 5.0
 		if ($this->printable == 1)
 		{
-			@trigger_error('Setting tl_article.printable to "1" has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+			trigger_deprecation('contao/core-bundle', '4.0', 'Setting tl_article.printable to "1" has been deprecated and will no longer work in Contao 5.0.');
 
 			$this->Template->printable = !empty($GLOBALS['TL_HOOKS']['printArticleAsPdf']);
 			$this->Template->pdfButton = $this->Template->printable;
@@ -299,7 +286,7 @@ class ModuleArticle extends Module
 
 		// Generate article
 		$strArticle = $this->replaceInsertTags($this->generate(), false);
-		$strArticle = html_entity_decode($strArticle, ENT_QUOTES, Config::get('characterSet'));
+		$strArticle = html_entity_decode($strArticle, ENT_QUOTES, System::getContainer()->getParameter('kernel.charset'));
 		$strArticle = $this->convertRelativeUrls($strArticle, '', true);
 
 		if (empty($GLOBALS['TL_HOOKS']['printArticleAsPdf']))

@@ -82,7 +82,7 @@
         <target>Ако се димензије слажу, користи оригиналну слику</target>
       </trans-unit>
       <trans-unit id="tl_image_size.skipIfDimensionsMatch.1">
-        <source>Note that no optimizations such as meta data stripping or JPEG compression will be applied in this case.</source>
+        <source>Note that no optimizations such as metadata stripping or JPEG compression will be applied in this case.</source>
         <target>Имајте на уму да методе оптимизације попут метадата стрипинга или JPEG компресије неће бити примењене у овом случају.</target>
       </trans-unit>
       <trans-unit id="tl_image_size.lazyLoading.0">
@@ -152,6 +152,12 @@
       <trans-unit id="tl_image_size.gif:webp,gif">
         <source>GIF to WEBP</source>
         <target>GIF у WEBP</target>
+      </trans-unit>
+      <trans-unit id="tl_image_size.webp:webp,png">
+        <source>WEBP to PNG</source>
+      </trans-unit>
+      <trans-unit id="tl_image_size.webp:webp,jpg">
+        <source>WEBP to JPG</source>
       </trans-unit>
       <trans-unit id="tl_image_size.new.0">
         <source>New</source>

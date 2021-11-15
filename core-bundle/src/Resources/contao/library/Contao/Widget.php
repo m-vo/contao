@@ -11,8 +11,7 @@
 namespace Contao;
 
 use Contao\Database\Result;
-use Doctrine\DBAL\Types\Type;
-use Patchwork\Utf8;
+use Doctrine\DBAL\Types\Types;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -38,66 +37,70 @@ use Symfony\Component\HttpFoundation\Request;
  *         }
  *     }
  *
- * @property string        $id                The field ID
- * @property string        $name              the field name
- * @property string        $label             The field label
- * @property mixed         $value             The field value
- * @property string        $class             One or more CSS classes
- * @property string        $prefix            The CSS class prefix
- * @property string        $template          The template name
- * @property string        $wizard            The field wizard markup
- * @property string        $alt               The alternative text
- * @property string        $style             The style attribute
- * @property string        $accesskey         The key to focus the field
- * @property integer       $tabindex          The tabindex of the field
- * @property boolean       $disabled          Adds the disabled attribute
- * @property boolean       $readonly          Adds the readonly attribute
- * @property boolean       $autofocus         Adds the autofocus attribute
- * @property boolean       $required          Adds the required attribute
- * @property string        $onblur            The blur event
- * @property string        $onchange          The change event
- * @property string        $onclick           The click event
- * @property string        $ondblclick        The double click event
- * @property string        $onfocus           The focus event
- * @property string        $onmousedown       The mouse down event
- * @property string        $onmousemove       The mouse move event
- * @property string        $onmouseout        The mouse out event
- * @property string        $onmouseover       The mouse over event
- * @property string        $onmouseup         The mouse up event
- * @property string        $onkeydown         The key down event
- * @property string        $onkeypress        The key press event
- * @property string        $onkeyup           The key up event
- * @property string        $onselect          The select event
- * @property boolean       $mandatory         The field value must not be empty
- * @property boolean       $nospace           Do not allow whitespace characters
- * @property boolean       $allowHtml         Allow HTML tags in the field value
- * @property boolean       $storeFile         Store uploaded files in a given folder
- * @property boolean       $useHomeDir        Store uploaded files in the user's home directory
- * @property boolean       $trailingSlash     Add or remove a trailing slash
- * @property boolean       $spaceToUnderscore Convert spaces to underscores
- * @property boolean       $doNotTrim         Do not trim the user input
- * @property string        $forAttribute      The "for" attribute
- * @property DataContainer $dataContainer     The data container object
- * @property Result        $activeRecord      The active record
- * @property string        $mandatoryField    The "mandatory field" label
- * @property string        $customTpl         A custom template name
- * @property string        $slabel            The submit button label
- * @property boolean       $preserveTags      Preserve HTML tags
- * @property boolean       $decodeEntities    Decode HTML entities
- * @property boolean       $useRawRequestData Use the raw request data from the Symfony request
- * @property integer       $minlength         The minimum length
- * @property integer       $maxlength         The maximum length
- * @property integer       $minval            The minimum value
- * @property integer       $maxval            The maximum value
- * @property integer       $rgxp              The regular expression name
- * @property boolean       $isHexColor        The field value is a hex color
- * @property string        $strTable          The table name
- * @property string        $strField          The field name
+ * @property string        $id                 The field ID
+ * @property string        $name               the field name
+ * @property string        $label              The field label
+ * @property mixed         $value              The field value
+ * @property string        $class              One or more CSS classes
+ * @property string        $prefix             The CSS class prefix
+ * @property string        $template           The template name
+ * @property string        $wizard             The field wizard markup
+ * @property string        $alt                The alternative text
+ * @property string        $style              The style attribute
+ * @property string        $accesskey          The key to focus the field
+ * @property integer       $tabindex           The tabindex of the field
+ * @property boolean       $disabled           Adds the disabled attribute
+ * @property boolean       $readonly           Adds the readonly attribute
+ * @property boolean       $autofocus          Adds the autofocus attribute
+ * @property boolean       $required           Adds the required attribute
+ * @property string        $onblur             The blur event
+ * @property string        $onchange           The change event
+ * @property string        $onclick            The click event
+ * @property string        $ondblclick         The double click event
+ * @property string        $onfocus            The focus event
+ * @property string        $onmousedown        The mouse down event
+ * @property string        $onmousemove        The mouse move event
+ * @property string        $onmouseout         The mouse out event
+ * @property string        $onmouseover        The mouse over event
+ * @property string        $onmouseup          The mouse up event
+ * @property string        $onkeydown          The key down event
+ * @property string        $onkeypress         The key press event
+ * @property string        $onkeyup            The key up event
+ * @property string        $onselect           The select event
+ * @property boolean       $mandatory          The field value must not be empty
+ * @property boolean       $nospace            Do not allow whitespace characters
+ * @property boolean       $allowHtml          Allow HTML tags in the field value
+ * @property boolean       $storeFile          Store uploaded files in a given folder
+ * @property boolean       $useHomeDir         Store uploaded files in the user's home directory
+ * @property boolean       $trailingSlash      Add or remove a trailing slash
+ * @property boolean       $spaceToUnderscore  Convert spaces to underscores
+ * @property boolean       $doNotTrim          Do not trim the user input
+ * @property string        $forAttribute       The "for" attribute
+ * @property DataContainer $dataContainer      The data container object
+ * @property Result        $activeRecord       The active record
+ * @property string        $mandatoryField     The "mandatory field" label
+ * @property string        $customTpl          A custom template name
+ * @property string        $slabel             The submit button label
+ * @property boolean       $preserveTags       Preserve HTML tags
+ * @property boolean       $decodeEntities     Decode HTML entities
+ * @property boolean       $useRawRequestData  Use the raw request data from the Symfony request
+ * @property integer       $minlength          The minimum length
+ * @property integer       $maxlength          The maximum length
+ * @property integer       $minval             The minimum value
+ * @property integer       $maxval             The maximum value
+ * @property integer       $rgxp               The regular expression name
+ * @property boolean       $isHexColor         The field value is a hex color
+ * @property string        $strTable           The table name
+ * @property string        $strField           The field name
  * @property string        $xlabel
+ * @property string        $customRgxp
+ * @property string        $errorMsg
  * @property integer       $currentRecord
  * @property integer       $rowClass
  * @property integer       $rowClassConfirm
  * @property integer       $storeValues
+ * @property boolean       $includeBlankOption
+ * @property string        $blankOptionLabel
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -233,7 +236,7 @@ abstract class Widget extends Controller
 				$this->varValue = StringUtil::deserialize($varValue);
 
 				// Decrypt the value if it is encrypted
-				if ($this->arrConfiguration['encrypt'])
+				if ($this->arrConfiguration['encrypt'] ?? null)
 				{
 					$this->varValue = Encryption::decrypt($this->varValue);
 				}
@@ -291,6 +294,7 @@ abstract class Widget extends Controller
 			case 'tabindex':
 				if ($varValue > 0)
 				{
+					trigger_deprecation('contao/core-bundle', '4.12', 'Using a tabindex value greater than 0 has been deprecated and will no longer work in Contao 5.0.');
 					$this->arrAttributes['tabindex'] = $varValue;
 				}
 				break;
@@ -751,7 +755,7 @@ abstract class Widget extends Controller
 	{
 		if (\is_callable($this->inputCallback))
 		{
-			return \call_user_func($this->inputCallback);
+			return ($this->inputCallback)();
 		}
 
 		if ($this->useRawRequestData === true)
@@ -770,7 +774,7 @@ abstract class Widget extends Controller
 		}
 
 		// Support arrays (thanks to Andreas Schempp)
-		$arrParts = explode('[', str_replace(']', '', $strKey));
+		$arrParts = explode('[', str_replace(']', '', (string) $strKey));
 		$varValue = Input::$strMethod(array_shift($arrParts), $this->decodeEntities);
 
 		foreach ($arrParts as $part)
@@ -827,12 +831,12 @@ abstract class Widget extends Controller
 			}
 		}
 
-		if ($this->minlength && $varInput && Utf8::strlen($varInput) < $this->minlength)
+		if ($this->minlength && $varInput && mb_strlen($varInput) < $this->minlength)
 		{
 			$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['minlength'], $this->strLabel, $this->minlength));
 		}
 
-		if ($this->maxlength && $varInput && Utf8::strlen($varInput) > $this->maxlength)
+		if ($this->maxlength && $varInput && mb_strlen($varInput) > $this->maxlength)
 		{
 			$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['maxlength'], $this->strLabel, $this->maxlength));
 		}
@@ -981,6 +985,13 @@ abstract class Widget extends Controller
 					break;
 
 				case 'url':
+					$varInput = StringUtil::specialcharsUrl($varInput);
+
+					if ($this->decodeEntities)
+					{
+						$varInput = StringUtil::decodeEntities($varInput);
+					}
+
 					if (!Validator::isUrl($varInput))
 					{
 						$this->addError(sprintf($GLOBALS['TL_LANG']['ERR']['url'], $this->strLabel));
@@ -1113,12 +1124,12 @@ abstract class Widget extends Controller
 	 */
 	protected function isChecked($arrOption)
 	{
-		if (empty($this->varValue) && empty($_POST) && $arrOption['default'])
+		if (empty($this->varValue) && empty($_POST) && ($arrOption['default'] ?? null))
 		{
 			return static::optionChecked(1, 1);
 		}
 
-		return static::optionChecked($arrOption['value'], $this->varValue);
+		return static::optionChecked($arrOption['value'] ?? null, $this->varValue);
 	}
 
 	/**
@@ -1130,12 +1141,12 @@ abstract class Widget extends Controller
 	 */
 	protected function isSelected($arrOption)
 	{
-		if (empty($this->varValue) && empty($_POST) && $arrOption['default'])
+		if (empty($this->varValue) && empty($_POST) && ($arrOption['default'] ?? null))
 		{
 			return static::optionSelected(1, 1);
 		}
 
-		return static::optionSelected($arrOption['value'], $this->varValue);
+		return static::optionSelected($arrOption['value'] ?? null, $this->varValue);
 	}
 
 	/**
@@ -1239,52 +1250,79 @@ abstract class Widget extends Controller
 	 */
 	public static function getAttributesFromDca($arrData, $strName, $varValue=null, $strField='', $strTable='', $objDca=null)
 	{
-		$arrAttributes = $arrData['eval'];
+		$arrAttributes = $arrData['eval'] ?? array();
+
+		if (method_exists(System::getContainer(), 'getParameterBag'))
+		{
+			$objParameterBag = System::getContainer()->getParameterBag();
+
+			foreach ($arrAttributes as $strAttrKey => $varAttrValue)
+			{
+				if (!\is_string($varAttrValue) || !preg_match('/%[a-z][a-z0-9_]*\.[a-z0-9_.]+%/i', $varAttrValue, $arrMatches))
+				{
+					continue;
+				}
+
+				$varAttrValue = $objParameterBag->resolveValue($varAttrValue);
+				$varAttrValue = $objParameterBag->unescapeValue($varAttrValue);
+
+				$arrAttributes[$strAttrKey] = $varAttrValue;
+			}
+		}
 
 		$arrAttributes['id'] = $strName;
 		$arrAttributes['name'] = $strName;
 		$arrAttributes['strField'] = $strField;
 		$arrAttributes['strTable'] = $strTable;
-		$arrAttributes['label'] = (($label = \is_array($arrData['label']) ? $arrData['label'][0] : $arrData['label']) !== null) ? $label : $strField;
-		$arrAttributes['description'] = $arrData['label'][1];
-		$arrAttributes['type'] = $arrData['inputType'];
+		$arrAttributes['label'] = (($label = \is_array($arrData['label'] ?? null) ? $arrData['label'][0] : $arrData['label'] ?? null) !== null) ? $label : $strField;
+		$arrAttributes['description'] = $arrData['label'][1] ?? null;
+		$arrAttributes['type'] = $arrData['inputType'] ?? null;
 		$arrAttributes['dataContainer'] = $objDca;
 		$arrAttributes['value'] = StringUtil::deserialize($varValue);
 
 		// Internet Explorer does not support onchange for checkboxes and radio buttons
-		if ($arrData['eval']['submitOnChange'])
+		if ($arrData['eval']['submitOnChange'] ?? null)
 		{
-			if ($arrData['inputType'] == 'checkbox' || $arrData['inputType'] == 'checkboxWizard' || $arrData['inputType'] == 'radio' || $arrData['inputType'] == 'radioTable')
+			if (($arrData['inputType'] ?? null) == 'checkbox' || ($arrData['inputType'] ?? null) == 'checkboxWizard' || ($arrData['inputType'] ?? null) == 'radio' || ($arrData['inputType'] ?? null) == 'radioTable')
 			{
-				$arrAttributes['onclick'] = trim($arrAttributes['onclick'] . " Backend.autoSubmit('" . $strTable . "')");
+				$arrAttributes['onclick'] = trim(($arrAttributes['onclick'] ?? '') . " Backend.autoSubmit('" . $strTable . "')");
 			}
 			else
 			{
-				$arrAttributes['onchange'] = trim($arrAttributes['onchange'] . " Backend.autoSubmit('" . $strTable . "')");
+				$arrAttributes['onchange'] = trim(($arrAttributes['onchange'] ?? '') . " Backend.autoSubmit('" . $strTable . "')");
 			}
 		}
 
-		$arrAttributes['allowHtml'] = ($arrData['eval']['allowHtml'] || $arrData['eval']['rte'] || $arrData['eval']['preserveTags']);
+		if (!empty($arrData['eval']['preserveTags']))
+		{
+			$arrAttributes['allowHtml'] = true;
+		}
+
+		if (!isset($arrAttributes['allowHtml']))
+		{
+			$rte = $arrData['eval']['rte'] ?? '';
+			$arrAttributes['allowHtml'] = 'ace|html' === $rte || 0 === strpos($rte, 'tiny');
+		}
 
 		// Decode entities if HTML is allowed
-		if ($arrAttributes['allowHtml'] || $arrData['inputType'] == 'fileTree')
+		if ($arrAttributes['allowHtml'] || ($arrData['inputType'] ?? null) == 'fileTree')
 		{
 			$arrAttributes['decodeEntities'] = true;
 		}
 
 		// Add Ajax event
-		if ($arrData['inputType'] == 'checkbox' && $arrData['eval']['submitOnChange'] && \is_array($GLOBALS['TL_DCA'][$strTable]['subpalettes']) && \array_key_exists($strField, $GLOBALS['TL_DCA'][$strTable]['subpalettes']))
+		if (($arrData['inputType'] ?? null) == 'checkbox' && ($arrData['eval']['submitOnChange'] ?? null) && \is_array($GLOBALS['TL_DCA'][$strTable]['subpalettes'] ?? null) && \array_key_exists($strField, $GLOBALS['TL_DCA'][$strTable]['subpalettes']))
 		{
 			$arrAttributes['onclick'] = "AjaxRequest.toggleSubpalette(this, 'sub_" . $strName . "', '" . $strField . "')";
 		}
 
 		// Options callback
-		if (\is_array($arrData['options_callback']))
+		if (\is_array($arrData['options_callback'] ?? null))
 		{
 			$arrCallback = $arrData['options_callback'];
 			$arrData['options'] = static::importStatic($arrCallback[0])->{$arrCallback[1]}($objDca);
 		}
-		elseif (\is_callable($arrData['options_callback']))
+		elseif (\is_callable($arrData['options_callback'] ?? null))
 		{
 			$arrData['options'] = $arrData['options_callback']($objDca);
 		}
@@ -1303,7 +1341,7 @@ abstract class Widget extends Controller
 		}
 
 		// Add default option to single checkbox
-		if ($arrData['inputType'] == 'checkbox' && !isset($arrData['options']) && !isset($arrData['options_callback']) && !isset($arrData['foreignKey']))
+		if (($arrData['inputType'] ?? null) == 'checkbox' && !isset($arrData['options']) && !isset($arrData['options_callback']) && !isset($arrData['foreignKey']))
 		{
 			if (TL_MODE == 'FE' && isset($arrAttributes['description']))
 			{
@@ -1316,12 +1354,12 @@ abstract class Widget extends Controller
 		}
 
 		// Add options
-		if (\is_array($arrData['options']))
+		if (\is_array($arrData['options'] ?? null))
 		{
-			$blnIsAssociative = ($arrData['eval']['isAssociative'] || array_is_assoc($arrData['options']));
+			$blnIsAssociative = ($arrData['eval']['isAssociative'] ?? null) || ArrayUtil::isAssoc($arrData['options'] ?? null);
 			$blnUseReference = isset($arrData['reference']);
 
-			if ($arrData['eval']['includeBlankOption'] && !$arrData['eval']['multiple'])
+			if (($arrData['eval']['includeBlankOption'] ?? null) && !($arrData['eval']['multiple'] ?? null))
 			{
 				$strLabel = $arrData['eval']['blankOptionLabel'] ?? '-';
 				$arrAttributes['options'][] = array('value'=>'', 'label'=>$strLabel);
@@ -1340,12 +1378,12 @@ abstract class Widget extends Controller
 						unset($unknown[$i]);
 					}
 
-					$arrAttributes['options'][] = array('value'=>$value, 'label'=>($blnUseReference ? ((($ref = (\is_array($arrData['reference'][$v]) ? $arrData['reference'][$v][0] : $arrData['reference'][$v])) != false) ? $ref : $v) : $v));
+					$arrAttributes['options'][] = array('value'=>$value, 'label'=>($blnUseReference && isset($arrData['reference'][$v]) ? ((($ref = (\is_array($arrData['reference'][$v]) ? $arrData['reference'][$v][0] : $arrData['reference'][$v])) != false) ? $ref : $v) : $v));
 					continue;
 				}
 
-				$key = $blnUseReference ? ((($ref = (\is_array($arrData['reference'][$k]) ? $arrData['reference'][$k][0] : $arrData['reference'][$k])) != false) ? $ref : $k) : $k;
-				$blnIsAssoc = array_is_assoc($v);
+				$key = $blnUseReference && isset($arrData['reference'][$k]) ? ((($ref = (\is_array($arrData['reference'][$k]) ? $arrData['reference'][$k][0] : $arrData['reference'][$k])) != false) ? $ref : $k) : $k;
+				$blnIsAssoc = ArrayUtil::isAssoc($v);
 
 				foreach ($v as $kk=>$vv)
 				{
@@ -1356,14 +1394,14 @@ abstract class Widget extends Controller
 						unset($unknown[$i]);
 					}
 
-					$arrAttributes['options'][$key][] = array('value'=>$value, 'label'=>($blnUseReference ? ((($ref = (\is_array($arrData['reference'][$vv]) ? $arrData['reference'][$vv][0] : $arrData['reference'][$vv])) != false) ? $ref : $vv) : $vv));
+					$arrAttributes['options'][$key][] = array('value'=>$value, 'label'=>($blnUseReference && isset($arrData['reference'][$vv]) ? ((($ref = (\is_array($arrData['reference'][$vv]) ? $arrData['reference'][$vv][0] : $arrData['reference'][$vv])) != false) ? $ref : $vv) : $vv));
 				}
 			}
 
 			$arrAttributes['unknownOption'] = array_filter($unknown);
 		}
 
-		if (\is_array($arrAttributes['sql']) && !isset($arrAttributes['sql']['columnDefinition']))
+		if (\is_array($arrAttributes['sql'] ?? null) && !isset($arrAttributes['sql']['columnDefinition']))
 		{
 			if (!isset($arrAttributes['maxlength']) && isset($arrAttributes['sql']['length']))
 			{
@@ -1377,10 +1415,16 @@ abstract class Widget extends Controller
 		}
 
 		// Convert timestamps
-		if ($varValue !== null && $varValue !== '' && \in_array($arrData['eval']['rgxp'], array('date', 'time', 'datim')))
+		if ($varValue !== null && $varValue !== '' && \in_array($arrData['eval']['rgxp'] ?? null, array('date', 'time', 'datim')))
 		{
 			$objDate = new Date($varValue, Date::getFormatFromRgxp($arrData['eval']['rgxp']));
 			$arrAttributes['value'] = $objDate->{$arrData['eval']['rgxp']};
+		}
+
+		// Convert URL insert tags
+		if ($varValue && 'url' === ($arrData['eval']['rgxp'] ?? null))
+		{
+			$arrAttributes['value'] = str_replace('|urlattr}}', '}}', $varValue);
 		}
 
 		// Add the "rootNodes" array as attribute (see #3563)
@@ -1401,7 +1445,7 @@ abstract class Widget extends Controller
 		// Warn if someone uses the "encrypt" flag (see #8589)
 		if (isset($arrAttributes['encrypt']))
 		{
-			@trigger_error('Using the "encrypt" flag' . (!empty($strTable) && !empty($strField) ? ' on ' . $strTable . '.' . $strField : '') . ' has been deprecated and will no longer work in Contao 5.0. Use the load and save callbacks with a third-party library such as OpenSSL or phpseclib instead.', E_USER_DEPRECATED);
+			trigger_deprecation('contao/core-bundle', '4.0', 'Using the "encrypt" flag' . (!empty($strTable) && !empty($strField) ? ' on ' . $strTable . '.' . $strField : '') . ' has been deprecated and will no longer work in Contao 5.0. Use the load and save callbacks with a third-party library such as OpenSSL or phpseclib instead.');
 		}
 
 		return $arrAttributes;
@@ -1449,12 +1493,12 @@ abstract class Widget extends Controller
 					return null;
 				}
 
-				if (\in_array($sql['type'], array(Type::BIGINT, Type::DECIMAL, Type::INTEGER, Type::SMALLINT, Type::FLOAT)))
+				if (\in_array($sql['type'], array(Types::BIGINT, Types::DECIMAL, Types::INTEGER, Types::SMALLINT, Types::FLOAT)))
 				{
 					return 0;
 				}
 
-				if ($sql['type'] === Type::BOOLEAN)
+				if ($sql['type'] === Types::BOOLEAN)
 				{
 					return false;
 				}
@@ -1519,7 +1563,7 @@ abstract class Widget extends Controller
 	 */
 	protected function addSubmit()
 	{
-		@trigger_error('Using Widget::addSubmit() has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.0', 'Using "Contao\Widget::addSubmit()" has been deprecated and will no longer work in Contao 5.0.');
 
 		return '';
 	}

@@ -12,10 +12,10 @@ declare(strict_types=1);
 
 namespace Contao\CoreBundle\Tests\Contao\Database;
 
-use Contao\CoreBundle\Tests\Fixtures\Database\DoctrineArrayStatement;
 use Contao\Database\Result;
-use Doctrine\DBAL\Driver\ResultStatement;
-use Doctrine\DBAL\ForwardCompatibility\Result as ForwardCompatibilityResult;
+use Doctrine\DBAL\Cache\ArrayResult;
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Result as DoctrineResult;
 use PHPUnit\Framework\Error\Notice;
 use PHPUnit\Framework\Error\Warning;
 use PHPUnit\Framework\TestCase;
@@ -24,7 +24,9 @@ class ResultTest extends TestCase
 {
     public function testEmptyResult(): void
     {
-        foreach ($results = $this->createResults([]) as $result) {
+        $results = $this->createResults([]);
+
+        foreach ($results as $result) {
             foreach ([null, 'first', 'last', 'reset'] as $methodName) {
                 if ($methodName) {
                     $this->assertSame($result, $result->$methodName());
@@ -52,6 +54,7 @@ class ResultTest extends TestCase
         }
 
         $this->expectException(PHP_MAJOR_VERSION < 8 ? Notice::class : Warning::class);
+
         $results[1]->fetchField();
     }
 
@@ -61,7 +64,9 @@ class ResultTest extends TestCase
             ['field' => 'value1'],
         ];
 
-        foreach ($results = $this->createResults($data) as $result) {
+        $results = $this->createResults($data);
+
+        foreach ($results as $result) {
             $this->assertFalse($result->isModified);
             $this->assertSame(1, $result->numFields);
             $this->assertSame(1, $result->numRows);
@@ -91,6 +96,7 @@ class ResultTest extends TestCase
         }
 
         $this->expectException(PHP_MAJOR_VERSION < 8 ? Notice::class : Warning::class);
+
         $results[1]->fetchField(1);
     }
 
@@ -101,7 +107,9 @@ class ResultTest extends TestCase
             ['field' => 'value2'],
         ];
 
-        foreach ($results = $this->createResults($data) as $result) {
+        $results = $this->createResults($data);
+
+        foreach ($results as $result) {
             $this->assertFalse($result->isModified);
             $this->assertSame(1, $result->numFields);
             $this->assertSame(2, $result->numRows);
@@ -135,6 +143,7 @@ class ResultTest extends TestCase
         }
 
         $this->expectException(PHP_MAJOR_VERSION < 8 ? Notice::class : Warning::class);
+
         $results[1]->fetchField(1);
     }
 
@@ -145,7 +154,9 @@ class ResultTest extends TestCase
             ['field' => 'value2'],
         ];
 
-        foreach ($this->createResults($data) as $result) {
+        $results = $this->createResults($data);
+
+        foreach ($results as $result) {
             $this->assertSame(['field' => 'value1'], $result->fetchAssoc());
             $this->assertSame(['field' => 'value1'], $result->row());
             $this->assertSame('value1', $result->field);
@@ -160,11 +171,10 @@ class ResultTest extends TestCase
 
     public function testResultStatementInterface(): void
     {
-        $resultStatement = $this->createMock(ResultStatement::class);
+        $resultStatement = $this->createMock(DoctrineResult::class);
         $resultStatement
             ->expects($this->exactly(3))
-            ->method('fetch')
-            ->with(\PDO::FETCH_ASSOC)
+            ->method('fetchAssociative')
             ->willReturnOnConsecutiveCalls(['field' => 'value1'], ['field' => 'value2'], false)
         ;
 
@@ -198,15 +208,12 @@ class ResultTest extends TestCase
      */
     private function createResults(array $data): array
     {
-        $resultObjects = [
-            new Result(new DoctrineArrayStatement($data), 'SELECT * FROM test'),
+        return [
+            new Result(
+                new DoctrineResult(new ArrayResult($data), $this->createMock(Connection::class)),
+                'SELECT * FROM test'
+            ),
             new Result($data, 'SELECT * FROM test'),
         ];
-
-        if (class_exists(ForwardCompatibilityResult::class)) {
-            $resultObjects[] = new Result(new ForwardCompatibilityResult(new DoctrineArrayStatement($data)), 'SELECT * FROM test');
-        }
-
-        return $resultObjects;
     }
 }

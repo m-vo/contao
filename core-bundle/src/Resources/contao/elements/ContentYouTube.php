@@ -10,6 +10,8 @@
 
 namespace Contao;
 
+use Contao\CoreBundle\Image\Studio\Studio;
+
 /**
  * Content element "YouTube".
  *
@@ -84,7 +86,6 @@ class ContentYouTube extends ContentElement
 				{
 					case 'youtube_fs':
 					case 'youtube_rel':
-					case 'youtube_showinfo':
 					case 'youtube_controls':
 						$params[] = substr($option, 8) . '=0';
 						break;
@@ -99,6 +100,10 @@ class ContentYouTube extends ContentElement
 
 					case 'youtube_nocookie':
 						$domain = 'https://www.youtube-nocookie.com';
+						break;
+
+					case 'youtube_showinfo':
+						// This option has been removed (see #3012)
 						break;
 
 					default:
@@ -127,15 +132,17 @@ class ContentYouTube extends ContentElement
 		// Add a splash image
 		if ($this->splashImage)
 		{
-			$objFile = FilesModel::findByUuid($this->singleSRC);
+			$figure = System::getContainer()
+				->get(Studio::class)
+				->createFigureBuilder()
+				->from($this->singleSRC)
+				->setSize($this->size)
+				->buildIfResourceExists();
 
-			if ($objFile !== null && is_file(TL_ROOT . '/' . $objFile->path))
+			if (null !== $figure)
 			{
-				$this->singleSRC = $objFile->path;
-
-				$objSplash = new \stdClass();
-				$this->addImageToTemplate($objSplash, $this->arrData, null, null, $objFile);
-				$this->Template->splashImage = $objSplash;
+				$this->Template->splashImage = (object) $figure->getLegacyTemplateData();
+				$this->Template->splashImage->figure = $figure;
 			}
 		}
 

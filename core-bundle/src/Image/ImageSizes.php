@@ -24,35 +24,12 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 class ImageSizes implements ResetInterface
 {
-    /**
-     * @var Connection
-     */
-    private $connection;
-
-    /**
-     * @var EventDispatcherInterface
-     */
-    private $eventDispatcher;
-
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
-
-    /**
-     * @var TranslatorInterface
-     */
-    private $translator;
-
-    /**
-     * @var array
-     */
-    private $predefinedSizes = [];
-
-    /**
-     * @var array|null
-     */
-    private $options;
+    private Connection $connection;
+    private EventDispatcherInterface $eventDispatcher;
+    private ContaoFramework $framework;
+    private TranslatorInterface $translator;
+    private array $predefinedSizes = [];
+    private ?array $options = null;
 
     /**
      * @internal Do not inherit from this class; decorate the "contao.image.image_sizes" service instead
@@ -102,9 +79,7 @@ class ImageSizes implements ResetInterface
             $event = new ImageSizesEvent($this->options, $user);
         } else {
             $options = array_map(
-                static function ($val) {
-                    return is_numeric($val) ? (int) $val : $val;
-                },
+                static fn ($val) => is_numeric($val) ? (int) $val : $val,
                 StringUtil::deserialize($user->imageSizes, true)
             );
 
@@ -133,9 +108,9 @@ class ImageSizes implements ResetInterface
         // The framework is required to have the TL_CROP options available
         $this->framework->initialize();
 
-        $this->options = $GLOBALS['TL_CROP'];
+        $this->options = $GLOBALS['TL_CROP'] ?? [];
 
-        $rows = $this->connection->fetchAll(
+        $rows = $this->connection->fetchAllAssociative(
             'SELECT
                 s.id, s.name, s.width, s.height, t.name as theme
             FROM

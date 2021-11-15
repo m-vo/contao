@@ -26,6 +26,7 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Finder\SplFileInfo;
+use Webmozart\PathUtil\Path;
 
 /**
  * Symlinks the public resources into the web directory.
@@ -36,45 +37,14 @@ class SymlinksCommand extends Command
 {
     protected static $defaultName = 'contao:symlinks';
 
-    /**
-     * @var array
-     */
-    private $rows = [];
-
-    /**
-     * @var string
-     */
-    private $projectDir;
-
-    /**
-     * @var string
-     */
-    private $webDir;
-
-    /**
-     * @var string
-     */
-    private $uploadPath;
-
-    /**
-     * @var string
-     */
-    private $logsDir;
-
-    /**
-     * @var ResourceFinderInterface
-     */
-    private $resourceFinder;
-
-    /**
-     * @var EventDispatcherInterface
-     */
-    private $eventDispatcher;
-
-    /**
-     * @var int
-     */
-    private $statusCode = 0;
+    private array $rows = [];
+    private string $projectDir;
+    private ?string $webDir;
+    private string $uploadPath;
+    private string $logsDir;
+    private ResourceFinderInterface $resourceFinder;
+    private EventDispatcherInterface $eventDispatcher;
+    private int $statusCode = 0;
 
     public function __construct(string $projectDir, string $uploadPath, string $logsDir, ResourceFinderInterface $resourceFinder, EventDispatcherInterface $eventDispatcher)
     {
@@ -90,14 +60,22 @@ class SymlinksCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addArgument('target', InputArgument::OPTIONAL, 'The target directory', 'web')
-            ->setDescription('Symlinks the public resources into the web directory.')
+            ->addArgument('target', InputArgument::OPTIONAL, 'The target directory')
+            ->setDescription('Symlinks the public resources into the public directory.')
         ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $this->webDir = rtrim($input->getArgument('target'), '/');
+        $this->webDir = $input->getArgument('target');
+
+        if (null === $this->webDir) {
+            if ((new Filesystem())->exists($this->projectDir.'/web')) {
+                $this->webDir = 'web'; // backwards compatibility
+            } else {
+                $this->webDir = 'public';
+            }
+        }
 
         $this->generateSymlinks();
 
@@ -118,20 +96,28 @@ class SymlinksCommand extends Command
         $fs = new Filesystem();
 
         // Remove the base folders in the document root
-        $fs->remove($this->projectDir.'/'.$this->webDir.'/'.$this->uploadPath);
-        $fs->remove($this->projectDir.'/'.$this->webDir.'/system/modules');
-        $fs->remove($this->projectDir.'/'.$this->webDir.'/vendor');
+        $fs->remove(Path::join($this->projectDir, $this->webDir, $this->uploadPath));
+        $fs->remove(Path::join($this->projectDir, $this->webDir, 'system/modules'));
+        $fs->remove(Path::join($this->projectDir, $this->webDir, 'vendor'));
 
         $this->symlinkFiles($this->uploadPath);
         $this->symlinkModules();
         $this->symlinkThemes();
 
         // Symlink the assets and themes directory
-        $this->symlink('assets', $this->webDir.'/assets');
-        $this->symlink('system/themes', $this->webDir.'/system/themes');
+        $this->symlink('assets', Path::join($this->webDir, 'assets'));
+        $this->symlink('system/themes', Path::join($this->webDir, 'system/themes'));
 
         // Symlinks the logs directory
         $this->symlink($this->getRelativePath($this->logsDir), 'system/logs');
+
+        // Symlink the highlight.php styles
+        if ($fs->exists(Path::join($this->projectDir, 'vendor/scrivo/highlight.php/styles'))) {
+            $this->symlink(
+                'vendor/scrivo/highlight.php/styles',
+                Path::join($this->webDir, 'vendor/scrivo/highlight_php/styles')
+            );
+        }
 
         $this->triggerSymlinkEvent();
     }
@@ -139,19 +125,17 @@ class SymlinksCommand extends Command
     private function symlinkFiles(string $uploadPath): void
     {
         $this->createSymlinksFromFinder(
-            $this->findIn($this->projectDir.'/'.$uploadPath)->files()->depth('> 0')->name('.public'),
+            $this->findIn(Path::join($this->projectDir, $uploadPath))->files()->depth('> 0')->name('.public'),
             $uploadPath
         );
     }
 
     private function symlinkModules(): void
     {
-        $filter = static function (SplFileInfo $file): bool {
-            return HtaccessAnalyzer::create($file)->grantsAccess();
-        };
+        $filter = static fn (SplFileInfo $file): bool => HtaccessAnalyzer::create($file)->grantsAccess();
 
         $this->createSymlinksFromFinder(
-            $this->findIn($this->projectDir.'/system/modules')->files()->filter($filter)->name('.htaccess'),
+            $this->findIn(Path::join($this->projectDir, 'system/modules'))->files()->filter($filter)->name('.htaccess'),
             'system/modules'
         );
     }
@@ -164,11 +148,11 @@ class SymlinksCommand extends Command
         foreach ($themes as $theme) {
             $path = $this->getRelativePath($theme->getPathname());
 
-            if (0 === strncmp($path, 'system/modules/', 15)) {
+            if (Path::isBasePath('system/modules', $path)) {
                 continue;
             }
 
-            $this->symlink($path, 'system/themes/'.basename($path));
+            $this->symlink($path, Path::join('system/themes', Path::getFilename($path)));
         }
     }
 
@@ -177,8 +161,8 @@ class SymlinksCommand extends Command
         $files = $this->filterNestedPaths($finder, $prepend);
 
         foreach ($files as $file) {
-            $path = rtrim($prepend.'/'.$file->getRelativePath(), '/');
-            $this->symlink($path, $this->webDir.'/'.$path);
+            $path = Path::join($prepend, $file->getRelativePath());
+            $this->symlink($path, Path::join($this->webDir, $path));
         }
     }
 
@@ -199,9 +183,6 @@ class SymlinksCommand extends Command
      */
     private function symlink(string $target, string $link): void
     {
-        $target = strtr($target, '\\', '/');
-        $link = strtr($link, '\\', '/');
-
         try {
             SymlinkUtil::symlink($target, $link, $this->projectDir);
 
@@ -236,8 +217,8 @@ class SymlinksCommand extends Command
             ->ignoreDotFiles(false)
             ->sort(
                 static function (SplFileInfo $a, SplFileInfo $b): int {
-                    $countA = substr_count(strtr($a->getRelativePath(), '\\', '/'), '/');
-                    $countB = substr_count(strtr($b->getRelativePath(), '\\', '/'), '/');
+                    $countA = substr_count(Path::normalize($a->getRelativePath()), '/');
+                    $countB = substr_count(Path::normalize($b->getRelativePath()), '/');
 
                     return $countA <=> $countB;
                 }
@@ -254,35 +235,31 @@ class SymlinksCommand extends Command
      */
     private function filterNestedPaths(Finder $finder, string $prepend): array
     {
-        $parents = [];
         $files = iterator_to_array($finder);
 
+        /** @var SplFileInfo $file */
         foreach ($files as $key => $file) {
-            $path = rtrim(strtr($prepend.'/'.$file->getRelativePath(), '\\', '/'), '/');
+            $path = $file->getRelativePath();
 
-            if (!empty($parents)) {
-                $parent = \dirname($path);
+            /** @var SplFileInfo $otherFile */
+            foreach ($files as $otherFile) {
+                $otherPath = $otherFile->getRelativePath();
 
-                while (false !== strpos($parent, '/')) {
-                    if (\in_array($parent, $parents, true)) {
-                        $this->rows[] = [
-                            sprintf(
-                                '<fg=yellow;options=bold>%s</>',
-                                '\\' === \DIRECTORY_SEPARATOR ? 'WARNING' : '!'
-                            ),
-                            $this->webDir.'/'.$path,
-                            sprintf('<comment>Skipped because %s will be symlinked.</comment>', $parent),
-                        ];
-
-                        unset($files[$key]);
-                        break;
-                    }
-
-                    $parent = \dirname($parent);
+                if ($path === $otherPath || !Path::isBasePath($otherPath, $path)) {
+                    continue;
                 }
-            }
 
-            $parents[] = $path;
+                unset($files[$key]);
+
+                $this->rows[] = [
+                    sprintf(
+                        '<fg=yellow;options=bold>%s</>',
+                        '\\' === \DIRECTORY_SEPARATOR ? 'WARNING' : '!'
+                    ),
+                    Path::join($this->webDir, $prepend, $path),
+                    sprintf('<comment>Skipped because %s will be symlinked.</comment>', Path::join($prepend, $otherPath)),
+                ];
+            }
         }
 
         return array_values($files);
@@ -290,6 +267,6 @@ class SymlinksCommand extends Command
 
     private function getRelativePath(string $path): string
     {
-        return str_replace(strtr($this->projectDir, '\\', '/').'/', '', strtr($path, '\\', '/'));
+        return Path::makeRelative($path, $this->projectDir);
     }
 }

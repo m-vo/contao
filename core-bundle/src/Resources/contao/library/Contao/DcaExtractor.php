@@ -16,7 +16,7 @@ use Symfony\Component\Config\Exception\FileLocatorFileNotFoundException;
  * Extracts DCA information and cache it
  *
  * The class parses the DCA files and stores various extracts like relations
- * in the cache directory. This meta data can then be loaded and used in the
+ * in the cache directory. This metadata can then be loaded and used in the
  * application (e.g. the Model classes).
  *
  * Usage:
@@ -45,7 +45,7 @@ class DcaExtractor extends Controller
 	protected $strTable;
 
 	/**
-	 * Meta data
+	 * Metadata
 	 * @var array
 	 */
 	protected $arrMeta = array();
@@ -154,9 +154,9 @@ class DcaExtractor extends Controller
 	}
 
 	/**
-	 * Return the meta data as array
+	 * Return the metadata as array
 	 *
-	 * @return array The meta data
+	 * @return array The metadata
 	 */
 	public function getMeta()
 	{
@@ -164,9 +164,9 @@ class DcaExtractor extends Controller
 	}
 
 	/**
-	 * Return true if there is meta data
+	 * Return true if there is metadata
 	 *
-	 * @return boolean True if there is meta data
+	 * @return boolean True if there is metadata
 	 */
 	public function hasMeta()
 	{
@@ -386,13 +386,13 @@ class DcaExtractor extends Controller
 		}
 
 		// Return if the DC type is "File"
-		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['dataContainer'] == 'File')
+		if (($GLOBALS['TL_DCA'][$this->strTable]['config']['dataContainer'] ?? null) == 'File')
 		{
 			return;
 		}
 
 		// Return if the DC type is "Folder" and the DC is not database assisted
-		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['dataContainer'] == 'Folder' && empty($GLOBALS['TL_DCA'][$this->strTable]['config']['databaseAssisted']))
+		if (($GLOBALS['TL_DCA'][$this->strTable]['config']['dataContainer'] ?? null) == 'Folder' && empty($GLOBALS['TL_DCA'][$this->strTable]['config']['databaseAssisted']))
 		{
 			return;
 		}
@@ -418,7 +418,7 @@ class DcaExtractor extends Controller
 
 					if (isset($config['foreignKey']))
 					{
-						$table = substr($config['foreignKey'], 0, strrpos($config['foreignKey'], '.'));
+						$table = explode('.', $config['foreignKey'])[0];
 					}
 
 					$arrRelations[$field] = array_merge(array('table'=>$table, 'field'=>'id'), $config['relation']);
@@ -444,7 +444,7 @@ class DcaExtractor extends Controller
 		// Deprecated since Contao 4.0, to be removed in Contao 5.0
 		if ($blnFromFile && !empty($files = $this->getDatabaseSqlFiles()))
 		{
-			@trigger_error('Using database.sql files has been deprecated and will no longer work in Contao 5.0. Use a DCA file instead.', E_USER_DEPRECATED);
+			trigger_deprecation('contao/core-bundle', '4.0', 'Using "database.sql" files has been deprecated and will no longer work in Contao 5.0. Use a DCA file instead.');
 
 			if (!isset(static::$arrSql[$this->strTable]))
 			{
@@ -459,13 +459,28 @@ class DcaExtractor extends Controller
 			}
 
 			$arrTable = static::$arrSql[$this->strTable];
+			$engine = null;
+			$charset = null;
 
-			if (\is_array($arrTable['TABLE_OPTIONS']))
+			if (isset($arrTable['TABLE_OPTIONS']))
 			{
-				$arrTable['TABLE_OPTIONS'] = $arrTable['TABLE_OPTIONS'][0]; // see #324
-			}
+				if (\is_array($arrTable['TABLE_OPTIONS']))
+				{
+					$arrTable['TABLE_OPTIONS'] = $arrTable['TABLE_OPTIONS'][0]; // see #324
+				}
 
-			list($engine, , $charset) = explode(' ', trim($arrTable['TABLE_OPTIONS']));
+				$chunks = explode(' ', trim($arrTable['TABLE_OPTIONS']));
+
+				if (isset($chunks[0]))
+				{
+					$engine = $chunks[0];
+				}
+
+				if (isset($chunks[2]))
+				{
+					$charset = $chunks[2];
+				}
+			}
 
 			if ($engine)
 			{
@@ -549,10 +564,10 @@ class DcaExtractor extends Controller
 			'collate' => $sql['collate']
 		);
 
-		// Fields
 		$this->arrFields = array();
 		$this->arrOrderFields = array();
 
+		// Fields
 		foreach ($fields as $field=>$config)
 		{
 			if (isset($config['sql']))

@@ -49,6 +49,14 @@
         <source>Here you can add a custom meta title to overwrite the default page title.</source>
         <target>Aquí puede agregar un meta título personalizado para sobrescribir el título de página predeterminado.</target>
       </trans-unit>
+      <trans-unit id="tl_news.robots.0">
+        <source>Robots tag</source>
+        <target>Etiqueta Robots</target>
+      </trans-unit>
+      <trans-unit id="tl_news.robots.1">
+        <source>Here you can overwrite how search engines handle the news item.</source>
+        <target>Aquí puede sobrescribir cómo los motores de búsqueda manejan la noticia.</target>
+      </trans-unit>
       <trans-unit id="tl_news.description.0">
         <source>Meta description</source>
         <target>Metadescripción</target>
@@ -199,7 +207,7 @@
       </trans-unit>
       <trans-unit id="tl_news.start.1">
         <source>If you want to prevent the news item from showing on the website before a certain date/time, you can enter it here. Otherwise leave the field blank.</source>
-        <target>Si desea evitar que la noticia se muestre en el sitio web antes de una fecha/hora determinada, puede ingresarla aquí. De lo contrario, deje el campo en blanco.</target>
+        <target>Si desea evitar que la noticia se muestre en el sitio web antes de una fecha / hora determinada, puede ingresarla aquí. De lo contrario, deje el campo en blanco.</target>
       </trans-unit>
       <trans-unit id="tl_news.stop.0">
         <source>Show until</source>
@@ -246,8 +254,8 @@
         <target>Página fuente</target>
       </trans-unit>
       <trans-unit id="tl_news.meta_legend">
-        <source>Meta data</source>
-        <target>Meta data</target>
+        <source>Metadata</source>
+        <target>Metadatos</target>
       </trans-unit>
       <trans-unit id="tl_news.expert_legend">
         <source>Expert settings</source>

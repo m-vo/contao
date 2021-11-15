@@ -12,6 +12,7 @@ namespace Contao;
 
 use Contao\Filter\SyncExclude;
 use Contao\Model\Collection;
+use Webmozart\PathUtil\Path;
 
 /**
  * Handles the database assisted file system (DBAFS)
@@ -48,7 +49,7 @@ class Dbafs
 	{
 		self::validateUtf8Path($strResource);
 
-		$strUploadPath = Config::get('uploadPath') . '/';
+		$strUploadPath = System::getContainer()->getParameter('contao.upload_path') . '/';
 		$projectDir = System::getContainer()->getParameter('kernel.project_dir');
 
 		// Remove trailing slashes (see #5707)
@@ -254,7 +255,7 @@ class Dbafs
 		$strFolder = \dirname($strDestination);
 
 		// Set the new parent ID
-		if ($strFolder == Config::get('uploadPath'))
+		if ($strFolder == System::getContainer()->getParameter('contao.upload_path'))
 		{
 			$objFile->pid = null;
 		}
@@ -291,12 +292,12 @@ class Dbafs
 		}
 
 		// Update the MD5 hash of the parent folders
-		if (($strPath = \dirname($strSource)) != Config::get('uploadPath'))
+		if (($strPath = \dirname($strSource)) != System::getContainer()->getParameter('contao.upload_path'))
 		{
 			static::updateFolderHashes($strPath);
 		}
 
-		if (($strPath = \dirname($strDestination)) != Config::get('uploadPath'))
+		if (($strPath = \dirname($strDestination)) != System::getContainer()->getParameter('contao.upload_path'))
 		{
 			static::updateFolderHashes($strPath);
 		}
@@ -332,7 +333,7 @@ class Dbafs
 		$objNewFile = clone $objFile->current();
 
 		// Set the new parent ID
-		if ($strFolder == Config::get('uploadPath'))
+		if ($strFolder == System::getContainer()->getParameter('contao.upload_path'))
 		{
 			$objNewFile->pid = null;
 		}
@@ -377,12 +378,12 @@ class Dbafs
 		}
 
 		// Update the MD5 hash of the parent folders
-		if (($strPath = \dirname($strSource)) != Config::get('uploadPath'))
+		if (($strPath = \dirname($strSource)) != System::getContainer()->getParameter('contao.upload_path'))
 		{
 			static::updateFolderHashes($strPath);
 		}
 
-		if (($strPath = \dirname($strDestination)) != Config::get('uploadPath'))
+		if (($strPath = \dirname($strDestination)) != System::getContainer()->getParameter('contao.upload_path'))
 		{
 			static::updateFolderHashes($strPath);
 		}
@@ -520,7 +521,7 @@ class Dbafs
 		$objFiles = new \RecursiveIteratorIterator(
 			new SyncExclude(
 				new \RecursiveDirectoryIterator(
-					$projectDir . '/' . Config::get('uploadPath'),
+					$projectDir . '/' . System::getContainer()->getParameter('contao.upload_path'),
 					\FilesystemIterator::UNIX_PATHS|\FilesystemIterator::FOLLOW_SYMLINKS|\FilesystemIterator::SKIP_DOTS
 				)
 			),
@@ -574,7 +575,7 @@ class Dbafs
 				$strParent = \dirname($strRelpath);
 
 				// Get the parent ID
-				if ($strParent == Config::get('uploadPath'))
+				if ($strParent == System::getContainer()->getParameter('contao.upload_path'))
 				{
 					$strPid = null;
 				}
@@ -774,7 +775,7 @@ class Dbafs
 	}
 
 	/**
-	 * Get the folder hash from the databse by combining the hashes of all children
+	 * Get the folder hash from the database by combining the hashes of all children
 	 *
 	 * @param string $strPath The relative path
 	 *
@@ -829,11 +830,6 @@ class Dbafs
 	 */
 	protected static function isFileSyncExclude($strPath)
 	{
-		if (Config::get('uploadPath') == 'templates')
-		{
-			return true;
-		}
-
 		self::validateUtf8Path($strPath);
 
 		$projectDir = System::getContainer()->getParameter('kernel.project_dir');
@@ -852,7 +848,7 @@ class Dbafs
 		$uploadPath = System::getContainer()->getParameter('contao.upload_path');
 
 		// Outside the files directory
-		if (strncmp($strPath . '/', $uploadPath . '/', \strlen($uploadPath) + 1) !== 0)
+		if (!Path::isBasePath($uploadPath, $strPath))
 		{
 			return true;
 		}

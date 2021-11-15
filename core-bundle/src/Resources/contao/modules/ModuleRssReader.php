@@ -11,7 +11,6 @@
 namespace Contao;
 
 use Contao\CoreBundle\Exception\PageNotFoundException;
-use Patchwork\Utf8;
 
 /**
  * Front end module "rss reader".
@@ -44,7 +43,7 @@ class ModuleRssReader extends Module
 		if ($request && System::getContainer()->get('contao.routing.scope_matcher')->isBackendRequest($request))
 		{
 			$objTemplate = new BackendTemplate('be_wildcard');
-			$objTemplate->wildcard = '### ' . Utf8::strtoupper($GLOBALS['TL_LANG']['FMD']['rssReader'][0]) . ' ###';
+			$objTemplate->wildcard = '### ' . $GLOBALS['TL_LANG']['FMD']['rssReader'][0] . ' ###';
 			$objTemplate->title = $this->headline;
 			$objTemplate->id = $this->id;
 			$objTemplate->link = $this->name;
@@ -65,7 +64,7 @@ class ModuleRssReader extends Module
 			$this->objFeed->set_feed_url($arrUrls[0]);
 		}
 
-		$this->objFeed->set_output_encoding(Config::get('characterSet'));
+		$this->objFeed->set_output_encoding(System::getContainer()->getParameter('kernel.charset'));
 		$this->objFeed->set_cache_location(System::getContainer()->getParameter('kernel.project_dir') . '/system/tmp');
 		$this->objFeed->enable_cache(false);
 

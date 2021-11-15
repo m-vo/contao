@@ -82,7 +82,7 @@
         <target>Использовать оригинальное изображение, если размеры совпадают</target>
       </trans-unit>
       <trans-unit id="tl_image_size.skipIfDimensionsMatch.1">
-        <source>Note that no optimizations such as meta data stripping or JPEG compression will be applied in this case.</source>
+        <source>Note that no optimizations such as metadata stripping or JPEG compression will be applied in this case.</source>
         <target>Обратите внимание, что в этом случае, не будет применена оптимизация, такая как удаление метаданных или сжатие JPEG.</target>
       </trans-unit>
       <trans-unit id="tl_image_size.lazyLoading.0">
@@ -152,6 +152,14 @@
       <trans-unit id="tl_image_size.gif:webp,gif">
         <source>GIF to WEBP</source>
         <target>GIF в WEBP</target>
+      </trans-unit>
+      <trans-unit id="tl_image_size.webp:webp,png">
+        <source>WEBP to PNG</source>
+        <target>WEBP в PNG</target>
+      </trans-unit>
+      <trans-unit id="tl_image_size.webp:webp,jpg">
+        <source>WEBP to JPG</source>
+        <target>WEBP в JPG</target>
       </trans-unit>
       <trans-unit id="tl_image_size.new.0">
         <source>New</source>

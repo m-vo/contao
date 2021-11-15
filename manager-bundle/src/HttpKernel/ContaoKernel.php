@@ -34,38 +34,26 @@ use Symfony\Component\ErrorHandler\Debug;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\Kernel;
+use Webmozart\PathUtil\Path;
 
 class ContaoKernel extends Kernel implements HttpCacheProvider
 {
-    /**
-     * @var string
-     */
-    protected static $projectDir;
+    protected static ?string $projectDir = null;
+    private ?PluginLoader $pluginLoader = null;
+    private ?BundleLoader $bundleLoader = null;
+    private ?JwtManager $jwtManager = null;
+    private ?ManagerConfig $managerConfig = null;
+    private ?ContaoCache $httpCache = null;
 
-    /**
-     * @var PluginLoader
-     */
-    private $pluginLoader;
+    public function shutdown(): void
+    {
+        // Reset bundle loader to re-calculate bundle order after cache:clear
+        if ($this->booted) {
+            $this->bundleLoader = null;
+        }
 
-    /**
-     * @var BundleLoader
-     */
-    private $bundleLoader;
-
-    /**
-     * @var JwtManager
-     */
-    private $jwtManager;
-
-    /**
-     * @var ManagerConfig
-     */
-    private $managerConfig;
-
-    /**
-     * @var ContaoCache
-     */
-    private $httpCache;
+        parent::shutdown();
+    }
 
     public function registerBundles(): array
     {
@@ -90,21 +78,17 @@ class ContaoKernel extends Kernel implements HttpCacheProvider
      */
     public function getRootDir(): string
     {
-        if (null === $this->rootDir) {
-            $this->rootDir = $this->getProjectDir().'/app';
-        }
-
-        return $this->rootDir;
+        return Path::join($this->getProjectDir(), 'app');
     }
 
     public function getCacheDir(): string
     {
-        return $this->getProjectDir().'/var/cache/'.$this->getEnvironment();
+        return Path::join($this->getProjectDir(), 'var/cache', $this->getEnvironment());
     }
 
     public function getLogDir(): string
     {
-        return $this->getProjectDir().'/var/logs';
+        return Path::join($this->getProjectDir(), 'var/logs');
     }
 
     public function getPluginLoader(): PluginLoader
@@ -135,7 +119,7 @@ class ContaoKernel extends Kernel implements HttpCacheProvider
         if (null === $this->bundleLoader) {
             $parser = new DelegatingParser();
             $parser->addParser(new JsonParser());
-            $parser->addParser(new IniParser($this->getProjectDir().'/system/modules'));
+            $parser->addParser(new IniParser(Path::join($this->getProjectDir(), 'system/modules')));
 
             $this->bundleLoader = new BundleLoader($this->getPluginLoader(), new ConfigResolverFactory(), $parser);
         }
@@ -202,7 +186,7 @@ class ContaoKernel extends Kernel implements HttpCacheProvider
             $loader->load($servicesFile);
         }
 
-        if (is_dir($this->getProjectDir().'/src')) {
+        if (is_dir(Path::join($this->getProjectDir(), 'src'))) {
             $loader->load(__DIR__.'/../Resources/skeleton/config/services.php');
         }
     }
@@ -213,7 +197,7 @@ class ContaoKernel extends Kernel implements HttpCacheProvider
             return $this->httpCache;
         }
 
-        $this->httpCache = new ContaoCache($this, $this->getProjectDir().'/var/cache/prod/http_cache');
+        $this->httpCache = new ContaoCache($this, Path::join($this->getProjectDir(), 'var/cache/prod/http_cache'));
 
         /** @var array<HttpCacheSubscriberPluginInterface> $plugins */
         $plugins = $this->getPluginLoader()->getInstancesOf(HttpCacheSubscriberPluginInterface::class);
@@ -242,13 +226,19 @@ class ContaoKernel extends Kernel implements HttpCacheProvider
     {
         self::loadEnv($projectDir, 'jwt');
 
-        // See https://github.com/symfony/recipes/blob/master/symfony/framework-bundle/4.2/public/index.php
-        if ($trustedProxies = $_SERVER['TRUSTED_PROXIES'] ?? null) {
-            Request::setTrustedProxies(explode(',', $trustedProxies), Request::HEADER_X_FORWARDED_ALL ^ Request::HEADER_X_FORWARDED_HOST);
-        }
-
         if ($trustedHosts = $_SERVER['TRUSTED_HOSTS'] ?? null) {
             Request::setTrustedHosts(explode(',', $trustedHosts));
+        }
+
+        if ($trustedProxies = $_SERVER['TRUSTED_PROXIES'] ?? null) {
+            $trustedHeaderSet = Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_PORT | Request::HEADER_X_FORWARDED_PROTO;
+
+            // If we have a limited list of trusted hosts, we can safely use the X-Forwarded-Host header
+            if ($trustedHosts) {
+                $trustedHeaderSet |= Request::HEADER_X_FORWARDED_HOST;
+            }
+
+            Request::setTrustedProxies(explode(',', $trustedProxies), $trustedHeaderSet);
         }
 
         Request::enableHttpMethodParameterOverride();
@@ -276,13 +266,9 @@ class ContaoKernel extends Kernel implements HttpCacheProvider
             $kernel->setJwtManager($jwtManager);
         }
 
-        if (!$kernel->isDebug()) {
-            $cache = $kernel->getHttpCache();
-
-            // Enable the Symfony reverse proxy if request has no surrogate capability
-            if (($surrogate = $cache->getSurrogate()) && !$surrogate->hasSurrogateCapability($request)) {
-                return $cache;
-            }
+        // Enable the Symfony reverse proxy if not disabled explicitly
+        if (!($_SERVER['DISABLE_HTTP_CACHE'] ?? null) && !$kernel->isDebug()) {
+            return $kernel->getHttpCache();
         }
 
         return $kernel;
@@ -317,7 +303,7 @@ class ContaoKernel extends Kernel implements HttpCacheProvider
             return;
         }
 
-        // Set the plugin loader again so it is available at runtime (synthetic service)
+        // Set the plugin loader again, so it is available at runtime (synthetic service)
         $container->set('contao_manager.plugin_loader', $this->getPluginLoader());
 
         // Set the JWT manager only if the debug mode has not been configured in env variables
@@ -331,17 +317,19 @@ class ContaoKernel extends Kernel implements HttpCacheProvider
         $projectDir = $this->getProjectDir();
 
         foreach (['.yaml', '.yml'] as $ext) {
-            if (file_exists($projectDir.'/config/'.$file.$ext)) {
-                return $projectDir.'/config/'.$file.$ext;
+            if (file_exists($path = Path::join($projectDir, 'config', $file.$ext))) {
+                return $path;
             }
         }
 
         // Fallback to the legacy config file (see #566)
         foreach (['.yaml', '.yml'] as $ext) {
-            if (file_exists($projectDir.'/app/config/'.$file.$ext)) {
-                @trigger_error(sprintf('Storing the "%s" file in the "app/config" folder has been deprecated and will no longer work in Contao 5.0. Move it to the "config" folder instead.', $file.$ext), E_USER_DEPRECATED);
+            $path = Path::join($projectDir, 'app/config', $file.$ext);
 
-                return $projectDir.'/app/config/'.$file.$ext;
+            if (file_exists($path)) {
+                trigger_deprecation('contao/manager-bundle', '4.9', sprintf('Storing the "%s" file in the "app/config" folder has been deprecated and will no longer work in Contao 5.0. Move it to the "config" folder instead.', $file.$ext));
+
+                return $path;
             }
         }
 
@@ -352,7 +340,7 @@ class ContaoKernel extends Kernel implements HttpCacheProvider
     {
         $configs = $this->getBundleLoader()->getBundleConfigs(
             'dev' === $this->getEnvironment(),
-            $this->debug ? null : $this->getCacheDir().'/bundles.map'
+            $this->debug ? null : Path::join($this->getCacheDir(), 'bundles.map')
         );
 
         foreach ($configs as $config) {
@@ -377,7 +365,7 @@ class ContaoKernel extends Kernel implements HttpCacheProvider
             throw new \RuntimeException('The Contao Managed Edition only supports the "dev" and "prod" environments');
         }
 
-        Plugin::autoloadModules($projectDir.'/system/modules');
+        Plugin::autoloadModules(Path::join($projectDir, 'system/modules'));
         static::setProjectDir($projectDir);
 
         if ('dev' === $env) {
@@ -391,12 +379,12 @@ class ContaoKernel extends Kernel implements HttpCacheProvider
     {
         // Load cached env vars if the .env.local.php file exists
         // See https://github.com/symfony/recipes/blob/master/symfony/framework-bundle/4.2/config/bootstrap.php
-        if (\is_array($env = @include $projectDir.'/.env.local.php')) {
+        if (\is_array($env = @include Path::join($projectDir, '.env.local.php'))) {
             foreach ($env as $k => $v) {
-                $_ENV[$k] = $_ENV[$k] ?? (isset($_SERVER[$k]) && 0 !== strpos($k, 'HTTP_') ? $_SERVER[$k] : $v);
+                $_ENV[$k] ??= isset($_SERVER[$k]) && 0 !== strpos($k, 'HTTP_') ? $_SERVER[$k] : $v;
             }
-        } elseif (file_exists($projectDir.'/.env')) {
-            (new Dotenv(false))->loadEnv($projectDir.'/.env', 'APP_ENV', $defaultEnv);
+        } elseif (file_exists($filePath = Path::join($projectDir, '.env'))) {
+            (new Dotenv(false))->loadEnv($filePath, 'APP_ENV', $defaultEnv);
         }
 
         $_SERVER += $_ENV;

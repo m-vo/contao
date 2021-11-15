@@ -13,16 +13,14 @@ declare(strict_types=1);
 namespace Contao\CoreBundle\Config;
 
 use Symfony\Component\Finder\Finder;
+use Webmozart\PathUtil\Path;
 
 /**
  * Creates a Finder object with the bundle paths set.
  */
 class ResourceFinder implements ResourceFinderInterface
 {
-    /**
-     * @var array
-     */
-    private $paths;
+    private array $paths;
 
     /**
      * @param string|array $paths
@@ -52,7 +50,7 @@ class ResourceFinder implements ResourceFinderInterface
         $paths = [];
 
         foreach ($this->paths as $path) {
-            if (is_dir($dir = $path.'/'.$subpath)) {
+            if (is_dir($dir = Path::join($path, $subpath))) {
                 $paths[] = $dir;
             }
         }

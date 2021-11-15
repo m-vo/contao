@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace Contao\CoreBundle\EventListener;
 
 use Contao\BackendUser;
+use Contao\CoreBundle\Util\LocaleUtil;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\Security\Core\Security;
 use Symfony\Contracts\Translation\LocaleAwareInterface;
@@ -22,15 +23,8 @@ use Symfony\Contracts\Translation\LocaleAwareInterface;
  */
 class BackendLocaleListener
 {
-    /**
-     * @var Security
-     */
-    private $security;
-
-    /**
-     * @var LocaleAwareInterface
-     */
-    private $translator;
+    private Security $security;
+    private LocaleAwareInterface $translator;
 
     public function __construct(Security $security, LocaleAwareInterface $translator)
     {
@@ -55,6 +49,6 @@ class BackendLocaleListener
         $this->translator->setLocale($user->language);
 
         // Deprecated since Contao 4.0, to be removed in Contao 5.0
-        $GLOBALS['TL_LANGUAGE'] = str_replace('_', '-', $user->language);
+        $GLOBALS['TL_LANGUAGE'] = LocaleUtil::formatAsLanguageTag($user->language);
     }
 }

@@ -73,6 +73,13 @@
         <source>Here you can add a custom meta title to overwrite the default page title.</source>
         <target>Hier kunt u een aangepaste metatitel toevoegen om de standaardpaginatitel te overschrijven.</target>
       </trans-unit>
+      <trans-unit id="tl_calendar_events.robots.0">
+        <source>Robots tag</source>
+        <target>Robots tag</target>
+      </trans-unit>
+      <trans-unit id="tl_calendar_events.robots.1">
+        <source>Here you can overwrite how search engines handle the event.</source>
+      </trans-unit>
       <trans-unit id="tl_calendar_events.description.0">
         <source>Meta description</source>
         <target>Meta omschrijving</target>
@@ -237,6 +244,12 @@
         <source>Do not allow comments for this particular event.</source>
         <target>Geen reacties toestaan voor dit specifieke evenement.</target>
       </trans-unit>
+      <trans-unit id="tl_calendar_events.featured.0">
+        <source>Feature event</source>
+      </trans-unit>
+      <trans-unit id="tl_calendar_events.featured.1">
+        <source>Show the event in a featured event list.</source>
+      </trans-unit>
       <trans-unit id="tl_calendar_events.published.0">
         <source>Publish event</source>
         <target>Publiceer evenement</target>
@@ -302,7 +315,7 @@
         <target>Doelpagina</target>
       </trans-unit>
       <trans-unit id="tl_calendar_events.meta_legend">
-        <source>Meta data</source>
+        <source>Metadata</source>
         <target>Meta data</target>
       </trans-unit>
       <trans-unit id="tl_calendar_events.expert_legend">
@@ -360,6 +373,9 @@
       <trans-unit id="tl_calendar_events.toggle">
         <source>Publish/unpublish event ID %s</source>
         <target>Publiceer/depubliceer evenement ID %s</target>
+      </trans-unit>
+      <trans-unit id="tl_calendar_events.feature">
+        <source>Feature/unfeature event ID %s</source>
       </trans-unit>
       <trans-unit id="tl_calendar_events.editheader">
         <source>Edit the settings of event ID %s</source>

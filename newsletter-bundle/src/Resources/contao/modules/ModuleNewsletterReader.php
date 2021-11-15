@@ -10,8 +10,12 @@
 
 namespace Contao;
 
+use Contao\CoreBundle\Exception\InternalServerErrorException;
 use Contao\CoreBundle\Exception\PageNotFoundException;
-use Patchwork\Utf8;
+use Contao\CoreBundle\Routing\ResponseContext\HtmlHeadBag\HtmlHeadBag;
+use Contao\CoreBundle\Routing\ResponseContext\ResponseContextAccessor;
+use Contao\CoreBundle\String\HtmlDecoder;
+use Contao\CoreBundle\String\SimpleTokenParser;
 
 /**
  * Front end module "newsletter reader".
@@ -40,7 +44,7 @@ class ModuleNewsletterReader extends Module
 		if ($request && System::getContainer()->get('contao.routing.scope_matcher')->isBackendRequest($request))
 		{
 			$objTemplate = new BackendTemplate('be_wildcard');
-			$objTemplate->wildcard = '### ' . Utf8::strtoupper($GLOBALS['TL_LANG']['FMD']['newsletterreader'][0]) . ' ###';
+			$objTemplate->wildcard = '### ' . $GLOBALS['TL_LANG']['FMD']['newsletterreader'][0] . ' ###';
 			$objTemplate->title = $this->headline;
 			$objTemplate->id = $this->id;
 			$objTemplate->link = $this->name;
@@ -55,30 +59,17 @@ class ModuleNewsletterReader extends Module
 			Input::setGet('items', Input::get('auto_item'));
 		}
 
-		// Do not index or cache the page if no news item has been specified
+		// Return an empty string if "items" is not set (to combine list and reader on same page)
 		if (!Input::get('items'))
 		{
-			/** @var PageModel $objPage */
-			global $objPage;
-
-			$objPage->noSearch = 1;
-			$objPage->cache = 0;
-
 			return '';
 		}
 
 		$this->nl_channels = StringUtil::deserialize($this->nl_channels);
 
-		// Do not index or cache the page if there are no channels
 		if (empty($this->nl_channels) || !\is_array($this->nl_channels))
 		{
-			/** @var PageModel $objPage */
-			global $objPage;
-
-			$objPage->noSearch = 1;
-			$objPage->cache = 0;
-
-			return '';
+			throw new InternalServerErrorException('The newsletter reader ID ' . $this->id . ' has no channels specified.');
 		}
 
 		return parent::generate();
@@ -89,9 +80,6 @@ class ModuleNewsletterReader extends Module
 	 */
 	protected function compile()
 	{
-		/** @var PageModel $objPage */
-		global $objPage;
-
 		$this->Template->content = '';
 		$this->Template->referer = 'javascript:history.go(-1)';
 		$this->Template->back = $GLOBALS['TL_LANG']['MSC']['goBack'];
@@ -103,10 +91,19 @@ class ModuleNewsletterReader extends Module
 			throw new PageNotFoundException('Page not found: ' . Environment::get('uri'));
 		}
 
-		// Overwrite the page title (see #2853 and #4955)
+		// Overwrite the page meta data (see #2853, #4955 and #87)
 		if ($objNewsletter->subject)
 		{
-			$objPage->pageTitle = strip_tags(StringUtil::stripInsertTags($objNewsletter->subject));
+			$responseContext = System::getContainer()->get(ResponseContextAccessor::class)->getResponseContext();
+
+			if ($responseContext && $responseContext->has(HtmlHeadBag::class))
+			{
+				$htmlDecoder = System::getContainer()->get(HtmlDecoder::class);
+
+				/** @var HtmlHeadBag $htmlHeadBag */
+				$htmlHeadBag = $responseContext->get(HtmlHeadBag::class);
+				$htmlHeadBag->setTitle($htmlDecoder->inputEncodedToPlainText($objNewsletter->subject));
+			}
 		}
 
 		// Add enclosure
@@ -118,7 +115,7 @@ class ModuleNewsletterReader extends Module
 		// Support plain text newsletters (thanks to Hagen Klemp)
 		if ($objNewsletter->sendText)
 		{
-			$strContent = nl2br_html5($objNewsletter->text);
+			$strContent = nl2br($objNewsletter->text, false);
 		}
 		else
 		{
@@ -127,7 +124,7 @@ class ModuleNewsletterReader extends Module
 
 		// Parse simple tokens and insert tags
 		$strContent = $this->replaceInsertTags($strContent);
-		$strContent = StringUtil::parseSimpleTokens($strContent, array());
+		$strContent = System::getContainer()->get(SimpleTokenParser::class)->parse($strContent, array());
 
 		// Encode e-mail addresses
 		$strContent = StringUtil::encodeEmail($strContent);

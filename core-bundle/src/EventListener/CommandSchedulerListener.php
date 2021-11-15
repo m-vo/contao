@@ -16,40 +16,27 @@ use Contao\Config;
 use Contao\CoreBundle\Cron\Cron;
 use Contao\CoreBundle\Framework\ContaoFramework;
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Exception\DriverException;
+use Doctrine\DBAL\Exception;
+use Psr\Container\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
+use Symfony\Contracts\Service\ServiceSubscriberInterface;
 
 /**
  * @internal
  */
-class CommandSchedulerListener
+class CommandSchedulerListener implements ServiceSubscriberInterface
 {
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
+    private ContainerInterface $locator;
+    private ContaoFramework $framework;
+    private Connection $connection;
+    private string $fragmentPath;
 
-    /**
-     * @var Connection
-     */
-    private $connection;
-
-    /**
-     * @var string
-     */
-    private $fragmentPath;
-
-    /**
-     * @var Cron
-     */
-    private $cron;
-
-    public function __construct(ContaoFramework $framework, Connection $connection, Cron $cron, string $fragmentPath = '_fragment')
+    public function __construct(ContainerInterface $locator, ContaoFramework $framework, Connection $connection, string $fragmentPath = '_fragment')
     {
+        $this->locator = $locator;
         $this->framework = $framework;
         $this->connection = $connection;
-        $this->cron = $cron;
         $this->fragmentPath = $fragmentPath;
     }
 
@@ -59,8 +46,20 @@ class CommandSchedulerListener
     public function __invoke(TerminateEvent $event): void
     {
         if ($this->framework->isInitialized() && $this->canRunCron($event->getRequest())) {
-            $this->cron->run(Cron::SCOPE_WEB);
+            $this->locator->get(Cron::class)->run(Cron::SCOPE_WEB);
         }
+    }
+
+    /**
+     * Lazy-load services to prevent issues with MySQL server_version.
+     *
+     * @see https://github.com/contao/contao/pull/3623
+     *
+     * @return array<string>
+     */
+    public static function getSubscribedServices(): array
+    {
+        return [Cron::class];
     }
 
     private function canRunCron(Request $request): bool
@@ -85,8 +84,8 @@ class CommandSchedulerListener
     {
         try {
             return $this->connection->isConnected()
-                && $this->connection->getSchemaManager()->tablesExist(['tl_cron_job']);
-        } catch (DriverException $e) {
+                && $this->connection->createSchemaManager()->tablesExist(['tl_cron_job']);
+        } catch (Exception $e) {
             return false;
         }
     }

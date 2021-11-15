@@ -47,7 +47,7 @@
       </trans-unit>
       <trans-unit id="MOD.tpl_editor.1">
         <source>Add or edit custom templates</source>
-        <target>Додај или уреди произвони шаблон</target>
+        <target>Додај или уреди произвољни шаблон</target>
       </trans-unit>
       <trans-unit id="MOD.accounts">
         <source>Account manager</source>

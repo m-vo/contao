@@ -27,7 +27,7 @@
       </trans-unit>
       <trans-unit id="tl_member_group.disable.0">
         <source>Deactivate</source>
-        <target>Désactivé</target>
+        <target>Inactif</target>
       </trans-unit>
       <trans-unit id="tl_member_group.disable.1">
         <source>Temporarily disable the group.</source>

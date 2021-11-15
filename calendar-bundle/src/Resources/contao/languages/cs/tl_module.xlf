@@ -97,6 +97,14 @@
         <source>Show the number of events of each month in the menu.</source>
         <target>Zobrazit počet událostí vybraného měsíce</target>
       </trans-unit>
+      <trans-unit id="tl_module.cal_featured.0">
+        <source>Featured events</source>
+        <target>Zvýrazněné příspěvky</target>
+      </trans-unit>
+      <trans-unit id="tl_module.cal_featured.1">
+        <source>Here you can choose how featured events are handled.</source>
+        <target>Zde můžete zvolit, co se stane se zvýrazněnými příspěvky.</target>
+      </trans-unit>
       <trans-unit id="tl_module.cal_list">
         <source>Event list</source>
         <target>Seznam událostí</target>
@@ -220,6 +228,18 @@
       <trans-unit id="tl_module.past_all">
         <source>All past events</source>
         <target>Všechny proběhlé události</target>
+      </trans-unit>
+      <trans-unit id="tl_module.events.all_items">
+        <source>Show all events</source>
+        <target>Zobrazit všechny příspěvky</target>
+      </trans-unit>
+      <trans-unit id="tl_module.events.featured">
+        <source>Show featured events only</source>
+        <target>Zobrazí jen zvýrazněné příspěvky</target>
+      </trans-unit>
+      <trans-unit id="tl_module.events.unfeatured">
+        <source>Skip featured events</source>
+        <target>Vynechat zvýrazněné příspěvky</target>
       </trans-unit>
     </body>
   </file>

@@ -16,6 +16,8 @@ use Contao\CoreBundle\EventListener\GlobalsMapListener;
 use Contao\CoreBundle\Fragment\FragmentConfig;
 use Contao\CoreBundle\Fragment\FragmentOptionsAwareInterface;
 use Contao\CoreBundle\Fragment\FragmentPreHandlerInterface;
+use Psr\Container\ContainerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
@@ -34,30 +36,15 @@ class RegisterFragmentsPass implements CompilerPassInterface
 {
     use PriorityTaggedServiceTrait;
 
-    /**
-     * @var string
-     */
-    private $tag;
-
-    /**
-     * @var string|null
-     */
-    private $globalsKey;
-
-    /**
-     * @var string|null
-     */
-    private $proxyClass;
-
-    /**
-     * @var string|null
-     */
-    private $templateOptionsListener;
+    private ?string $tag;
+    private ?string $globalsKey;
+    private ?string $proxyClass;
+    private ?string $templateOptionsListener;
 
     public function __construct(string $tag = null, string $globalsKey = null, string $proxyClass = null, string $templateOptionsListener = null)
     {
         if (null === $tag) {
-            @trigger_error('Using "new RegisterFragmentsPass()" without passing the tag name has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+            trigger_deprecation('contao/core-bundle', '4.9', 'Initializing "Contao\CoreBundle\DependencyInjection\Compiler\RegisterFragmentsPass" objects without passing the tag name as argument has been deprecated and will no longer work in Contao 5.0.');
         }
 
         $this->tag = $tag;
@@ -98,8 +85,7 @@ class RegisterFragmentsPass implements CompilerPassInterface
                 continue;
             }
 
-            $definition = $container->findDefinition($reference);
-
+            $definition = $container->findDefinition((string) $reference);
             $tags = $definition->getTag($tag);
             $definition->clearTag($tag);
 
@@ -125,6 +111,10 @@ class RegisterFragmentsPass implements CompilerPassInterface
 
                 if (is_a($definition->getClass(), FragmentOptionsAwareInterface::class, true)) {
                     $childDefinition->addMethodCall('setFragmentOptions', [$attributes]);
+                }
+
+                if (!$childDefinition->hasMethodCall('setContainer') && is_a($definition->getClass(), AbstractController::class, true)) {
+                    $childDefinition->addMethodCall('setContainer', [new Reference(ContainerInterface::class)]);
                 }
 
                 $registry->addMethodCall('add', [$identifier, $config]);

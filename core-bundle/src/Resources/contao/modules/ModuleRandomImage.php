@@ -10,6 +10,7 @@
 
 namespace Contao;
 
+use Contao\CoreBundle\Image\Studio\Studio;
 use Contao\Model\Collection;
 
 /**
@@ -83,14 +84,7 @@ class ModuleRandomImage extends Module
 				}
 
 				// Add the image
-				$images[$objFiles->path] = array
-				(
-					'id'         => $objFiles->id,
-					'name'       => $objFile->basename,
-					'singleSRC'  => $objFiles->path,
-					'title'      => StringUtil::specialchars($objFile->basename),
-					'filesModel' => $objFiles->current()
-				);
+				$images[$objFiles->path] = $objFiles->current();
 			}
 
 			// Folders
@@ -119,42 +113,32 @@ class ModuleRandomImage extends Module
 					}
 
 					// Add the image
-					$images[$objSubfiles->path] = array
-					(
-						'id'         => $objSubfiles->id,
-						'name'       => $objFile->basename,
-						'singleSRC'  => $objSubfiles->path,
-						'title'      => StringUtil::specialchars($objFile->basename),
-						'filesModel' => $objSubfiles->current()
-					);
+					$images[$objSubfiles->path] = $objSubfiles->current();
 				}
 			}
 		}
-
-		$images = array_values($images);
 
 		if (empty($images))
 		{
 			return;
 		}
 
-		$i = random_int(0, \count($images)-1);
+		$figure = System::getContainer()
+			->get(Studio::class)
+			->createFigureBuilder()
+			->fromFilesModel($images[array_rand($images)])
+			->setSize($this->imgSize)
+			->enableLightbox((bool) $this->fullsize)
+			->build();
 
-		$arrImage = $images[$i];
+		$imageData = $figure->getLegacyTemplateData();
+		$imageData['figure'] = $figure;
 
-		$arrImage['size'] = $this->imgSize;
-		$arrImage['fullsize'] = $this->fullsize;
-
-		if (!$this->useCaption)
-		{
-			$arrImage['caption'] = null;
-		}
-		elseif (!$arrImage['caption'])
-		{
-			$arrImage['caption'] = $arrImage['title'];
-		}
-
-		$this->addImageToTemplate($this->Template, $arrImage, null, null, $arrImage['filesModel']);
+		$this->Template->setData(array_merge(
+			$this->Template->getData(),
+			$imageData,
+			array('caption' => $this->useCaption ? $imageData['title'] ?? '' : null)
+		));
 	}
 }
 

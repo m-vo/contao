@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace Contao\CoreBundle\Migration\Version408;
 
+use Contao\Controller;
 use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\CoreBundle\Migration\AbstractMigration;
 use Contao\CoreBundle\Migration\MigrationResult;
@@ -20,36 +21,22 @@ use Contao\StringUtil;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Types\IntegerType;
 use Symfony\Component\Filesystem\Filesystem;
+use Webmozart\PathUtil\Path;
 
 /**
  * @internal
  */
 class Version480Update extends AbstractMigration
 {
-    /**
-     * @var Connection
-     */
-    private $connection;
-
-    /**
-     * @var Filesystem
-     */
-    private $filesystem;
-
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
-
-    /**
-     * @var string
-     */
-    private $projectDir;
+    private Connection $connection;
+    private Filesystem $filesystem;
+    private ContaoFramework $framework;
+    private string $projectDir;
 
     /**
      * @var array<string>
      */
-    private $resultMessages = [];
+    private array $resultMessages = [];
 
     public function __construct(Connection $connection, Filesystem $filesystem, ContaoFramework $framework, string $projectDir)
     {
@@ -113,7 +100,7 @@ class Version480Update extends AbstractMigration
 
     public function shouldRunMediaelement(): bool
     {
-        $schemaManager = $this->connection->getSchemaManager();
+        $schemaManager = $this->connection->createSchemaManager();
 
         if (!$schemaManager->tablesExist(['tl_layout'])) {
             return false;
@@ -125,8 +112,8 @@ class Version480Update extends AbstractMigration
             return false;
         }
 
-        return (bool) $this->connection
-            ->query("
+        if (
+            !$this->connection->fetchOne("
                 SELECT EXISTS(
                     SELECT id
                     FROM tl_layout
@@ -135,13 +122,50 @@ class Version480Update extends AbstractMigration
                         OR scripts LIKE '%js_mediaelement%'
                 )
             ")
-            ->fetchColumn()
-        ;
+        ) {
+            // Early return without initializing the framework
+            return false;
+        }
+
+        $this->framework->initialize();
+
+        /** @var Controller $controller */
+        $controller = $this->framework->getAdapter(Controller::class);
+
+        foreach (['jquery' => 'j_mediaelement', 'scripts' => 'js_mediaelement'] as $column => $templateName) {
+            if (\array_key_exists($templateName, $controller->getTemplateGroup(explode('_', $templateName)[0].'_'))) {
+                // Do not delete scripts that still exist
+                continue;
+            }
+
+            if (
+                $this->connection->fetchOne("
+                    SELECT EXISTS(
+                        SELECT id
+                        FROM tl_layout
+                        WHERE
+                            $column LIKE '%$templateName%'
+                    )
+                ")
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function runMediaelement(): void
     {
-        $statement = $this->connection->query('
+        $this->framework->initialize();
+
+        /** @var Controller $controller */
+        $controller = $this->framework->getAdapter(Controller::class);
+
+        $jTemplateExists = \array_key_exists('j_mediaelement', $controller->getTemplateGroup('j_'));
+        $jsTemplateExists = \array_key_exists('js_mediaelement', $controller->getTemplateGroup('js_'));
+
+        $rows = $this->connection->fetchAllAssociative('
             SELECT
                 id, jquery, scripts
             FROM
@@ -149,9 +173,9 @@ class Version480Update extends AbstractMigration
         ');
 
         // Remove the "j_mediaelement" and "js_mediaelement" templates
-        while (false !== ($row = $statement->fetch(\PDO::FETCH_OBJ))) {
-            if ($row->jquery) {
-                $jquery = StringUtil::deserialize($row->jquery);
+        foreach ($rows as $row) {
+            if ($row['jquery'] && !$jTemplateExists) {
+                $jquery = StringUtil::deserialize($row['jquery']);
 
                 if (\is_array($jquery) && false !== ($i = array_search('j_mediaelement', $jquery, true))) {
                     unset($jquery[$i]);
@@ -165,12 +189,12 @@ class Version480Update extends AbstractMigration
                             id = :id
                     ');
 
-                    $stmt->execute([':jquery' => serialize(array_values($jquery)), ':id' => $row->id]);
+                    $stmt->executeStatement([':jquery' => serialize(array_values($jquery)), ':id' => $row['id']]);
                 }
             }
 
-            if ($row->scripts) {
-                $scripts = StringUtil::deserialize($row->scripts);
+            if ($row['scripts'] && !$jsTemplateExists) {
+                $scripts = StringUtil::deserialize($row['scripts']);
 
                 if (\is_array($scripts) && false !== ($i = array_search('js_mediaelement', $scripts, true))) {
                     unset($scripts[$i]);
@@ -184,7 +208,7 @@ class Version480Update extends AbstractMigration
                             id = :id
                     ');
 
-                    $stmt->execute([':scripts' => serialize(array_values($scripts)), ':id' => $row->id]);
+                    $stmt->executeStatement([':scripts' => serialize(array_values($scripts)), ':id' => $row['id']]);
                 }
             }
         }
@@ -192,7 +216,7 @@ class Version480Update extends AbstractMigration
 
     public function shouldRunSkipIfDimensionsMatch(): bool
     {
-        $schemaManager = $this->connection->getSchemaManager();
+        $schemaManager = $this->connection->createSchemaManager();
 
         if (!$schemaManager->tablesExist(['tl_image_size'])) {
             return false;
@@ -205,7 +229,7 @@ class Version480Update extends AbstractMigration
 
     public function runSkipIfDimensionsMatch(): void
     {
-        $this->connection->query("
+        $this->connection->executeStatement("
             ALTER TABLE
                 tl_image_size
             ADD
@@ -213,7 +237,7 @@ class Version480Update extends AbstractMigration
         ");
 
         // Enable the "skipIfDimensionsMatch" option for existing image sizes (backwards compatibility)
-        $this->connection->query("
+        $this->connection->executeStatement("
             UPDATE
                 tl_image_size
             SET
@@ -223,7 +247,7 @@ class Version480Update extends AbstractMigration
 
     public function shouldRunImportantPart(): bool
     {
-        $schemaManager = $this->connection->getSchemaManager();
+        $schemaManager = $this->connection->createSchemaManager();
 
         if (!$schemaManager->tablesExist(['tl_files'])) {
             return false;
@@ -233,12 +257,12 @@ class Version480Update extends AbstractMigration
 
         if (
             !isset(
-            $columns['path'],
-            $columns['importantpartx'],
-            $columns['importantparty'],
-            $columns['importantpartwidth'],
-            $columns['importantpartheight']
-        )
+                $columns['path'],
+                $columns['importantpartx'],
+                $columns['importantparty'],
+                $columns['importantpartwidth'],
+                $columns['importantpartheight']
+            )
         ) {
             return false;
         }
@@ -247,20 +271,17 @@ class Version480Update extends AbstractMigration
             return true;
         }
 
-        return (bool) $this->connection
-            ->query('
-                SELECT EXISTS(
-                    SELECT id
-                    FROM tl_files
-                    WHERE
-                        importantPartX > 1.00001
-                        OR importantPartY > 1.00001
-                        OR importantPartWidth > 1.00001
-                        OR importantPartHeight > 1.00001
-                )
-            ')
-            ->fetchColumn()
-        ;
+        return (bool) $this->connection->fetchOne('
+            SELECT EXISTS(
+                SELECT id
+                FROM tl_files
+                WHERE
+                    importantPartX > 1.00001
+                    OR importantPartY > 1.00001
+                    OR importantPartWidth > 1.00001
+                    OR importantPartHeight > 1.00001
+            )
+        ');
     }
 
     public function runImportantPart(): void
@@ -268,11 +289,11 @@ class Version480Update extends AbstractMigration
         $compareValue = 1;
 
         // If the columns are of type integer, we can safely convert all images even if they are only set to 1
-        if ($this->connection->getSchemaManager()->listTableColumns('tl_files')['importantpartx']->getType() instanceof IntegerType) {
+        if ($this->connection->createSchemaManager()->listTableColumns('tl_files')['importantpartx']->getType() instanceof IntegerType) {
             $compareValue = 0;
         }
 
-        $this->connection->query('
+        $this->connection->executeStatement('
             ALTER TABLE
                 tl_files
             CHANGE
@@ -285,7 +306,7 @@ class Version480Update extends AbstractMigration
                 importantPartHeight importantPartHeight DOUBLE PRECISION UNSIGNED DEFAULT 0 NOT NULL
         ');
 
-        $statement = $this->connection->query("
+        $files = $this->connection->fetchAllAssociative("
             SELECT
                 id, path, importantPartX, importantPartY, importantPartWidth, importantPartHeight
             FROM
@@ -295,21 +316,23 @@ class Version480Update extends AbstractMigration
         ");
 
         // Convert the important part to relative values as fractions
-        while (false !== ($file = $statement->fetch(\PDO::FETCH_OBJ))) {
-            if (!$this->filesystem->exists($this->projectDir.'/'.$file->path) || is_dir($this->projectDir.'/'.$file->path)) {
+        foreach ($files as $file) {
+            $path = Path::join($this->projectDir, $file['path']);
+
+            if (!$this->filesystem->exists($path) || is_dir($path)) {
                 $imageSize = [];
             } else {
-                $imageSize = (new File($file->path))->imageViewSize;
+                $imageSize = (new File($file['path']))->imageViewSize;
             }
 
             $updateData = [
-                ':id' => $file->id,
+                ':id' => $file['id'],
             ];
 
             if (empty($imageSize[0]) || empty($imageSize[1])) {
                 if (
-                    (float) $file->importantPartX + (float) $file->importantPartWidth <= 1.00001
-                    && (float) $file->importantPartY + (float) $file->importantPartHeight <= 1.00001
+                    (float) $file['importantPartX'] + (float) $file['importantPartWidth'] <= 1.00001
+                    && (float) $file['importantPartY'] + (float) $file['importantPartHeight'] <= 1.00001
                 ) {
                     continue;
                 }
@@ -321,17 +344,17 @@ class Version480Update extends AbstractMigration
 
                 $this->resultMessages[] = sprintf(
                     'Deleted invalid important part [%s,%s,%s,%s] from image "%s".',
-                    $file->importantPartX,
-                    $file->importantPartY,
-                    $file->importantPartWidth,
-                    $file->importantPartHeight,
-                    $file->path
+                    $file['importantPartX'],
+                    $file['importantPartY'],
+                    $file['importantPartWidth'],
+                    $file['importantPartHeight'],
+                    $file['path']
                 );
             } else {
-                $updateData[':x'] = min(1, $file->importantPartX / $imageSize[0]);
-                $updateData[':y'] = min(1, $file->importantPartY / $imageSize[1]);
-                $updateData[':width'] = min(1 - $updateData[':x'], $file->importantPartWidth / $imageSize[0]);
-                $updateData[':height'] = min(1 - $updateData[':y'], $file->importantPartHeight / $imageSize[1]);
+                $updateData[':x'] = min(1, $file['importantPartX'] / $imageSize[0]);
+                $updateData[':y'] = min(1, $file['importantPartY'] / $imageSize[1]);
+                $updateData[':width'] = min(1 - $updateData[':x'], $file['importantPartWidth'] / $imageSize[0]);
+                $updateData[':height'] = min(1 - $updateData[':y'], $file['importantPartHeight'] / $imageSize[1]);
             }
 
             $this->connection
@@ -346,12 +369,12 @@ class Version480Update extends AbstractMigration
                     WHERE
                         id = :id
                 ')
-                ->execute($updateData)
+                ->executeStatement($updateData)
             ;
         }
 
         // If there are still invalid values left, reset them
-        $this->connection->query('
+        $this->connection->executeStatement('
             UPDATE
                 tl_files
             SET
@@ -369,7 +392,7 @@ class Version480Update extends AbstractMigration
 
     public function shouldRunMinKeywordLength(): bool
     {
-        $schemaManager = $this->connection->getSchemaManager();
+        $schemaManager = $this->connection->createSchemaManager();
 
         if (!$schemaManager->tablesExist(['tl_module'])) {
             return false;
@@ -382,7 +405,7 @@ class Version480Update extends AbstractMigration
 
     public function runMinKeywordLength(): void
     {
-        $this->connection->query('
+        $this->connection->executeStatement('
             ALTER TABLE
                 tl_module
             ADD
@@ -390,7 +413,7 @@ class Version480Update extends AbstractMigration
         ');
 
         // Disable the minimum keyword length for existing modules (backwards compatibility)
-        $this->connection->query("
+        $this->connection->executeStatement("
             UPDATE
                 tl_module
             SET
@@ -402,7 +425,7 @@ class Version480Update extends AbstractMigration
 
     public function shouldRunContextLength(): bool
     {
-        $schemaManager = $this->connection->getSchemaManager();
+        $schemaManager = $this->connection->createSchemaManager();
 
         if (!$schemaManager->tablesExist(['tl_module'])) {
             return false;
@@ -415,14 +438,14 @@ class Version480Update extends AbstractMigration
 
     public function runContextLength(): void
     {
-        $this->connection->query("
+        $this->connection->executeStatement("
             ALTER TABLE
                 tl_module
             CHANGE
                 contextLength contextLength varchar(64) NOT NULL default ''
         ");
 
-        $statement = $this->connection->query("
+        $rows = $this->connection->fetchAllAssociative("
             SELECT
                 id, contextLength, totalLength
             FROM
@@ -432,8 +455,8 @@ class Version480Update extends AbstractMigration
         ");
 
         // Consolidate the search context fields
-        while (false !== ($row = $statement->fetch(\PDO::FETCH_OBJ))) {
-            if (!empty($row->contextLength) && !is_numeric($row->contextLength)) {
+        foreach ($rows as $row) {
+            if (!empty($row['contextLength']) && !is_numeric($row['contextLength'])) {
                 continue;
             }
 
@@ -446,18 +469,18 @@ class Version480Update extends AbstractMigration
                     id = :id
             ');
 
-            $stmt->execute([
-                ':id' => $row->id,
-                ':context' => serialize([$row->contextLength, $row->totalLength]),
+            $stmt->executeStatement([
+                ':id' => $row['id'],
+                ':context' => serialize([$row['contextLength'], $row['totalLength']]),
             ]);
         }
 
-        $this->connection->query('ALTER TABLE tl_module DROP COLUMN totalLength');
+        $this->connection->executeStatement('ALTER TABLE tl_module DROP COLUMN totalLength');
     }
 
     public function shouldRunDefaultImageDensities(): bool
     {
-        $schemaManager = $this->connection->getSchemaManager();
+        $schemaManager = $this->connection->createSchemaManager();
 
         if (!$schemaManager->tablesExist(['tl_layout', 'tl_theme'])) {
             return false;
@@ -471,7 +494,7 @@ class Version480Update extends AbstractMigration
 
     public function runDefaultImageDensities(): void
     {
-        $this->connection->query("
+        $this->connection->executeStatement("
             ALTER TABLE
                 tl_layout
             ADD
@@ -479,7 +502,7 @@ class Version480Update extends AbstractMigration
         ");
 
         // Move the default image densities to the page layout
-        $this->connection->query('
+        $this->connection->executeStatement('
             UPDATE
                 tl_layout l
             SET
@@ -489,7 +512,7 @@ class Version480Update extends AbstractMigration
 
     public function shouldRunRememberMe(): bool
     {
-        $schemaManager = $this->connection->getSchemaManager();
+        $schemaManager = $this->connection->createSchemaManager();
 
         if (!$schemaManager->tablesExist(['tl_remember_me'])) {
             return false;
@@ -505,8 +528,8 @@ class Version480Update extends AbstractMigration
         // Since rememberme is broken in Contao 4.7 and there are no valid
         // cookies out there, we can simply drop the old table here and let the
         // install tool create the new one
-        if ($this->connection->getSchemaManager()->tablesExist(['tl_remember_me'])) {
-            $this->connection->query('DROP TABLE tl_remember_me');
+        if ($this->connection->createSchemaManager()->tablesExist(['tl_remember_me'])) {
+            $this->connection->executeStatement('DROP TABLE tl_remember_me');
         }
     }
 }

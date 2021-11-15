@@ -10,6 +10,8 @@
 
 namespace Contao;
 
+use Contao\CoreBundle\Image\Studio\Studio;
+
 /**
  * Front end content element "image".
  *
@@ -59,9 +61,19 @@ class ContentImage extends ContentElement
 	 */
 	protected function compile()
 	{
-		$this->arrData['floating'] = '';
+		$figure = System::getContainer()
+			->get(Studio::class)
+			->createFigureBuilder()
+			->from($this->objFilesModel)
+			->setSize($this->size)
+			->setMetadata($this->objModel->getOverwriteMetadata())
+			->enableLightbox((bool) $this->fullsize)
+			->buildIfResourceExists();
 
-		$this->addImageToTemplate($this->Template, $this->arrData, null, null, $this->objFilesModel);
+		if (null !== $figure)
+		{
+			$figure->applyLegacyTemplateData($this->Template, $this->imagemargin);
+		}
 	}
 }
 

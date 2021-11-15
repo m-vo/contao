@@ -19,9 +19,12 @@ use Contao\System;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Statement;
 use Monolog\Logger;
+use Symfony\Bridge\PhpUnit\ExpectDeprecationTrait;
 
 class ContaoTableHandlerTest extends TestCase
 {
+    use ExpectDeprecationTrait;
+
     public function testSupportsReadingAndWritingTheDbalServiceName(): void
     {
         $handler = new ContaoTableHandler();
@@ -35,16 +38,18 @@ class ContaoTableHandlerTest extends TestCase
 
     /**
      * @group legacy
-     *
-     * @expectedDeprecation Using the "addLogEntry" hook has been deprecated %s.
      */
     public function testHandlesContaoRecords(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.0: Using the "addLogEntry" hook has been deprecated %s.');
+
         $record = [
             'level' => Logger::DEBUG,
+            'level_name' => 'DEBUG',
+            'channel' => 'test',
             'extra' => ['contao' => new ContaoContext('foobar')],
             'context' => [],
-            'datetime' => new \DateTime(),
+            'datetime' => new \DateTimeImmutable(),
             'message' => 'foobar',
         ];
 
@@ -84,15 +89,27 @@ class ContaoTableHandlerTest extends TestCase
         $handler = new ContaoTableHandler();
         $handler->setLevel(Logger::INFO);
 
-        $this->assertFalse($handler->handle(['level' => Logger::DEBUG]));
+        $this->assertFalse($handler->handle([
+            'level' => Logger::DEBUG,
+            'level_name' => 'DEBUG',
+            'channel' => 'test',
+            'extra' => [],
+            'context' => [],
+            'datetime' => new \DateTimeImmutable(),
+            'message' => 'foobar',
+        ]));
     }
 
     public function testDoesNotHandleARecordWithoutContaoContext(): void
     {
         $record = [
             'level' => Logger::DEBUG,
+            'level_name' => 'DEBUG',
+            'channel' => 'test',
             'extra' => ['contao' => null],
             'context' => [],
+            'datetime' => new \DateTimeImmutable(),
+            'message' => 'foobar',
         ];
 
         $handler = new ContaoTableHandler();
@@ -104,9 +121,11 @@ class ContaoTableHandlerTest extends TestCase
     {
         $record = [
             'level' => Logger::DEBUG,
+            'level_name' => 'DEBUG',
+            'channel' => 'test',
             'extra' => ['contao' => new ContaoContext('foobar')],
             'context' => [],
-            'datetime' => new \DateTime(),
+            'datetime' => new \DateTimeImmutable(),
             'message' => 'foobar',
         ];
 

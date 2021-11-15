@@ -73,7 +73,7 @@ class BackendPopup extends Backend
 		}
 
 		// Limit preview to the files directory
-		if (!preg_match('@^' . preg_quote(Config::get('uploadPath'), '@') . '@i', $this->strFile))
+		if (!preg_match('@^' . preg_quote(System::getContainer()->getParameter('contao.upload_path'), '@') . '@i', $this->strFile))
 		{
 			die('Invalid path');
 		}
@@ -132,7 +132,7 @@ class BackendPopup extends Backend
 				$objTemplate->dataUri = $objFile->dataUri;
 			}
 
-			// Meta data
+			// Metadata
 			if (($objModel = FilesModel::findByPath($this->strFile)) instanceof FilesModel)
 			{
 				$arrMeta = StringUtil::deserialize($objModel->meta);
@@ -146,7 +146,7 @@ class BackendPopup extends Backend
 				}
 			}
 
-			$objTemplate->href = ampersand(Environment::get('request')) . '&amp;download=1';
+			$objTemplate->href = StringUtil::ampersand(Environment::get('request')) . '&amp;download=1';
 			$objTemplate->filesize = $this->getReadableSize($objFile->filesize) . ' (' . number_format($objFile->filesize, 0, $GLOBALS['TL_LANG']['MSC']['decimalSeparator'], $GLOBALS['TL_LANG']['MSC']['thousandsSeparator']) . ' Byte)';
 		}
 
@@ -161,7 +161,7 @@ class BackendPopup extends Backend
 		$objTemplate->language = $GLOBALS['TL_LANGUAGE'];
 		$objTemplate->title = StringUtil::specialchars($this->strFile);
 		$objTemplate->host = Backend::getDecodedHostname();
-		$objTemplate->charset = Config::get('characterSet');
+		$objTemplate->charset = System::getContainer()->getParameter('kernel.charset');
 		$objTemplate->labels = (object) $GLOBALS['TL_LANG']['MSC'];
 		$objTemplate->download = StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['fileDownload']);
 

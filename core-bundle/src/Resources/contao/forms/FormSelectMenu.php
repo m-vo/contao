@@ -162,9 +162,13 @@ class FormSelectMenu extends Widget
 	 */
 	public function __get($strKey)
 	{
-		if ($strKey == 'options')
+		switch ($strKey)
 		{
-			return $this->arrOptions;
+			case 'options':
+				return $this->arrOptions;
+
+			case 'name':
+				return $this->strName . ($this->multiple ? '[]' : '');
 		}
 
 		return parent::__get($strKey);
@@ -183,7 +187,6 @@ class FormSelectMenu extends Widget
 
 		if ($this->multiple)
 		{
-			$this->strName .= '[]';
 			$strClass = 'multiselect';
 		}
 
@@ -229,7 +232,7 @@ class FormSelectMenu extends Widget
 		// Generate options
 		foreach ($this->arrOptions as $arrOption)
 		{
-			if ($arrOption['group'])
+			if ($arrOption['group'] ?? null)
 			{
 				if ($blnHasGroups)
 				{
@@ -242,7 +245,7 @@ class FormSelectMenu extends Widget
 				$arrOptions[] = array
 				(
 					'type'  => 'group_start',
-					'label' => StringUtil::specialchars($arrOption['label'])
+					'label' => StringUtil::specialchars($arrOption['label'] ?? '')
 				);
 
 				$blnHasGroups = true;
@@ -255,9 +258,9 @@ class FormSelectMenu extends Widget
 					array
 					(
 						'type'     => 'option',
-						'value'    => $arrOption['value'],
+						'value'    => $arrOption['value'] ?? null,
 						'selected' => $this->isSelected($arrOption),
-						'label'    => $arrOption['label'],
+						'label'    => $arrOption['label'] ?? null
 					)
 				);
 			}
@@ -284,13 +287,8 @@ class FormSelectMenu extends Widget
 		$strOptions = '';
 		$blnHasGroups = false;
 
-		if ($this->multiple)
-		{
-			$this->strName .= '[]';
-		}
-
 		// Make sure there are no multiple options in single mode
-		elseif (\is_array($this->varValue))
+		if (!$this->multiple && \is_array($this->varValue))
 		{
 			$this->varValue = $this->varValue[0];
 		}
@@ -303,23 +301,23 @@ class FormSelectMenu extends Widget
 
 		foreach ($this->arrOptions as $arrOption)
 		{
-			if ($arrOption['group'])
+			if ($arrOption['group'] ?? null)
 			{
 				if ($blnHasGroups)
 				{
 					$strOptions .= '</optgroup>';
 				}
 
-				$strOptions .= sprintf('<optgroup label="%s">', StringUtil::specialchars($arrOption['label']));
+				$strOptions .= sprintf('<optgroup label="%s">', StringUtil::specialchars($arrOption['label'] ?? ''));
 				$blnHasGroups = true;
 				continue;
 			}
 
 			$strOptions .= sprintf(
 				'<option value="%s"%s>%s</option>',
-				$arrOption['value'],
+				$arrOption['value'] ?? null,
 				$this->isSelected($arrOption),
-				$arrOption['label']
+				$arrOption['label'] ?? null
 			);
 		}
 
@@ -330,7 +328,7 @@ class FormSelectMenu extends Widget
 
 		return sprintf(
 			'<select name="%s" id="ctrl_%s" class="%s"%s>%s</select>',
-			$this->strName,
+			$this->name,
 			$this->strId,
 			$this->class,
 			$this->getAttributes(),

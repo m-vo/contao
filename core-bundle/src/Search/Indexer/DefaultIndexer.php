@@ -15,24 +15,13 @@ namespace Contao\CoreBundle\Search\Indexer;
 use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\CoreBundle\Search\Document;
 use Contao\Search;
-use Doctrine\DBAL\Driver\Connection;
+use Doctrine\DBAL\Connection;
 
 class DefaultIndexer implements IndexerInterface
 {
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
-
-    /**
-     * @var Connection
-     */
-    private $connection;
-
-    /**
-     * @var bool
-     */
-    private $indexProtected;
+    private ContaoFramework $framework;
+    private Connection $connection;
+    private bool $indexProtected;
 
     /**
      * @internal Do not inherit from this class; decorate the "contao.search.indexer.default" service instead
@@ -54,8 +43,12 @@ class DefaultIndexer implements IndexerInterface
             $this->throwBecause('Cannot index empty response.');
         }
 
+        if (($canonical = $document->extractCanonicalUri()) && ((string) $canonical !== (string) $document->getUri())) {
+            $this->throwBecause(sprintf('Ignored because canonical URI "%s" does not match document URI.', $canonical));
+        }
+
         try {
-            $title = $document->getContentCrawler()->filterXPath('//head/title')->first()->text();
+            $title = $document->getContentCrawler()->filterXPath('//head/title')->first()->text(null, true);
         } catch (\Exception $e) {
             $title = 'undefined';
         }
@@ -108,6 +101,7 @@ class DefaultIndexer implements IndexerInterface
                 'pid' => $meta['pageId'],
                 'title' => $meta['title'],
                 'language' => $meta['language'],
+                'meta' => $document->extractJsonLdScripts(),
             ]);
         } catch (\Throwable $t) {
             $this->throwBecause('Could not add a search index entry: '.$t->getMessage(), false);
@@ -125,8 +119,9 @@ class DefaultIndexer implements IndexerInterface
 
     public function clear(): void
     {
-        $this->connection->exec('TRUNCATE TABLE tl_search');
-        $this->connection->exec('TRUNCATE TABLE tl_search_index');
+        $this->connection->executeStatement('TRUNCATE TABLE tl_search');
+        $this->connection->executeStatement('TRUNCATE TABLE tl_search_index');
+        $this->connection->executeStatement('TRUNCATE TABLE tl_search_term');
     }
 
     /**

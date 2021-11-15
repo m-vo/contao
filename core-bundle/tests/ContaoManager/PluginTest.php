@@ -27,7 +27,6 @@ use Scheb\TwoFactorBundle\SchebTwoFactorBundle;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\MonologBundle\MonologBundle;
 use Symfony\Bundle\SecurityBundle\SecurityBundle;
-use Symfony\Bundle\SwiftmailerBundle\SwiftmailerBundle;
 use Symfony\Bundle\TwigBundle\TwigBundle;
 use Symfony\Cmf\Bundle\RoutingBundle\CmfRoutingBundle;
 use Symfony\Component\Config\Loader\LoaderInterface;
@@ -84,7 +83,6 @@ class PluginTest extends TestCase
                 FrameworkBundle::class,
                 MonologBundle::class,
                 SecurityBundle::class,
-                SwiftmailerBundle::class,
                 TwigBundle::class,
                 CmfRoutingBundle::class,
             ],

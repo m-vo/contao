@@ -77,18 +77,18 @@ class BackendPage extends Backend
 		\define('CURRENT_ID', (Input::get('table') ? $objSession->get('CURRENT_ID') : Input::get('id')));
 
 		$this->loadDataContainer($strTable);
-		$strDriver = 'DC_' . $GLOBALS['TL_DCA'][$strTable]['config']['dataContainer'];
+		$strDriver = DataContainer::getDriverForTable($strTable);
 		$objDca = new $strDriver($strTable);
 		$objDca->field = $strField;
 
 		// Set the active record
 		if ($this->Database->tableExists($strTable))
 		{
-			/** @var Model $strModel */
 			$strModel = Model::getClassFromTable($strTable);
 
 			if (class_exists($strModel))
 			{
+				/** @var Model|null $objModel */
 				$objModel = $strModel::findByPk(Input::get('id'));
 
 				if ($objModel !== null)
@@ -108,7 +108,7 @@ class BackendPage extends Backend
 		$arrValues = array_filter(explode(',', Input::get('value')));
 
 		// Call the load_callback
-		if (\is_array($GLOBALS['TL_DCA'][$strTable]['fields'][$strField]['load_callback']))
+		if (\is_array($GLOBALS['TL_DCA'][$strTable]['fields'][$strField]['load_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA'][$strTable]['fields'][$strField]['load_callback'] as $callback)
 			{
@@ -125,7 +125,7 @@ class BackendPage extends Backend
 		}
 
 		/** @var PageSelector $strClass */
-		$strClass = $GLOBALS['BE_FFL']['pageSelector'];
+		$strClass = $GLOBALS['BE_FFL']['pageSelector'] ?? null;
 
 		/** @var PageSelector $objPageTree */
 		$objPageTree = new $strClass($strClass::getAttributesFromDca($GLOBALS['TL_DCA'][$strTable]['fields'][$strField], $strField, $arrValues, $strField, $strTable, $objDca));
@@ -139,11 +139,11 @@ class BackendPage extends Backend
 		$objTemplate->language = $GLOBALS['TL_LANGUAGE'];
 		$objTemplate->title = StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['pagepicker']);
 		$objTemplate->host = Backend::getDecodedHostname();
-		$objTemplate->charset = Config::get('characterSet');
+		$objTemplate->charset = System::getContainer()->getParameter('kernel.charset');
 		$objTemplate->addSearch = true;
 		$objTemplate->search = $GLOBALS['TL_LANG']['MSC']['search'];
 		$objTemplate->value = $objSessionBag->get('page_selector_search');
-		$objTemplate->breadcrumb = $GLOBALS['TL_DCA']['tl_page']['list']['sorting']['breadcrumb'];
+		$objTemplate->breadcrumb = $GLOBALS['TL_DCA']['tl_page']['list']['sorting']['breadcrumb'] ?? null;
 
 		if ($this->User->hasAccess('page', 'modules'))
 		{
@@ -154,7 +154,7 @@ class BackendPage extends Backend
 		if (Input::get('switch') && $this->User->hasAccess('files', 'modules'))
 		{
 			$objTemplate->switch = $GLOBALS['TL_LANG']['MSC']['filePicker'];
-			$objTemplate->switchHref = str_replace('contao/page?', 'contao/file?', ampersand(Environment::get('request')));
+			$objTemplate->switchHref = str_replace('contao/page?', 'contao/file?', StringUtil::ampersand(Environment::get('request')));
 		}
 
 		return $objTemplate->getResponse();

@@ -77,18 +77,18 @@ class BackendFile extends Backend
 		\define('CURRENT_ID', (Input::get('table') ? $objSession->get('CURRENT_ID') : Input::get('id')));
 
 		$this->loadDataContainer($strTable);
-		$strDriver = 'DC_' . $GLOBALS['TL_DCA'][$strTable]['config']['dataContainer'];
+		$strDriver = DataContainer::getDriverForTable($strTable);
 		$objDca = new $strDriver($strTable);
 		$objDca->field = $strField;
 
 		// Set the active record
 		if ($this->Database->tableExists($strTable))
 		{
-			/** @var Model $strModel */
 			$strModel = Model::getClassFromTable($strTable);
 
 			if (class_exists($strModel))
 			{
+				/** @var Model|null $objModel */
 				$objModel = $strModel::findByPk(Input::get('id'));
 
 				if ($objModel !== null)
@@ -118,7 +118,7 @@ class BackendFile extends Backend
 		}
 
 		// Call the load_callback
-		if (\is_array($GLOBALS['TL_DCA'][$strTable]['fields'][$strField]['load_callback']))
+		if (\is_array($GLOBALS['TL_DCA'][$strTable]['fields'][$strField]['load_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA'][$strTable]['fields'][$strField]['load_callback'] as $callback)
 			{
@@ -135,7 +135,7 @@ class BackendFile extends Backend
 		}
 
 		/** @var FileSelector $strClass */
-		$strClass = $GLOBALS['BE_FFL']['fileSelector'];
+		$strClass = $GLOBALS['BE_FFL']['fileSelector'] ?? null;
 
 		/** @var FileSelector $objFileTree */
 		$objFileTree = new $strClass($strClass::getAttributesFromDca($GLOBALS['TL_DCA'][$strTable]['fields'][$strField], $strField, $arrValues, $strField, $strTable, $objDca));
@@ -149,12 +149,12 @@ class BackendFile extends Backend
 		$objTemplate->language = $GLOBALS['TL_LANGUAGE'];
 		$objTemplate->title = StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['filepicker']);
 		$objTemplate->host = Backend::getDecodedHostname();
-		$objTemplate->charset = Config::get('characterSet');
+		$objTemplate->charset = System::getContainer()->getParameter('kernel.charset');
 		$objTemplate->addSearch = true;
 		$objTemplate->search = $GLOBALS['TL_LANG']['MSC']['search'];
 		$objTemplate->searchExclude = $GLOBALS['TL_LANG']['MSC']['searchExclude'];
 		$objTemplate->value = $objSessionBag->get('file_selector_search');
-		$objTemplate->breadcrumb = $GLOBALS['TL_DCA']['tl_files']['list']['sorting']['breadcrumb'];
+		$objTemplate->breadcrumb = $GLOBALS['TL_DCA']['tl_files']['list']['sorting']['breadcrumb'] ?? null;
 
 		if ($this->User->hasAccess('files', 'modules'))
 		{
@@ -165,7 +165,7 @@ class BackendFile extends Backend
 		if (Input::get('switch') && $this->User->hasAccess('page', 'modules'))
 		{
 			$objTemplate->switch = $GLOBALS['TL_LANG']['MSC']['pagePicker'];
-			$objTemplate->switchHref = str_replace('contao/file?', 'contao/page?', ampersand(Environment::get('request')));
+			$objTemplate->switchHref = str_replace('contao/file?', 'contao/page?', StringUtil::ampersand(Environment::get('request')));
 		}
 
 		return $objTemplate->getResponse();

@@ -97,6 +97,12 @@
         <source>Show the number of events of each month in the menu.</source>
         <target>Toon het aantal evenementen van elke maand in het menu.</target>
       </trans-unit>
+      <trans-unit id="tl_module.cal_featured.0">
+        <source>Featured events</source>
+      </trans-unit>
+      <trans-unit id="tl_module.cal_featured.1">
+        <source>Here you can choose how featured events are handled.</source>
+      </trans-unit>
       <trans-unit id="tl_module.cal_list">
         <source>Event list</source>
         <target>Evenementenlijst</target>
@@ -220,6 +226,15 @@
       <trans-unit id="tl_module.past_all">
         <source>All past events</source>
         <target>Alle afgelopen evenementen</target>
+      </trans-unit>
+      <trans-unit id="tl_module.events.all_items">
+        <source>Show all events</source>
+      </trans-unit>
+      <trans-unit id="tl_module.events.featured">
+        <source>Show featured events only</source>
+      </trans-unit>
+      <trans-unit id="tl_module.events.unfeatured">
+        <source>Skip featured events</source>
       </trans-unit>
     </body>
   </file>

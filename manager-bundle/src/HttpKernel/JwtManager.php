@@ -20,6 +20,7 @@ use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Webmozart\PathUtil\Path;
 
 /**
  * @internal
@@ -28,10 +29,7 @@ class JwtManager
 {
     public const COOKIE_NAME = 'contao_settings';
 
-    /**
-     * @var Configuration
-     */
-    private $config;
+    private Configuration $config;
 
     public function __construct(string $projectDir, Filesystem $filesystem = null, Configuration $config = null)
     {
@@ -41,7 +39,7 @@ class JwtManager
             $filesystem = new Filesystem();
         }
 
-        $secretFile = $projectDir.'/var/jwt_secret';
+        $secretFile = Path::join($projectDir, 'var/jwt_secret');
 
         if ($filesystem->exists($secretFile)) {
             $secret = file_get_contents($secretFile);
@@ -52,7 +50,7 @@ class JwtManager
             $filesystem->dumpFile($secretFile, $secret);
         }
 
-        $this->config = $config ?: Configuration::forSymmetricSigner(new Sha256(), InMemory::file($secretFile));
+        $this->config = $config ?: Configuration::forSymmetricSigner(new Sha256(), InMemory::plainText($secret));
         $this->config->setValidationConstraints(new SignedWith($this->config->signer(), $this->config->signingKey()));
     }
 

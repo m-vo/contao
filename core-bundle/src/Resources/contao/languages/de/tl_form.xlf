@@ -33,6 +33,14 @@
         <source>Send the submitted data to an e-mail address.</source>
         <target>Die Formulardaten an eine E-Mail-Adresse versenden.</target>
       </trans-unit>
+      <trans-unit id="tl_form.mailerTransport.0">
+        <source>Mailer transport</source>
+        <target>Mailer-Transport</target>
+      </trans-unit>
+      <trans-unit id="tl_form.mailerTransport.1">
+        <source>Here you can override the mailer transport used to send the form via e-mail.</source>
+        <target>Hier können Sie den Mailer-Transport überschreiben, der für den Versand des Formulars per E-Mail verwendet wird.</target>
+      </trans-unit>
       <trans-unit id="tl_form.recipient.0">
         <source>Recipient address</source>
         <target>Empfänger-Adresse</target>
@@ -80,6 +88,14 @@
       <trans-unit id="tl_form.csv.1">
         <source>The form data will be attached to the e-mail as a CSV file.</source>
         <target>Die Formulardaten werden der E-Mail als CSV-Datei angefügt.</target>
+      </trans-unit>
+      <trans-unit id="tl_form.csv_excel.0">
+        <source>CSV file (Microsoft Excel)</source>
+        <target>CSV-Datei (Microsoft Excel)</target>
+      </trans-unit>
+      <trans-unit id="tl_form.csv_excel.1">
+        <source>The form data will be attached to the e-mail as a CSV file readable by Microsoft Excel.</source>
+        <target>Die Formulardaten werden der E-Mail als CSV-Datei angefügt, die von Microsoft Excel gelesen werden kann.</target>
       </trans-unit>
       <trans-unit id="tl_form.skipEmpty.0">
         <source>Skip empty fields</source>
@@ -228,6 +244,10 @@
       <trans-unit id="tl_form.delete">
         <source>Delete form ID %s</source>
         <target>Formular ID %s löschen</target>
+      </trans-unit>
+      <trans-unit id="tl_form.targetTableMissingAllowlist">
+        <source>Define the available tables in the following DCA configuration: &lt;code&gt;%s&lt;/code&gt;.</source>
+        <target>Die verfügbaren Tabellen können in folgender DCA-Konfiguration festgelegt werden: &lt;code&gt;%s&lt;/code&gt;.</target>
       </trans-unit>
     </body>
   </file>

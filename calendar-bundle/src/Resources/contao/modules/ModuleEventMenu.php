@@ -10,14 +10,13 @@
 
 namespace Contao;
 
-use Patchwork\Utf8;
-
 /**
  * Front end module "event menu".
  *
  * @property bool   $cal_showQuantity
  * @property string $cal_order
  * @property string $cal_format
+ * @property string $cal_featured
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
@@ -41,7 +40,7 @@ class ModuleEventMenu extends ModuleCalendar
 		if ($request && System::getContainer()->get('contao.routing.scope_matcher')->isBackendRequest($request))
 		{
 			$objTemplate = new BackendTemplate('be_wildcard');
-			$objTemplate->wildcard = '### ' . Utf8::strtoupper($GLOBALS['TL_LANG']['FMD']['eventmenu'][0]) . ' ###';
+			$objTemplate->wildcard = '### ' . $GLOBALS['TL_LANG']['FMD']['eventmenu'][0] . ' ###';
 			$objTemplate->title = $this->headline;
 			$objTemplate->id = $this->id;
 			$objTemplate->link = $this->name;
@@ -86,14 +85,33 @@ class ModuleEventMenu extends ModuleCalendar
 	 */
 	protected function compileYearlyMenu()
 	{
+		// Handle featured events
+		$blnFeatured = null;
+
+		if ($this->cal_featured == 'featured')
+		{
+			$blnFeatured = true;
+		}
+		elseif ($this->cal_featured == 'unfeatured')
+		{
+			$blnFeatured = false;
+		}
+
 		$arrData = array();
-		$arrAllEvents = $this->getAllEvents($this->cal_calendar, 0, min(4294967295, PHP_INT_MAX)); // 1970-01-01 00:00:00 - 2106-02-07 07:28:15
+		$arrAllEvents = $this->getAllEvents($this->cal_calendar, 0, min(4294967295, PHP_INT_MAX), $blnFeatured); // 1970-01-01 00:00:00 - 2106-02-07 07:28:15
 
 		foreach ($arrAllEvents as $intDay=>$arrDay)
 		{
 			foreach ($arrDay as $arrEvents)
 			{
-				$arrData[substr($intDay, 0, 4)] += \count($arrEvents);
+				$year = substr($intDay, 0, 4);
+
+				if (!isset($arrData[$year]))
+				{
+					$arrData[$year] = 0;
+				}
+
+				$arrData[$year] += \count($arrEvents);
 			}
 		}
 
@@ -129,14 +147,34 @@ class ModuleEventMenu extends ModuleCalendar
 	 */
 	protected function compileMonthlyMenu()
 	{
+		// Handle featured events
+		$blnFeatured = null;
+
+		if ($this->cal_featured == 'featured')
+		{
+			$blnFeatured = true;
+		}
+		elseif ($this->cal_featured == 'unfeatured')
+		{
+			$blnFeatured = false;
+		}
+
 		$arrData = array();
-		$arrAllEvents = $this->getAllEvents($this->cal_calendar, 0, min(4294967295, PHP_INT_MAX)); // 1970-01-01 00:00:00 - 2106-02-07 07:28:15
+		$arrAllEvents = $this->getAllEvents($this->cal_calendar, 0, min(4294967295, PHP_INT_MAX), $blnFeatured); // 1970-01-01 00:00:00 - 2106-02-07 07:28:15
 
 		foreach ($arrAllEvents as $intDay=>$arrDay)
 		{
 			foreach ($arrDay as $arrEvents)
 			{
-				$arrData[substr($intDay, 0, 4)][substr($intDay, 4, 2)] += \count($arrEvents);
+				$year = substr($intDay, 0, 4);
+				$month = substr($intDay, 4, 2);
+
+				if (!isset($arrData[$year][$month]))
+				{
+					$arrData[$year][$month] = 0;
+				}
+
+				$arrData[$year][$month] += \count($arrEvents);
 			}
 		}
 

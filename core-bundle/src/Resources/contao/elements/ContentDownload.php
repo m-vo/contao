@@ -94,6 +94,7 @@ class ContentDownload extends ContentElement
 		}
 		else
 		{
+			/** @var PageModel $objPage */
 			global $objPage;
 
 			$arrMeta = Frontend::getMetaData($this->objFile->meta, $objPage->language);
@@ -136,6 +137,7 @@ class ContentDownload extends ContentElement
 		$this->Template->filesize = $this->getReadableSize($objFile->filesize);
 		$this->Template->icon = Image::getPath($objFile->icon);
 		$this->Template->mime = $objFile->mime;
+		$this->Template->meta = $arrMeta;
 		$this->Template->extension = $objFile->extension;
 		$this->Template->path = $objFile->dirname;
 	}

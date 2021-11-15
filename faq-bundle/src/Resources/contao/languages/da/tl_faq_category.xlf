@@ -117,10 +117,6 @@
         <source>Author and system administrator</source>
         <target>Forfatter og systemadministrator</target>
       </trans-unit>
-      <trans-unit id="tl_faq_category.deleteConfirm">
-        <source>Deleting category ID %s will also delete all its FAQs! Continue?</source>
-        <target>Sletning af en kategori medfører sletning af alle dets FAQ! Er du sikker på du vil slette kategori ID %s?</target>
-      </trans-unit>
       <trans-unit id="tl_faq_category.new.0">
         <source>New</source>
         <target>Ny</target>

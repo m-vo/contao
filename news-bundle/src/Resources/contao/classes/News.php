@@ -10,6 +10,8 @@
 
 namespace Contao;
 
+use Contao\CoreBundle\String\HtmlDecoder;
+
 /**
  * Provide methods regarding news archives.
  *
@@ -22,6 +24,12 @@ class News extends Frontend
 	 * @var array
 	 */
 	private static $arrUrlCache = array();
+
+	/**
+	 * Page cache array
+	 * @var array
+	 */
+	private static $arrPageCache = array();
 
 	/**
 	 * Update a particular RSS feed
@@ -61,7 +69,6 @@ class News extends Frontend
 	{
 		$this->import(Automator::class, 'Automator');
 		$this->Automator->purgeXmlFiles();
-		$this->Automator->generateSitemap();
 
 		$objFeed = NewsFeedModel::findAll();
 
@@ -146,6 +153,8 @@ class News extends Frontend
 				$request->attributes->set('_scope', 'frontend');
 			}
 
+			$origObjPage = $GLOBALS['objPage'] ?? null;
+
 			while ($objArticle->next())
 			{
 				$jumpTo = $objArticle->getRelated('pid')->jumpTo;
@@ -156,26 +165,21 @@ class News extends Frontend
 					continue;
 				}
 
+				$objParent = $this->getPageWithDetails($jumpTo);
+
+				// A jumpTo page is set but does no longer exist (see #5781)
+				if ($objParent === null)
+				{
+					continue;
+				}
+
+				// Override the global page object (#2946)
+				$GLOBALS['objPage'] = $objParent;
+
 				// Get the jumpTo URL
 				if (!isset($arrUrls[$jumpTo]))
 				{
-					$objParent = PageModel::findWithDetails($jumpTo);
-
-					// A jumpTo page is set but does no longer exist (see #5781)
-					if ($objParent === null)
-					{
-						$arrUrls[$jumpTo] = false;
-					}
-					else
-					{
-						$arrUrls[$jumpTo] = $objParent->getAbsoluteUrl(Config::get('useAutoItem') ? '/%s' : '/items/%s');
-					}
-				}
-
-				// Skip the event if it requires a jumpTo URL but there is none
-				if ($objArticle->source == 'default' && $arrUrls[$jumpTo] === false)
-				{
-					continue;
+					$arrUrls[$jumpTo] = $objParent->getAbsoluteUrl(Config::get('useAutoItem') ? '/%s' : '/items/%s');
 				}
 
 				$strUrl = $arrUrls[$jumpTo];
@@ -256,6 +260,8 @@ class News extends Frontend
 			{
 				$request->attributes->set('_scope', $origScope);
 			}
+
+			$GLOBALS['objPage'] = $origObjPage;
 		}
 
 		$webDir = StringUtil::stripRootDir(System::getContainer()->getParameter('contao.web_dir'));
@@ -350,6 +356,11 @@ class News extends Frontend
 				{
 					while ($objArticle->next())
 					{
+						if ($blnIsSitemap && $objArticle->robots === 'noindex,nofollow')
+						{
+							continue;
+						}
+
 						$arrPages[] = $this->getLink($objArticle, $strUrl);
 					}
 				}
@@ -391,7 +402,7 @@ class News extends Frontend
 				}
 				else
 				{
-					self::$arrUrlCache[$strCacheKey] = ampersand($objItem->url);
+					self::$arrUrlCache[$strCacheKey] = StringUtil::ampersand($objItem->url);
 				}
 				break;
 
@@ -400,7 +411,7 @@ class News extends Frontend
 				if (($objTarget = $objItem->getRelated('jumpTo')) instanceof PageModel)
 				{
 					/** @var PageModel $objTarget */
-					self::$arrUrlCache[$strCacheKey] = ampersand($blnAbsolute ? $objTarget->getAbsoluteUrl() : $objTarget->getFrontendUrl());
+					self::$arrUrlCache[$strCacheKey] = StringUtil::ampersand($blnAbsolute ? $objTarget->getAbsoluteUrl() : $objTarget->getFrontendUrl());
 				}
 				break;
 
@@ -411,7 +422,7 @@ class News extends Frontend
 					$params = '/articles/' . ($objArticle->alias ?: $objArticle->id);
 
 					/** @var PageModel $objPid */
-					self::$arrUrlCache[$strCacheKey] = ampersand($blnAbsolute ? $objPid->getAbsoluteUrl($params) : $objPid->getFrontendUrl($params));
+					self::$arrUrlCache[$strCacheKey] = StringUtil::ampersand($blnAbsolute ? $objPid->getAbsoluteUrl($params) : $objPid->getFrontendUrl($params));
 				}
 				break;
 		}
@@ -423,13 +434,13 @@ class News extends Frontend
 
 			if (!$objPage instanceof PageModel)
 			{
-				self::$arrUrlCache[$strCacheKey] = ampersand(Environment::get('request'));
+				self::$arrUrlCache[$strCacheKey] = StringUtil::ampersand(Environment::get('request'));
 			}
 			else
 			{
 				$params = (Config::get('useAutoItem') ? '/' : '/items/') . ($objItem->alias ?: $objItem->id);
 
-				self::$arrUrlCache[$strCacheKey] = ampersand($blnAbsolute ? $objPage->getAbsoluteUrl($params) : $objPage->getFrontendUrl($params));
+				self::$arrUrlCache[$strCacheKey] = StringUtil::ampersand($blnAbsolute ? $objPage->getAbsoluteUrl($params) : $objPage->getFrontendUrl($params));
 			}
 
 			// Add the current archive parameter (news archive)
@@ -440,6 +451,42 @@ class News extends Frontend
 		}
 
 		return self::$arrUrlCache[$strCacheKey];
+	}
+
+	/**
+	 * Return the schema.org data from a news article
+	 *
+	 * @param NewsModel $objArticle
+	 *
+	 * @return array
+	 */
+	public static function getSchemaOrgData(NewsModel $objArticle): array
+	{
+		$htmlDecoder = System::getContainer()->get(HtmlDecoder::class);
+
+		$jsonLd = array(
+			'@type' => 'NewsArticle',
+			'identifier' => '#/schema/news/' . $objArticle->id,
+			'url' => self::generateNewsUrl($objArticle),
+			'headline' => $htmlDecoder->inputEncodedToPlainText($objArticle->headline),
+			'datePublished' => date('Y-m-d\TH:i:sP', $objArticle->date),
+		);
+
+		if ($objArticle->teaser)
+		{
+			$jsonLd['description'] = $htmlDecoder->htmlToPlainText($objArticle->teaser);
+		}
+
+		/** @var UserModel $objAuthor */
+		if (($objAuthor = $objArticle->getRelated('author')) instanceof UserModel)
+		{
+			$jsonLd['author'] = array(
+				'@type' => 'Person',
+				'name' => $objAuthor->name,
+			);
+		}
+
+		return $jsonLd;
 	}
 
 	/**
@@ -473,7 +520,7 @@ class News extends Frontend
 				if (($objArticle = ArticleModel::findByPk($objItem->articleId)) instanceof ArticleModel && ($objPid = $objArticle->getRelated('pid')) instanceof PageModel)
 				{
 					/** @var PageModel $objPid */
-					return ampersand($objPid->getAbsoluteUrl('/articles/' . ($objArticle->alias ?: $objArticle->id)));
+					return StringUtil::ampersand($objPid->getAbsoluteUrl('/articles/' . ($objArticle->alias ?: $objArticle->id)));
 				}
 				break;
 		}
@@ -507,6 +554,22 @@ class News extends Frontend
 		}
 
 		return $arrFeeds;
+	}
+
+	/**
+	 * Return the page object with loaded details for the given page ID
+	 *
+	 * @param  integer        $intPageId
+	 * @return PageModel|null
+	 */
+	private function getPageWithDetails($intPageId)
+	{
+		if (!isset(self::$arrPageCache[$intPageId]))
+		{
+			self::$arrPageCache[$intPageId] = PageModel::findWithDetails($intPageId);
+		}
+
+		return self::$arrPageCache[$intPageId];
 	}
 }
 

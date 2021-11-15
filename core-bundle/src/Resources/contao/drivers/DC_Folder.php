@@ -10,6 +10,7 @@
 
 namespace Contao;
 
+use Contao\CoreBundle\EventListener\BackendRebuildCacheMessageListener;
 use Contao\CoreBundle\Exception\AccessDeniedException;
 use Contao\CoreBundle\Exception\InternalServerErrorException;
 use Contao\CoreBundle\Exception\ResponseException;
@@ -19,15 +20,19 @@ use Contao\Image\ResizeConfiguration;
 use Doctrine\DBAL\Exception\DriverException;
 use Imagine\Exception\RuntimeException;
 use Imagine\Gd\Imagine;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\Attribute\AttributeBagInterface;
 use Symfony\Component\HttpFoundation\Session\Session;
+use Webmozart\PathUtil\Path;
 
 /**
  * Provide methods to modify the file system.
  *
  * @property string  $path
  * @property string  $extension
+ * @property string  $uploadPath
+ * @property array   $editableFileTypes
  * @property boolean $createNewVersion
  * @property boolean $isDbAssisted
  *
@@ -54,6 +59,18 @@ class DC_Folder extends DataContainer implements \listable, \editable
 	protected $strRootDir;
 
 	/**
+	 * Upload path
+	 * @var string
+	 */
+	protected $strUploadPath;
+
+	/**
+	 * Initial ID of the record
+	 * @var string
+	 */
+	protected $initialId;
+
+	/**
 	 * Current filemounts
 	 * @var array
 	 */
@@ -64,6 +81,12 @@ class DC_Folder extends DataContainer implements \listable, \editable
 	 * @var array
 	 */
 	protected $arrValidFileTypes = array();
+
+	/**
+	 * Editable file types
+	 * @var array
+	 */
+	protected $arrEditableFileTypes = array();
 
 	/**
 	 * Messages
@@ -182,17 +205,17 @@ class DC_Folder extends DataContainer implements \listable, \editable
 		}
 
 		$this->strTable = $strTable;
-		$this->blnIsDbAssisted = $GLOBALS['TL_DCA'][$strTable]['config']['databaseAssisted'];
+		$this->blnIsDbAssisted = $GLOBALS['TL_DCA'][$strTable]['config']['databaseAssisted'] ?? false;
 		$this->strRootDir = System::getContainer()->getParameter('kernel.project_dir');
 
 		// Check for valid file types
-		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['validFileTypes'])
+		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['validFileTypes'] ?? null)
 		{
 			$this->arrValidFileTypes = StringUtil::trimsplit(',', strtolower($GLOBALS['TL_DCA'][$this->strTable]['config']['validFileTypes']));
 		}
 
 		// Call onload_callback (e.g. to check permissions)
-		if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onload_callback']))
+		if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onload_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onload_callback'] as $callback)
 			{
@@ -208,8 +231,22 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			}
 		}
 
+		if (!isset($GLOBALS['TL_DCA'][$this->strTable]['config']['editableFileTypes']))
+		{
+			trigger_deprecation('contao/core-bundle', '4.12', 'Not specifying config.editableFileTypes for DC_Folder is deprecated and will no longer work in Contao 5.0.');
+		}
+
+		$this->arrEditableFileTypes = StringUtil::trimsplit(',', strtolower($GLOBALS['TL_DCA'][$this->strTable]['config']['editableFileTypes'] ?? $GLOBALS['TL_CONFIG']['editableFiles'] ?? System::getContainer()->getParameter('contao.editable_files')));
+
+		if (!isset($GLOBALS['TL_DCA'][$this->strTable]['config']['uploadPath']))
+		{
+			trigger_deprecation('contao/core-bundle', '4.12', 'Not specifying config.uploadPath for DC_Folder is deprecated and will no longer work in Contao 5.0.');
+		}
+
+		$this->strUploadPath = $GLOBALS['TL_DCA'][$this->strTable]['config']['uploadPath'] ?? $GLOBALS['TL_CONFIG']['uploadPath'] ?? System::getContainer()->getParameter('contao.upload_path');
+
 		// Get all filemounts (root folders)
-		if (\is_array($GLOBALS['TL_DCA'][$strTable]['list']['sorting']['root']))
+		if (\is_array($GLOBALS['TL_DCA'][$strTable]['list']['sorting']['root'] ?? null))
 		{
 			$this->arrFilemounts = $this->eliminateNestedPaths($GLOBALS['TL_DCA'][$strTable]['list']['sorting']['root']);
 		}
@@ -232,8 +269,14 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			case 'extension':
 				return $this->strExtension;
 
+			case 'uploadPath':
+				return $this->strUploadPath;
+
 			case 'isDbAssisted':
 				return $this->blnIsDbAssisted;
+
+			case 'editableFileTypes':
+				return $this->arrEditableFileTypes;
 		}
 
 		return parent::__get($strKey);
@@ -284,7 +327,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			// Expand tree
 			if (empty($session['filetree']) || !\is_array($session['filetree']) || current($session['filetree']) != 1)
 			{
-				$session['filetree'] = $this->getMD5Folders(Config::get('uploadPath'));
+				$session['filetree'] = $this->getMD5Folders($this->strUploadPath);
 			}
 			// Collapse tree
 			else
@@ -305,12 +348,16 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			$blnClipboard = true;
 			$arrClipboard = $arrClipboard[$this->strTable];
 		}
+		else
+		{
+			$arrClipboard = null;
+		}
 
 		$this->import(Files::class, 'Files');
 		$this->import(BackendUser::class, 'User');
 
 		$arrFound = array();
-		$for = $session['search'][$this->strTable]['value'];
+		$for = $session['search'][$this->strTable]['value'] ?? null;
 
 		// Limit the results by modifying $this->arrFilemounts
 		if ((string) $for !== '')
@@ -334,7 +381,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 
 			if (isset($GLOBALS['TL_DCA'][$this->strTable]['fields']['name']['foreignKey']))
 			{
-				list($t, $f) = explode('.', $GLOBALS['TL_DCA'][$this->strTable]['fields']['name']['foreignKey']);
+				list($t, $f) = explode('.', $GLOBALS['TL_DCA'][$this->strTable]['fields']['name']['foreignKey'], 2);
 
 				$objRoot = $this->Database->prepare("SELECT path, type, extension FROM " . $this->strTable . " WHERE (" . $strPattern . " OR " . sprintf($strPattern, "(SELECT " . Database::quoteIdentifier($f) . " FROM $t WHERE $t.id=" . $this->strTable . ".name)") . ")")
 										  ->execute($for, $for);
@@ -354,7 +401,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 				$arrRoot = array();
 
 				// Respect existing limitations (root IDs)
-				if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['root']))
+				if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['root'] ?? null))
 				{
 					while ($objRoot->next())
 					{
@@ -395,9 +442,9 @@ class DC_Folder extends DataContainer implements \listable, \editable
 		{
 			// Show an empty tree if there are no search results
 		}
-		elseif (empty($this->arrFilemounts) && !\is_array($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['root']) && $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['root'] !== false)
+		elseif (empty($this->arrFilemounts) && !\is_array($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['root'] ?? null) && ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['root'] ?? null) !== false)
 		{
-			$return .= $this->generateTree($this->strRootDir . '/' . Config::get('uploadPath'), 0, false, true, ($blnClipboard ? $arrClipboard : false), $arrFound);
+			$return .= $this->generateTree($this->strRootDir . '/' . $this->strUploadPath, 0, false, true, ($blnClipboard ? $arrClipboard : false), $arrFound);
 		}
 		else
 		{
@@ -445,13 +492,13 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			$label = $GLOBALS['TL_LANG']['MOD']['files'][0];
 		}
 
-		$icon = $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['icon'] ?: 'filemounts.svg';
+		$icon = !empty($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['icon']) ? $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['icon'] : 'filemounts.svg';
 		$label = Image::getHtml($icon) . ' <label>' . $label . '</label>';
 
 		// Build the tree
 		$return = $this->panel() . Message::generate() . '
 <div id="tl_buttons">' . ((Input::get('act') == 'select') ? '
-<a href="' . $this->getReferer(true) . '" class="header_back" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']) . '" accesskey="b" onclick="Backend.getScrollOffset()">' . $GLOBALS['TL_LANG']['MSC']['backBT'] . '</a> ' : '') . ((Input::get('act') != 'select' && !$blnClipboard && !$GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] && !$GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable']) ? '
+<a href="' . $this->getReferer(true) . '" class="header_back" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']) . '" accesskey="b" onclick="Backend.getScrollOffset()">' . $GLOBALS['TL_LANG']['MSC']['backBT'] . '</a> ' : '') . ((Input::get('act') != 'select' && !$blnClipboard && !($GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] ?? null) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable'] ?? null)) ? '
 <a href="' . $this->addToUrl($hrfNew) . '" class="' . $clsNew . '" title="' . StringUtil::specialchars($ttlNew) . '" accesskey="n" onclick="Backend.getScrollOffset()">' . $lblNew . '</a>
 <a href="' . $this->addToUrl('&amp;act=paste&amp;mode=move') . '" class="header_new" title="' . StringUtil::specialchars($GLOBALS['TL_LANG'][$this->strTable]['move'][1]) . '" onclick="Backend.getScrollOffset()">' . $GLOBALS['TL_LANG'][$this->strTable]['move'][0] . '</a>  ' : '') . ($blnClipboard ? '
 <a href="' . $this->addToUrl('clipboard=1') . '" class="header_clipboard" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['clearClipboard']) . '" accesskey="x">' . $GLOBALS['TL_LANG']['MSC']['clearClipboard'] . '</a> ' : $this->generateGlobalButtons()) . '
@@ -468,7 +515,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 <label for="tl_select_trigger" class="tl_select_label">' . $GLOBALS['TL_LANG']['MSC']['selectAll'] . '</label> <input type="checkbox" id="tl_select_trigger" onclick="Backend.toggleCheckboxes(this)" class="tl_tree_checkbox">
 </div>' : '') . '
 <ul class="tl_listing tl_file_manager' . ($this->strPickerFieldType ? ' picker unselectable' : '') . '">
-  <li class="tl_folder_top cf"><div class="tl_left">' . $label . '</div> <div class="tl_right">' . (($blnClipboard && empty($this->arrFilemounts) && !\is_array($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['root']) && $GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['root'] !== false) ? '<a href="' . $this->addToUrl('&amp;act=' . $arrClipboard['mode'] . '&amp;mode=2&amp;pid=' . Config::get('uploadPath') . (!\is_array($arrClipboard['id']) ? '&amp;id=' . $arrClipboard['id'] : '')) . '" title="' . StringUtil::specialchars($labelPasteInto[0]) . '" onclick="Backend.getScrollOffset()">' . $imagePasteInto . '</a>' : '&nbsp;') . '</div></li>' . $return . '
+  <li class="tl_folder_top cf"><div class="tl_left">' . $label . '</div> <div class="tl_right">' . (($blnClipboard && empty($this->arrFilemounts) && !\is_array($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['root'] ?? null) && ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['root'] ?? null) !== false) ? '<a href="' . $this->addToUrl('&amp;act=' . $arrClipboard['mode'] . '&amp;mode=2&amp;pid=' . $this->strUploadPath . (!\is_array($arrClipboard['id'] ?? null) ? '&amp;id=' . $arrClipboard['id'] : '')) . '" title="' . StringUtil::specialchars($labelPasteInto[0]) . '" onclick="Backend.getScrollOffset()">' . $imagePasteInto . '</a>' : '&nbsp;') . '</div></li>' . $return . '
 </ul>' . ($this->strPickerFieldType == 'radio' ? '
 <div class="tl_radio_reset">
 <label for="tl_radio_reset" class="tl_radio_label">' . $GLOBALS['TL_LANG']['MSC']['resetSelected'] . '</label> <input type="radio" name="picker" id="tl_radio_reset" value="" class="tl_tree_radio">
@@ -481,28 +528,28 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			// Submit buttons
 			$arrButtons = array();
 
-			if (!$GLOBALS['TL_DCA'][$this->strTable]['config']['notEditable'])
+			if (!($GLOBALS['TL_DCA'][$this->strTable]['config']['notEditable'] ?? null))
 			{
 				$arrButtons['edit'] = '<button type="submit" name="edit" id="edit" class="tl_submit" accesskey="s">' . $GLOBALS['TL_LANG']['MSC']['editSelected'] . '</button>';
 			}
 
-			if (!$GLOBALS['TL_DCA'][$this->strTable]['config']['notDeletable'])
+			if (!($GLOBALS['TL_DCA'][$this->strTable]['config']['notDeletable'] ?? null))
 			{
 				$arrButtons['delete'] = '<button type="submit" name="delete" id="delete" class="tl_submit" accesskey="d" onclick="return confirm(\'' . $GLOBALS['TL_LANG']['MSC']['delAllConfirmFile'] . '\')">' . $GLOBALS['TL_LANG']['MSC']['deleteSelected'] . '</button>';
 			}
 
-			if (!$GLOBALS['TL_DCA'][$this->strTable]['config']['notSortable'])
+			if (!($GLOBALS['TL_DCA'][$this->strTable]['config']['notSortable'] ?? null))
 			{
 				$arrButtons['cut'] = '<button type="submit" name="cut" id="cut" class="tl_submit" accesskey="x">' . $GLOBALS['TL_LANG']['MSC']['moveSelected'] . '</button>';
 			}
 
-			if (!$GLOBALS['TL_DCA'][$this->strTable]['config']['notCopyable'])
+			if (!($GLOBALS['TL_DCA'][$this->strTable]['config']['notCopyable'] ?? null))
 			{
 				$arrButtons['copy'] = '<button type="submit" name="copy" id="copy" class="tl_submit" accesskey="c">' . $GLOBALS['TL_LANG']['MSC']['copySelected'] . '</button>';
 			}
 
 			// Call the buttons_callback (see #4691)
-			if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['select']['buttons_callback']))
+			if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['select']['buttons_callback'] ?? null))
 			{
 				foreach ($GLOBALS['TL_DCA'][$this->strTable]['select']['buttons_callback'] as $callback)
 				{
@@ -546,7 +593,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 </form>';
 		}
 
-		if (!$GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] && !$GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable'] && Input::get('act') != 'select')
+		if (!($GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] ?? null) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable'] ?? null) && Input::get('act') != 'select')
 		{
 			$GLOBALS['TL_CSS'][] = 'assets/dropzone/css/dropzone.min.css';
 			$GLOBALS['TL_JAVASCRIPT'][] = 'assets/dropzone/js/dropzone.min.js';
@@ -557,7 +604,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			$return .= '<script>'
 				. 'Dropzone.autoDiscover = false;'
 				. 'Backend.enableFileTreeUpload("tl_listing", ' . json_encode(array(
-					'url' => html_entity_decode($this->addToUrl('act=move&mode=2&pid=' . urlencode($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['root'][0] ?? Config::get('uploadPath')))),
+					'url' => html_entity_decode($this->addToUrl('act=move&mode=2&pid=' . urlencode($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['root'][0] ?? $this->strUploadPath))),
 					'paramName' => 'files',
 					'maxFilesize' => $intMaxSize,
 					'acceptedFiles' => $strAccepted,
@@ -571,7 +618,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 
 		$return .= '<script>'
 			. 'Backend.enableFileTreeDragAndDrop($("tl_listing").getChildren(".tl_file_manager")[0], ' . json_encode(array(
-				'url' => html_entity_decode($this->addToUrl('act=cut&mode=2&pid=' . urlencode($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['root'][0] ?? Config::get('uploadPath')))),
+				'url' => html_entity_decode($this->addToUrl('act=cut&mode=2&pid=' . urlencode($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['root'][0] ?? $this->strUploadPath))),
 			)) . ')</script>'
 		;
 
@@ -596,7 +643,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 	 */
 	public function create()
 	{
-		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable'])
+		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable'] ?? null)
 		{
 			throw new InternalServerErrorException('Table "' . $this->strTable . '" is not creatable.');
 		}
@@ -631,7 +678,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 	 */
 	public function cut($source=null)
 	{
-		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notSortable'])
+		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notSortable'] ?? null)
 		{
 			throw new InternalServerErrorException('Table "' . $this->strTable . '" is not sortable.');
 		}
@@ -705,7 +752,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			}
 
 			// Call the oncut_callback
-			if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['oncut_callback']))
+			if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['oncut_callback'] ?? null))
 			{
 				foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['oncut_callback'] as $callback)
 				{
@@ -739,7 +786,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 	 */
 	public function cutAll()
 	{
-		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notSortable'])
+		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notSortable'] ?? null)
 		{
 			throw new InternalServerErrorException('Table "' . $this->strTable . '" is not sortable.');
 		}
@@ -777,7 +824,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 	 */
 	public function copy($source=null, $destination=null)
 	{
-		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notCopyable'])
+		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notCopyable'] ?? null)
 		{
 			throw new InternalServerErrorException('Table "' . $this->strTable . '" is not copyable.');
 		}
@@ -874,7 +921,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 		}
 
 		// Call the oncopy_callback
-		if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['oncopy_callback']))
+		if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['oncopy_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['oncopy_callback'] as $callback)
 			{
@@ -913,7 +960,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 	 */
 	public function copyAll()
 	{
-		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notCopyable'])
+		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notCopyable'] ?? null)
 		{
 			throw new InternalServerErrorException('Table "' . $this->strTable . '" is not copyable.');
 		}
@@ -950,7 +997,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 	 */
 	public function delete($source=null)
 	{
-		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notDeletable'])
+		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notDeletable'] ?? null)
 		{
 			throw new InternalServerErrorException('Table "' . $this->strTable . '" is not deletable.');
 		}
@@ -971,7 +1018,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 		}
 
 		// Call the ondelete_callback
-		if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['ondelete_callback']))
+		if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['ondelete_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['ondelete_callback'] as $callback)
 			{
@@ -993,6 +1040,8 @@ class DC_Folder extends DataContainer implements \listable, \editable
 		if (is_dir($this->strRootDir . '/' . $source))
 		{
 			$this->Files->rrdir($source);
+
+			$this->purgeCache($source);
 
 			$strWebDir = StringUtil::stripRootDir(System::getContainer()->getParameter('contao.web_dir'));
 
@@ -1030,7 +1079,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 	 */
 	public function deleteAll()
 	{
-		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notDeletable'])
+		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notDeletable'] ?? null)
 		{
 			throw new InternalServerErrorException('Table "' . $this->strTable . '" is not deletable.');
 		}
@@ -1039,7 +1088,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 		$objSession = System::getContainer()->get('session');
 
 		$session = $objSession->all();
-		$ids = $session['CURRENT']['IDS'];
+		$ids = $session['CURRENT']['IDS'] ?? array();
 
 		if (!empty($ids) && \is_array($ids))
 		{
@@ -1082,7 +1131,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			throw new AccessDeniedException('Folder "' . $strFolder . '" is not mounted or is not a directory.');
 		}
 
-		if (!preg_match('/^' . preg_quote(Config::get('uploadPath'), '/') . '/i', $strFolder))
+		if (!preg_match('/^' . preg_quote($this->strUploadPath, '/') . '/i', $strFolder))
 		{
 			throw new AccessDeniedException('Parent folder "' . $strFolder . '" is not within the files directory.');
 		}
@@ -1209,7 +1258,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 		$arrButtons['uploadNback'] = '<button type="submit" name="uploadNback" class="tl_submit" accesskey="c">' . $GLOBALS['TL_LANG'][$this->strTable]['uploadNback'] . '</button>';
 
 		// Call the buttons_callback (see #4691)
-		if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback']))
+		if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback'] as $callback)
 			{
@@ -1301,35 +1350,34 @@ class DC_Folder extends DataContainer implements \listable, \editable
 				}
 
 				$this->objActiveRecord = $objModel;
-			}
+				$this->blnCreateNewVersion = false;
 
-			$this->blnCreateNewVersion = false;
+				/** @var FilesModel $objModel */
+				$objVersions = new Versions($this->strTable, $objModel->id);
 
-			/** @var FilesModel $objModel */
-			$objVersions = new Versions($this->strTable, $objModel->id);
-
-			if (!$GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'])
-			{
-				// Compare versions
-				if (Input::get('versions'))
+				if (!($GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'] ?? null))
 				{
-					$objVersions->compare();
+					// Compare versions
+					if (Input::get('versions'))
+					{
+						$objVersions->compare();
+					}
+
+					// Restore a version
+					if (Input::post('FORM_SUBMIT') == 'tl_version' && Input::post('version'))
+					{
+						$objVersions->restore(Input::post('version'));
+						$this->reload();
+					}
 				}
 
-				// Restore a version
-				if (Input::post('FORM_SUBMIT') == 'tl_version' && Input::post('version'))
-				{
-					$objVersions->restore(Input::post('version'));
-					$this->reload();
-				}
+				$objVersions->initialize();
 			}
-
-			$objVersions->initialize();
 		}
 		else
 		{
 			// Unset the database fields
-			$GLOBALS['TL_DCA'][$this->strTable]['fields'] = array_intersect_key($GLOBALS['TL_DCA'][$this->strTable]['fields'], array('name' => true, 'protected' => true, 'syncExclude' => true));
+			$GLOBALS['TL_DCA'][$this->strTable]['fields'] = array_intersect_key($GLOBALS['TL_DCA'][$this->strTable]['fields'] ?? array(), array('name' => true, 'protected' => true, 'syncExclude' => true));
 		}
 
 		// Build an array from boxes and rows (do not show excluded fields)
@@ -1345,7 +1393,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 
 				foreach ($boxes[$k] as $kk=>$vv)
 				{
-					if (!isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]) || $GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]['exclude'])
+					if (!isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]) || ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]['exclude'] ?? null))
 					{
 						unset($boxes[$k][$kk]);
 					}
@@ -1399,7 +1447,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 					}
 
 					// Call load_callback
-					if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback']))
+					if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback'] ?? null))
 					{
 						foreach ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback'] as $callback)
 						{
@@ -1428,7 +1476,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 		}
 
 		// Versions overview
-		if ($objVersions && $this->blnIsDbAssisted && $GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'] && !$GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'] && Dbafs::shouldBeSynchronized($this->intId))
+		if ($objVersions && $this->blnIsDbAssisted && ($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'] ?? null) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'] ?? null) && Dbafs::shouldBeSynchronized($this->intId))
 		{
 			$version = $objVersions->renderDropdown();
 		}
@@ -1447,7 +1495,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 		}
 
 		// Call the buttons_callback (see #4691)
-		if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback']))
+		if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback'] as $callback)
 			{
@@ -1512,7 +1560,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 		if (!$this->noReload && Input::post('FORM_SUBMIT') == $this->strTable)
 		{
 			// Trigger the onsubmit_callback
-			if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback']))
+			if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback'] ?? null))
 			{
 				foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback'] as $callback)
 				{
@@ -1541,9 +1589,9 @@ class DC_Folder extends DataContainer implements \listable, \editable
 				$objVersions->create();
 
 				// Call the onversion_callback
-				if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback']))
+				if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'] ?? null))
 				{
-					@trigger_error('Using the "onversion_callback" has been deprecated and will no longer work in Contao 5.0. Use the "oncreate_version_callback" instead.', E_USER_DEPRECATED);
+					trigger_deprecation('contao/core-bundle', '4.0', 'Using the "onversion_callback" has been deprecated and will no longer work in Contao 5.0. Use the "oncreate_version_callback" instead.');
 
 					foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'] as $callback)
 					{
@@ -1603,7 +1651,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 	{
 		$return = '';
 
-		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notEditable'])
+		if ($GLOBALS['TL_DCA'][$this->strTable]['config']['notEditable'] ?? null)
 		{
 			throw new InternalServerErrorException('Table "' . $this->strTable . '" is not editable.');
 		}
@@ -1613,7 +1661,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 
 		// Get current IDs from session
 		$session = $objSession->all();
-		$ids = $session['CURRENT']['IDS'];
+		$ids = $session['CURRENT']['IDS'] ?? array();
 
 		// Save field selection in session
 		if (Input::post('FORM_SUBMIT') == $this->strTable . '_all' && Input::get('fields'))
@@ -1622,7 +1670,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			$objSession->replace($session);
 		}
 
-		$fields = $session['CURRENT'][$this->strTable];
+		$fields = $session['CURRENT'][$this->strTable] ?? array();
 
 		// Add fields
 		if (!empty($fields) && \is_array($fields) && Input::get('fields'))
@@ -1633,6 +1681,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			foreach ($ids as $id)
 			{
 				$this->intId = $id;
+				$this->initialId = $id;
 				$this->strPalette = StringUtil::trimsplit('[;,]', $this->getPalette());
 
 				$objModel = null;
@@ -1671,7 +1720,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 				foreach ($this->strPalette as $v)
 				{
 					// Check whether field is excluded
-					if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['exclude'])
+					if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['exclude'] ?? null)
 					{
 						continue;
 					}
@@ -1706,7 +1755,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 					}
 
 					// Call load_callback
-					if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback']))
+					if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback'] ?? null))
 					{
 						foreach ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['load_callback'] as $callback)
 						{
@@ -1741,7 +1790,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 				if (!$this->noReload && Input::post('FORM_SUBMIT') == $this->strTable)
 				{
 					// Call onsubmit_callback
-					if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback']))
+					if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback'] ?? null))
 					{
 						foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onsubmit_callback'] as $callback)
 						{
@@ -1770,9 +1819,9 @@ class DC_Folder extends DataContainer implements \listable, \editable
 						$objVersions->create();
 
 						// Call the onversion_callback
-						if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback']))
+						if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'] ?? null))
 						{
-							@trigger_error('Using the "onversion_callback" has been deprecated and will no longer work in Contao 5.0. Use the "oncreate_version_callback" instead.', E_USER_DEPRECATED);
+							trigger_deprecation('contao/core-bundle', '4.0', 'Using the "onversion_callback" has been deprecated and will no longer work in Contao 5.0. Use the "oncreate_version_callback" instead.');
 
 							foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onversion_callback'] as $callback)
 							{
@@ -1797,7 +1846,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			$arrButtons['saveNclose'] = '<button type="submit" name="saveNclose" id="saveNclose" class="tl_submit" accesskey="c">' . $GLOBALS['TL_LANG']['MSC']['saveNclose'] . '</button>';
 
 			// Call the buttons_callback (see #4691)
-			if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback']))
+			if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback'] ?? null))
 			{
 				foreach ($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback'] as $callback)
 				{
@@ -1876,15 +1925,15 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			$fields = array();
 
 			// Add fields of the current table
-			$fields = array_merge($fields, array_keys($GLOBALS['TL_DCA'][$this->strTable]['fields']));
+			$fields = array_merge($fields, array_keys($GLOBALS['TL_DCA'][$this->strTable]['fields'] ?? array()));
 
 			// Show all non-excluded fields
 			foreach ($fields as $field)
 			{
-				if (!$GLOBALS['TL_DCA'][$this->strTable]['fields'][$field]['exclude'] && !$GLOBALS['TL_DCA'][$this->strTable]['fields'][$field]['eval']['doNotShow'] && (isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$field]['inputType']) || \is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$field]['input_field_callback'])))
+				if (!($GLOBALS['TL_DCA'][$this->strTable]['fields'][$field]['exclude'] ?? null) && !($GLOBALS['TL_DCA'][$this->strTable]['fields'][$field]['eval']['doNotShow'] ?? null) && (isset($GLOBALS['TL_DCA'][$this->strTable]['fields'][$field]['inputType']) || \is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$field]['input_field_callback'] ?? null)))
 				{
 					$options .= '
-  <input type="checkbox" name="all_fields[]" id="all_' . $field . '" class="tl_checkbox" value="' . StringUtil::specialchars($field) . '"> <label for="all_' . $field . '" class="tl_checkbox_label">' . (($GLOBALS['TL_DCA'][$this->strTable]['fields'][$field]['label'][0] ?: ($GLOBALS['TL_LANG']['MSC'][$field][0] ?: $field)) . ' <span style="color:#999;padding-left:3px">[' . $field . ']</span>') . '</label><br>';
+  <input type="checkbox" name="all_fields[]" id="all_' . $field . '" class="tl_checkbox" value="' . StringUtil::specialchars($field) . '"> <label for="all_' . $field . '" class="tl_checkbox_label">' . (($GLOBALS['TL_DCA'][$this->strTable]['fields'][$field]['label'][0] ?? (\is_array($GLOBALS['TL_LANG']['MSC'][$field] ?? null) ? $GLOBALS['TL_LANG']['MSC'][$field][0] : ($GLOBALS['TL_LANG']['MSC'][$field] ?? null) ?? $field)) . ' <span style="color:#999;padding-left:3px">[' . $field . ']</span>') . '</label><br>';
 				}
 			}
 
@@ -1892,7 +1941,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 
 			// Return the select menu
 			$return .= '
-<form action="' . ampersand(Environment::get('request')) . '&amp;fields=1" id="' . $this->strTable . '_all" class="tl_form tl_edit_form" method="post">
+<form action="' . StringUtil::ampersand(Environment::get('request')) . '&amp;fields=1" id="' . $this->strTable . '_all" class="tl_form tl_edit_form" method="post">
 <div class="tl_formbody_edit">
 <input type="hidden" name="FORM_SUBMIT" value="' . $this->strTable . '_all">
 <input type="hidden" name="REQUEST_TOKEN" value="' . REQUEST_TOKEN . '">' . ($blnIsError ? '
@@ -1947,7 +1996,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 		$objFile = new File($this->intId);
 
 		// Check whether file type is editable
-		if (!\in_array($objFile->extension, StringUtil::trimsplit(',', strtolower(Config::get('editableFiles')))))
+		if (!\in_array($objFile->extension, $this->arrEditableFileTypes))
 		{
 			throw new AccessDeniedException('File type "' . $objFile->extension . '" (' . $this->intId . ') is not allowed to be edited.');
 		}
@@ -1967,7 +2016,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 
 			$objVersions = new Versions($this->strTable, $objMeta->id);
 
-			if (!$GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'])
+			if (!($GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'] ?? null))
 			{
 				// Compare versions
 				if (Input::get('versions'))
@@ -1981,12 +2030,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 					$objVersions->restore(Input::post('version'));
 
 					// Purge the script cache (see #7005)
-					if ($objFile->extension == 'css' || $objFile->extension == 'scss' || $objFile->extension == 'less')
-					{
-						$this->import(Automator::class, 'Automator');
-						$this->Automator->purgeScriptCache();
-					}
-
+					$this->purgeCache($objFile->path);
 					$this->reload();
 				}
 			}
@@ -2029,11 +2073,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 				}
 
 				// Purge the script cache (see #7005)
-				if (\in_array($objFile->extension, array('css', 'scss', 'less', 'js')))
-				{
-					$this->import(Automator::class, 'Automator');
-					$this->Automator->purgeScriptCache();
-				}
+				$this->purgeCache($objFile->path);
 			}
 
 			if (isset($_POST['saveNclose']))
@@ -2057,7 +2097,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 		}
 
 		// Versions overview
-		if ($this->blnIsDbAssisted && $objVersions !== null && $GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'] && !$GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'])
+		if ($this->blnIsDbAssisted && $objVersions !== null && ($GLOBALS['TL_DCA'][$this->strTable]['config']['enableVersioning'] ?? null) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['hideVersionMenu'] ?? null))
 		{
 			$version = $objVersions->renderDropdown();
 		}
@@ -2072,7 +2112,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 		$arrButtons['saveNclose'] = '<button type="submit" name="saveNclose" id="saveNclose" class="tl_submit" accesskey="c">' . $GLOBALS['TL_LANG']['MSC']['saveNclose'] . '</button>';
 
 		// Call the buttons_callback (see #4691)
-		if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback']))
+		if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA'][$this->strTable]['edit']['buttons_callback'] as $callback)
 			{
@@ -2131,6 +2171,55 @@ class DC_Folder extends DataContainer implements \listable, \editable
 </form>' . "\n\n" . $codeEditor;
 	}
 
+	private function purgeCache(string ...$affectedPaths): void
+	{
+		$extensions = array_unique(array_map(
+			static function (string $path): string
+			{
+				return Path::getExtension($path, true);
+			},
+			$affectedPaths
+		));
+
+		if (!empty(array_intersect(array('css', 'scss', 'less', 'js'), $extensions)))
+		{
+			$this->import(Automator::class, 'Automator');
+			$this->Automator->purgeScriptCache();
+		}
+
+		$bundleTemplatePaths = array_filter(
+			$affectedPaths,
+			static function (string $path): bool
+			{
+				return Path::isBasePath('templates/bundles', $path) && empty(Path::getExtension($path));
+			}
+		);
+
+		if (!empty($bundleTemplatePaths))
+		{
+			// If a bundle template path is changed, the whole container cache needs to
+			// be rebuild because the template paths are added at compile time
+			$cacheItemPool = System::getContainer()->get('cache.system');
+
+			$item = $cacheItemPool->getItem(BackendRebuildCacheMessageListener::CACHE_DIRTY_FLAG);
+			$item->set(true);
+
+			$cacheItemPool->save($item);
+
+			return;
+		}
+
+		if (\in_array('twig', $extensions, true))
+		{
+			$twigCache = System::getContainer()->get('twig')->getCache();
+
+			if (\is_string($twigCache) && is_dir($twigCache))
+			{
+				(new Filesystem())->remove($twigCache);
+			}
+		}
+	}
+
 	/**
 	 * Protect a folder
 	 *
@@ -2141,7 +2230,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 	 */
 	public function protect()
 	{
-		@trigger_error('Using DC_Folder::protect() has been deprecated and will no longer work in Contao 5.0. Use Contao\Folder::protect() and Contao\Folder::unprotect() instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.7', 'Using "Contao\DC_Folder::protect()" has been deprecated and will no longer work in Contao 5.0. Use "Contao\Folder::protect()" and "Contao\Folder::unprotect()" instead.');
 
 		if (!is_dir($this->strRootDir . '/' . $this->intId))
 		{
@@ -2187,7 +2276,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			return;
 		}
 
-		$arrData = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField];
+		$arrData = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField] ?? array();
 
 		// File names
 		if ($this->strField == 'name')
@@ -2200,7 +2289,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			$this->import(Files::class, 'Files');
 
 			// Trigger the save_callback
-			if (\is_array($arrData['save_callback']))
+			if (\is_array($arrData['save_callback'] ?? null))
 			{
 				foreach ($arrData['save_callback'] as $callback)
 				{
@@ -2222,7 +2311,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 				throw new \Exception(sprintf($GLOBALS['TL_LANG']['ERR']['fileExists'], $varValue));
 			}
 
-			$arrImageTypes = StringUtil::trimsplit(',', strtolower(Config::get('validImageTypes')));
+			$arrImageTypes = System::getContainer()->getParameter('contao.image.valid_extensions');
 
 			// Remove potentially existing thumbnails (see #6641)
 			if (\in_array(substr($this->strExtension, 1), $arrImageTypes))
@@ -2235,6 +2324,8 @@ class DC_Folder extends DataContainer implements \listable, \editable
 
 			// Rename the file
 			$this->Files->rename($this->strPath . '/' . $this->varValue . $this->strExtension, $this->strPath . '/' . $varValue . $this->strExtension);
+
+			$this->purgeCache($this->strPath . '/' . $this->varValue . $this->strExtension, $this->strPath . '/' . $varValue . $this->strExtension);
 
 			// New folders
 			if (stripos($this->intId, '__new__') !== false)
@@ -2302,20 +2393,20 @@ class DC_Folder extends DataContainer implements \listable, \editable
 		elseif ($this->blnIsDbAssisted && $this->objActiveRecord !== null)
 		{
 			// Convert date formats into timestamps
-			if ($varValue !== null && $varValue !== '' && \in_array($arrData['eval']['rgxp'], array('date', 'time', 'datim')))
+			if ($varValue !== null && $varValue !== '' && \in_array($arrData['eval']['rgxp'] ?? null, array('date', 'time', 'datim')))
 			{
 				$objDate = new Date($varValue, Date::getFormatFromRgxp($arrData['eval']['rgxp']));
 				$varValue = $objDate->tstamp;
 			}
 
 			// Make sure unique fields are unique
-			if ((string) $varValue !== '' && $arrData['eval']['unique'] && !$this->Database->isUniqueValue($this->strTable, $this->strField, $varValue, $this->objActiveRecord->id))
+			if ((string) $varValue !== '' && ($arrData['eval']['unique'] ?? null) && !$this->Database->isUniqueValue($this->strTable, $this->strField, $varValue, $this->objActiveRecord->id))
 			{
 				throw new \Exception(sprintf($GLOBALS['TL_LANG']['ERR']['unique'], $arrData['label'][0] ?: $this->strField));
 			}
 
 			// Handle multi-select fields in "override all" mode
-			if ($this->objActiveRecord !== null && ($arrData['inputType'] == 'checkbox' || $arrData['inputType'] == 'checkboxWizard') && $arrData['eval']['multiple'] && Input::get('act') == 'overrideAll')
+			if ($this->objActiveRecord !== null && (($arrData['inputType'] ?? null) == 'checkbox' || ($arrData['inputType'] ?? null) == 'checkboxWizard') && ($arrData['eval']['multiple'] ?? null) && Input::get('act') == 'overrideAll')
 			{
 				$new = StringUtil::deserialize($varValue, true);
 				$old = StringUtil::deserialize($this->objActiveRecord->{$this->strField}, true);
@@ -2350,13 +2441,13 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			}
 
 			// Convert arrays (see #2890)
-			if ($arrData['eval']['multiple'] && isset($arrData['eval']['csv']))
+			if (($arrData['eval']['multiple'] ?? null) && isset($arrData['eval']['csv']))
 			{
 				$varValue = implode($arrData['eval']['csv'], StringUtil::deserialize($varValue, true));
 			}
 
 			// Trigger the save_callback
-			if (\is_array($arrData['save_callback']))
+			if (\is_array($arrData['save_callback'] ?? null))
 			{
 				foreach ($arrData['save_callback'] as $callback)
 				{
@@ -2373,10 +2464,10 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			}
 
 			// Save the value if there was no error
-			if (((string) $varValue !== '' || !$arrData['eval']['doNotSaveEmpty']) && ($this->varValue != $varValue || $arrData['eval']['alwaysSave']))
+			if (((string) $varValue !== '' || !($arrData['eval']['doNotSaveEmpty'] ?? null)) && ($this->varValue != $varValue || ($arrData['eval']['alwaysSave'] ?? null)))
 			{
 				// If the field is a fallback field, empty all other columns
-				if ($varValue && $arrData['eval']['fallback'])
+				if ($varValue && ($arrData['eval']['fallback'] ?? null))
 				{
 					$this->Database->execute("UPDATE " . $this->strTable . " SET " . $this->strField . "=''");
 				}
@@ -2384,7 +2475,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 				// Set the correct empty value (see #6284, #6373)
 				if ((string) $varValue === '')
 				{
-					$varValue = Widget::getEmptyValueByFieldType($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['sql']);
+					$varValue = Widget::getEmptyValueByFieldType($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['sql'] ?? array());
 				}
 
 				$this->objActiveRecord->{$this->strField} = $varValue;
@@ -2533,6 +2624,10 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			$blnClipboard = true;
 			$arrClipboard = $arrClipboard[$this->strTable];
 		}
+		else
+		{
+			$arrClipboard = null;
+		}
 
 		$this->import(Files::class, 'Files');
 		$this->import(BackendUser::class, 'User');
@@ -2556,7 +2651,6 @@ class DC_Folder extends DataContainer implements \listable, \editable
 	{
 		/** @var AttributeBagInterface $objSessionBag */
 		$objSessionBag = System::getContainer()->get('session')->getBag('contao_backend');
-
 		$session = $objSessionBag->all();
 
 		// Get the session data and toggle the nodes
@@ -2582,7 +2676,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 		// Scan directory and sort the result
 		else
 		{
-			foreach (scan($path) as $v)
+			foreach (Folder::scan($path) as $v)
 			{
 				if (strncmp($v, '.', 1) === 0)
 				{
@@ -2628,8 +2722,8 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			}
 
 			$md5 = substr(md5($folders[$f]), 0, 8);
-			$content = scan($folders[$f]);
-			$session['filetree'][$md5] = is_numeric($session['filetree'][$md5]) ? $session['filetree'][$md5] : 0;
+			$content = Folder::scan($folders[$f]);
+			$session['filetree'][$md5] = is_numeric($session['filetree'][$md5] ?? null) ? $session['filetree'][$md5] : 0;
 			$currentEncoded = $this->urlEncode($currentFolder);
 			$countFiles = \count($content);
 
@@ -2693,7 +2787,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			$folderImg = $protected ? 'folderCP.svg' : 'folderC.svg';
 
 			// Add the current folder
-			$strFolderNameEncoded = StringUtil::convertEncoding(StringUtil::specialchars(basename($currentFolder)), Config::get('characterSet'));
+			$strFolderNameEncoded = StringUtil::convertEncoding(StringUtil::specialchars(basename($currentFolder)), System::getContainer()->getParameter('kernel.charset'));
 			$return .= Image::getHtml($folderImg) . ' <a href="' . $this->addToUrl('fn=' . $currentEncoded) . '" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['selectNode']) . '"><strong>' . $strFolderNameEncoded . '</strong></a></div> <div class="tl_right">';
 
 			// Paste buttons
@@ -2714,7 +2808,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 			// Default buttons
 			else
 			{
-				$uploadButton = ' <a href="' . $this->addToUrl('&amp;act=move&amp;mode=2&amp;pid=' . $currentEncoded) . '" title="' . StringUtil::specialchars(sprintf($GLOBALS['TL_LANG']['tl_files']['uploadFF'], $currentEncoded)) . '">' . Image::getHtml('new.svg', $GLOBALS['TL_LANG'][$this->strTable]['move'][0]) . '</a>';
+				$uploadButton = ' <a href="' . $this->addToUrl('&amp;act=move&amp;mode=2&amp;pid=' . $currentEncoded) . '" title="' . StringUtil::specialchars(sprintf($GLOBALS['TL_LANG']['tl_files']['uploadFF'], $currentEncoded)) . '">' . Image::getHtml('new.svg', $GLOBALS['TL_LANG']['tl_files']['move'][0]) . '</a>';
 
 				// Only show the upload button for mounted folders
 				if (!$this->User->isAdmin && \in_array($currentFolder, $this->User->filemounts))
@@ -2727,7 +2821,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 				}
 
 				// Add upload button if it is missing for backwards compatibility
-				if (!isset($GLOBALS['TL_DCA'][$this->strTable]['list']['operations']['upload']) && !$GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] && !$GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable'] && Input::get('act') != 'select')
+				if (!isset($GLOBALS['TL_DCA'][$this->strTable]['list']['operations']['upload']) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['closed'] ?? null) && !($GLOBALS['TL_DCA'][$this->strTable]['config']['notCreatable'] ?? null) && Input::get('act') != 'select')
 				{
 					$return .= $uploadButton;
 				}
@@ -2823,10 +2917,10 @@ class DC_Folder extends DataContainer implements \listable, \editable
 				}
 			}
 
-			$strFileNameEncoded = StringUtil::convertEncoding(StringUtil::specialchars(basename($currentFile)), Config::get('characterSet'));
+			$strFileNameEncoded = StringUtil::convertEncoding(StringUtil::specialchars(basename($currentFile)), System::getContainer()->getParameter('kernel.charset'));
 
-			// No popup links for protected files, templates and in the popup file manager
-			if ($blnProtected || $this->strTable == 'tl_templates' || Input::get('popup'))
+			// No popup links for protected files and templates (see #700)
+			if ($blnProtected || $this->strTable == 'tl_templates')
 			{
 				$return .= Image::getHtml($objFile->icon) . ' ' . $strFileNameEncoded . $thumbnail . '</div> <div class="tl_right">';
 			}
@@ -2879,7 +2973,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 		}
 
 		// Set the search value from the session
-		elseif ((string) $session['search'][$this->strTable]['value'] !== '')
+		elseif (isset($session['search'][$this->strTable]['value']) && (string) $session['search'][$this->strTable]['value'] !== '')
 		{
 			$searchValue = $session['search'][$this->strTable]['value'];
 
@@ -2902,7 +2996,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 
 			if (isset($GLOBALS['TL_DCA'][$this->strTable]['fields']['name']['foreignKey']))
 			{
-				list($t, $f) = explode('.', $GLOBALS['TL_DCA'][$this->strTable]['fields']['name']['foreignKey']);
+				list($t, $f) = explode('.', $GLOBALS['TL_DCA'][$this->strTable]['fields']['name']['foreignKey'], 2);
 				$this->procedure[] = "(" . $strPattern . " OR " . sprintf($strPattern, "(SELECT " . Database::quoteIdentifier($f) . " FROM $t WHERE $t.id=" . $this->strTable . ".name)") . ")";
 				$this->values[] = $searchValue;
 			}
@@ -2920,10 +3014,10 @@ class DC_Folder extends DataContainer implements \listable, \editable
     <div class="tl_search tl_subpanel">
       <strong>' . $GLOBALS['TL_LANG']['MSC']['search'] . ':</strong>
       <select name="tl_field" class="tl_select' . ($active ? ' active' : '') . '">
-        <option value="name">' . ($GLOBALS['TL_DCA'][$this->strTable]['fields']['name']['label'][0] ?: (\is_array($GLOBALS['TL_LANG']['MSC']['name']) ? $GLOBALS['TL_LANG']['MSC']['name'][0] : $GLOBALS['TL_LANG']['MSC']['name'])) . '</option>
+        <option value="name">' . ($GLOBALS['TL_DCA'][$this->strTable]['fields']['name']['label'][0] ?: (\is_array($GLOBALS['TL_LANG']['MSC']['name'] ?? null) ? $GLOBALS['TL_LANG']['MSC']['name'][0] : ($GLOBALS['TL_LANG']['MSC']['name'] ?? null))) . '</option>
       </select>
       <span>=</span>
-      <input type="search" name="tl_value" class="tl_text' . ($active ? ' active' : '') . '" value="' . StringUtil::specialchars($session['search'][$this->strTable]['value']) . '">
+      <input type="search" name="tl_value" class="tl_text' . ($active ? ' active' : '') . '" value="' . StringUtil::specialchars($session['search'][$this->strTable]['value'] ?? '') . '">
     </div>';
 	}
 
@@ -2997,13 +3091,13 @@ class DC_Folder extends DataContainer implements \listable, \editable
 		}
 
 		// Check whether the file is within the files directory
-		if (!preg_match('/^' . preg_quote(Config::get('uploadPath'), '/') . '/i', $strFile))
+		if (!preg_match('/^' . preg_quote($this->strUploadPath, '/') . '/i', $strFile))
 		{
 			throw new AccessDeniedException('File or folder "' . $strFile . '" is not within the files directory.');
 		}
 
 		// Check whether the parent folder is within the files directory
-		if ($strFolder && !preg_match('/^' . preg_quote(Config::get('uploadPath'), '/') . '/i', $strFolder))
+		if ($strFolder && !preg_match('/^' . preg_quote($this->strUploadPath, '/') . '/i', $strFolder))
 		{
 			throw new AccessDeniedException('Parent folder "' . $strFolder . '" is not within the files directory.');
 		}
@@ -3033,7 +3127,7 @@ class DC_Folder extends DataContainer implements \listable, \editable
 	{
 		$arrFiles = array();
 
-		foreach (scan($this->strRootDir . '/' . $strPath) as $strFile)
+		foreach (Folder::scan($this->strRootDir . '/' . $strPath) as $strFile)
 		{
 			if (!is_dir($this->strRootDir . '/' . $strPath . '/' . $strFile))
 			{
@@ -3062,6 +3156,11 @@ class DC_Folder extends DataContainer implements \listable, \editable
 	protected function isProtectedPath($path)
 	{
 		return !(new Folder($path))->isUnprotected();
+	}
+
+	protected function getFormFieldSuffix()
+	{
+		return md5($this->initialId ?: $this->intId);
 	}
 
 	/**

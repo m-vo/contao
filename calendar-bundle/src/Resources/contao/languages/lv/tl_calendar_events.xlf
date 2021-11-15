@@ -73,6 +73,14 @@
         <source>Here you can add a custom meta title to overwrite the default page title.</source>
         <target>Šeit jūs varat pievienot pielāgotu meta nosaukumu, lai pārrakstītu noklusējuma lapas nosaukumu.</target>
       </trans-unit>
+      <trans-unit id="tl_calendar_events.robots.0">
+        <source>Robots tag</source>
+        <target>Robotu birkas</target>
+      </trans-unit>
+      <trans-unit id="tl_calendar_events.robots.1">
+        <source>Here you can overwrite how search engines handle the event.</source>
+        <target>Šeit jūs varat pārrakstīt, kā meklētājprogrammas apstrādā notikumu.</target>
+      </trans-unit>
       <trans-unit id="tl_calendar_events.description.0">
         <source>Meta description</source>
         <target>Meta apraksts</target>
@@ -237,6 +245,14 @@
         <source>Do not allow comments for this particular event.</source>
         <target>Neļaut komentārus šim notikumam.</target>
       </trans-unit>
+      <trans-unit id="tl_calendar_events.featured.0">
+        <source>Feature event</source>
+        <target>Zīmīgais notikums</target>
+      </trans-unit>
+      <trans-unit id="tl_calendar_events.featured.1">
+        <source>Show the event in a featured event list.</source>
+        <target>Rādīt notikumu iezīmēto notikumu sarakstā.</target>
+      </trans-unit>
       <trans-unit id="tl_calendar_events.published.0">
         <source>Publish event</source>
         <target>Publicēts</target>
@@ -302,8 +318,8 @@
         <target>Novirzīšanas mērķis</target>
       </trans-unit>
       <trans-unit id="tl_calendar_events.meta_legend">
-        <source>Meta data</source>
-        <target>Meta dati</target>
+        <source>Metadata</source>
+        <target>Metadati</target>
       </trans-unit>
       <trans-unit id="tl_calendar_events.expert_legend">
         <source>Expert settings</source>
@@ -360,6 +376,10 @@
       <trans-unit id="tl_calendar_events.toggle">
         <source>Publish/unpublish event ID %s</source>
         <target>Publicēt/slēpt notikumu ID %s</target>
+      </trans-unit>
+      <trans-unit id="tl_calendar_events.feature">
+        <source>Feature/unfeature event ID %s</source>
+        <target>Iezīmēt/neiezīmēt notikumu ID %s</target>
       </trans-unit>
       <trans-unit id="tl_calendar_events.editheader">
         <source>Edit the settings of event ID %s</source>

@@ -11,6 +11,7 @@
 namespace Contao;
 
 use Contao\CoreBundle\Exception\PageNotFoundException;
+use Contao\CoreBundle\Image\Studio\Studio;
 use Contao\Model\Collection;
 
 /**
@@ -100,15 +101,7 @@ class ContentGallery extends ContentElement
 				}
 
 				// Add the image
-				$images[$objFiles->path] = array
-				(
-					'id'         => $objFiles->id,
-					'uuid'       => $objFiles->uuid,
-					'name'       => $objFile->basename,
-					'singleSRC'  => $objFiles->path,
-					'filesModel' => $objFiles->current()
-				);
-
+				$images[$objFiles->path] = $objFiles->current();
 				$auxDate[] = $objFile->mtime;
 			}
 
@@ -138,15 +131,7 @@ class ContentGallery extends ContentElement
 					}
 
 					// Add the image
-					$images[$objSubfiles->path] = array
-					(
-						'id'         => $objSubfiles->id,
-						'uuid'       => $objSubfiles->uuid,
-						'name'       => $objFile->basename,
-						'singleSRC'  => $objSubfiles->path,
-						'filesModel' => $objSubfiles->current()
-					);
-
+					$images[$objSubfiles->path] = $objSubfiles->current();
 					$auxDate[] = $objFile->mtime;
 				}
 			}
@@ -157,11 +142,17 @@ class ContentGallery extends ContentElement
 		{
 			default:
 			case 'name_asc':
-				uksort($images, 'basename_natcasecmp');
+				uksort($images, static function ($a, $b): int
+				{
+					return strnatcasecmp(basename($a), basename($b));
+				});
 				break;
 
 			case 'name_desc':
-				uksort($images, 'basename_natcasercmp');
+				uksort($images, static function ($a, $b): int
+				{
+					return -strnatcasecmp(basename($a), basename($b));
+				});
 				break;
 
 			case 'date_asc':
@@ -174,40 +165,11 @@ class ContentGallery extends ContentElement
 
 			// Deprecated since Contao 4.0, to be removed in Contao 5.0
 			case 'meta':
-				@trigger_error('The "meta" key in ContentGallery::compile() has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+				trigger_deprecation('contao/core-bundle', '4.0', 'The "meta" key in "Contao\ContentGallery::compile()" has been deprecated and will no longer work in Contao 5.0.');
 				// no break
 
 			case 'custom':
-				if ($this->orderSRC)
-				{
-					$tmp = StringUtil::deserialize($this->orderSRC);
-
-					if (!empty($tmp) && \is_array($tmp))
-					{
-						// Remove all values
-						$arrOrder = array_map(static function () {}, array_flip($tmp));
-
-						// Move the matching elements to their position in $arrOrder
-						foreach ($images as $k=>$v)
-						{
-							if (\array_key_exists($v['uuid'], $arrOrder))
-							{
-								$arrOrder[$v['uuid']] = $v;
-								unset($images[$k]);
-							}
-						}
-
-						// Append the left-over images at the end
-						if (!empty($images))
-						{
-							$arrOrder = array_merge($arrOrder, array_values($images));
-						}
-
-						// Remove empty (unreplaced) entries
-						$images = array_values(array_filter($arrOrder));
-						unset($arrOrder);
-					}
-				}
+				$images = ArrayUtil::sortByOrderField($images, $this->orderSRC);
 				break;
 
 			case 'random':
@@ -251,8 +213,14 @@ class ContentGallery extends ContentElement
 
 		$rowcount = 0;
 		$colwidth = floor(100/$this->perRow);
-		$strLightboxId = 'lb' . $this->id;
 		$body = array();
+
+		$figureBuilder = System::getContainer()
+			->get(Studio::class)
+			->createFigureBuilder()
+			->setSize($this->size)
+			->setLightboxGroupIdentifier('lb' . $this->id)
+			->enableLightbox((bool) $this->fullsize);
 
 		// Rows
 		for ($i=$offset; $i<$limit; $i+=$this->perRow)
@@ -286,30 +254,26 @@ class ContentGallery extends ContentElement
 					$class_td .= ' col_last';
 				}
 
-				$objCell = new \stdClass();
-				$key = 'row_' . $rowcount . $class_tr . $class_eo;
-
-				// Empty cell
-				if (($j+$i) >= $limit || !\is_array($images[($i+$j)]))
+				// Image / empty cell
+				if (($j + $i) < $limit && null !== ($image = $images[$i + $j] ?? null))
 				{
-					$objCell->colWidth = $colwidth . '%';
-					$objCell->class = 'col_' . $j . $class_td;
+					$figure = $figureBuilder
+						->fromFilesModel($image)
+						->build();
+
+					$cellData = $figure->getLegacyTemplateData($this->imagemargin);
+					$cellData['figure'] = $figure;
 				}
 				else
 				{
-					// Add size and margin
-					$images[($i+$j)]['size'] = $this->size;
-					$images[($i+$j)]['imagemargin'] = $this->imagemargin;
-					$images[($i+$j)]['fullsize'] = $this->fullsize;
-
-					$this->addImageToTemplate($objCell, $images[($i+$j)], null, $strLightboxId, $images[($i+$j)]['filesModel']);
-
-					// Add column width and class
-					$objCell->colWidth = $colwidth . '%';
-					$objCell->class = 'col_' . $j . $class_td;
+					$cellData = array('addImage' => false);
 				}
 
-				$body[$key][$j] = $objCell;
+				// Add column width and class
+				$cellData['colWidth'] = $colwidth . '%';
+				$cellData['class'] = 'col_' . $j . $class_td;
+
+				$body['row_' . $rowcount . $class_tr . $class_eo][$j] = (object) $cellData;
 			}
 
 			++$rowcount;

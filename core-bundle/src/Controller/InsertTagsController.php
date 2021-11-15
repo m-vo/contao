@@ -26,10 +26,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class InsertTagsController
 {
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
+    private ContaoFramework $framework;
 
     public function __construct(ContaoFramework $framework)
     {
@@ -43,7 +40,7 @@ class InsertTagsController
         /** @var InsertTags $it */
         $it = $this->framework->createInstance(InsertTags::class);
 
-        $response = Response::create($it->replace($insertTag, false));
+        $response = new Response($it->replace($insertTag, false));
         $response->setPrivate(); // always private
 
         if ($clientCache = $request->query->getInt('clientCache')) {

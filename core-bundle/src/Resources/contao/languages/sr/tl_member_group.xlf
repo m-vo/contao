@@ -67,15 +67,15 @@
       </trans-unit>
       <trans-unit id="tl_member_group.new.1">
         <source>Create a new member group</source>
-        <target>Креирај новог члана групе</target>
+        <target>Креирај нову корисничку групу</target>
       </trans-unit>
       <trans-unit id="tl_member_group.show">
         <source>Show the details of member group ID %s</source>
-        <target>Прикажи детаље члана групе ID %s</target>
+        <target>Прикажи детаље корисничке групе ID %s</target>
       </trans-unit>
       <trans-unit id="tl_member_group.edit">
         <source>Edit member group ID %s</source>
-        <target>Уреди члана групе ID %s</target>
+        <target>Уреди корисничку групу ID %s</target>
       </trans-unit>
       <trans-unit id="tl_member_group.copy">
         <source>Duplicate member group ID %s</source>

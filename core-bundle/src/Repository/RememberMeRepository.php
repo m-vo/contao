@@ -15,6 +15,7 @@ namespace Contao\CoreBundle\Repository;
 use Contao\CoreBundle\Entity\RememberMe;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Types\Types;
 use Symfony\Bridge\Doctrine\ManagerRegistry;
 
 /**
@@ -22,10 +23,7 @@ use Symfony\Bridge\Doctrine\ManagerRegistry;
  */
 class RememberMeRepository extends ServiceEntityRepository
 {
-    /**
-     * @var Connection
-     */
-    private $connection;
+    private Connection $connection;
 
     public function __construct(ManagerRegistry $registry)
     {
@@ -38,12 +36,12 @@ class RememberMeRepository extends ServiceEntityRepository
     {
         $table = $this->getClassMetadata()->getTableName();
 
-        $this->connection->exec("LOCK TABLES $table WRITE, $table AS t0_ WRITE");
+        $this->connection->executeStatement("LOCK TABLES $table WRITE, $table AS t0_ WRITE");
     }
 
     public function unlockTable(): void
     {
-        $this->connection->exec('UNLOCK TABLES');
+        $this->connection->executeStatement('UNLOCK TABLES');
     }
 
     /**
@@ -61,7 +59,7 @@ class RememberMeRepository extends ServiceEntityRepository
                 )
             )
             ->setParameter('series', $series)
-            ->setParameter('now', new \DateTime())
+            ->setParameter('now', new \DateTime(), Types::DATETIME_MUTABLE)
             ->orderBy('rm.expires', 'ASC')
         ;
 

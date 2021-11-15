@@ -22,15 +22,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  */
 class Version447Update extends AbstractMigration
 {
-    /**
-     * @var Connection
-     */
-    private $connection;
-
-    /**
-     * @var TranslatorInterface
-     */
-    private $translator;
+    private Connection $connection;
+    private TranslatorInterface $translator;
 
     public function __construct(Connection $connection, TranslatorInterface $translator)
     {
@@ -45,7 +38,7 @@ class Version447Update extends AbstractMigration
 
     public function shouldRun(): bool
     {
-        $schemaManager = $this->connection->getSchemaManager();
+        $schemaManager = $this->connection->createSchemaManager();
 
         if (!$schemaManager->tablesExist(['tl_newsletter_recipients'])) {
             return false;
@@ -58,18 +51,18 @@ class Version447Update extends AbstractMigration
 
     public function run(): MigrationResult
     {
-        $schemaManager = $this->connection->getSchemaManager();
+        $schemaManager = $this->connection->createSchemaManager();
 
         // Back up the existing subscriptions
         if (!$schemaManager->tablesExist(['tl_newsletter_recipients_backup'])) {
-            $this->connection->query('
+            $this->connection->executeStatement('
                 CREATE TABLE
                     tl_newsletter_recipients_backup
                 LIKE
                     tl_newsletter_recipients
             ');
 
-            $this->connection->query('
+            $this->connection->executeStatement('
                 INSERT
                     tl_newsletter_recipients_backup
                 SELECT
@@ -80,7 +73,7 @@ class Version447Update extends AbstractMigration
         }
 
         // Find multiple subscriptions for the same channel with the same e-mail address
-        $duplicates = $this->connection->query('
+        $duplicates = $this->connection->fetchAllAssociative('
             SELECT
                 pid, email
             FROM
@@ -95,11 +88,11 @@ class Version447Update extends AbstractMigration
 
         $messages = [];
 
-        while (false !== ($duplicate = $duplicates->fetch(\PDO::FETCH_OBJ))) {
+        foreach ($duplicates as $duplicate) {
             $count = 0;
 
             // Find the oldest, active subscription preferring real subscriptions over imported ones
-            $subscriptions = $this->connection->prepare("
+            $stmt = $this->connection->prepare("
                 SELECT
                     *
                 FROM
@@ -110,9 +103,12 @@ class Version447Update extends AbstractMigration
                     active = '1' DESC, addedOn != '' DESC, id
             ");
 
-            $subscriptions->execute(['pid' => $duplicate->pid, ':email' => $duplicate->email]);
+            $subscriptions = $stmt
+                ->executeQuery(['pid' => $duplicate['pid'], 'email' => $duplicate['email']])
+                ->fetchAllAssociative()
+            ;
 
-            while (false !== ($subscription = $subscriptions->fetch(\PDO::FETCH_OBJ))) {
+            foreach ($subscriptions as $subscription) {
                 if (0 === $count++) {
                     continue; // keep the first subscription
                 }
@@ -124,13 +120,13 @@ class Version447Update extends AbstractMigration
                         id = :id
                 ');
 
-                $delete->execute(['id' => $subscription->id]);
+                $delete->executeStatement(['id' => $subscription['id']]);
             }
 
-            $messages[] = $duplicate->email;
+            $messages[] = $duplicate['email'];
         }
 
-        $this->connection->query('CREATE UNIQUE INDEX pid_email ON tl_newsletter_recipients (pid, email)');
+        $this->connection->executeStatement('CREATE UNIQUE INDEX pid_email ON tl_newsletter_recipients (pid, email)');
 
         if ($messages) {
             return $this->createResult(

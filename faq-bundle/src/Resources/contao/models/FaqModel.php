@@ -10,32 +10,38 @@
 
 namespace Contao;
 
+use Contao\CoreBundle\File\ModelMetadataTrait;
 use Contao\Model\Collection;
 
 /**
  * Reads and writes FAQs
  *
- * @property integer $id
- * @property integer $pid
- * @property integer $sorting
- * @property integer $tstamp
- * @property string  $question
- * @property string  $alias
- * @property integer $author
- * @property string  $answer
- * @property boolean $addImage
- * @property string  $singleSRC
- * @property string  $alt
- * @property string  $size
- * @property string  $imagemargin
- * @property string  $imageUrl
- * @property boolean $fullsize
- * @property string  $caption
- * @property string  $floating
- * @property boolean $addEnclosure
- * @property string  $enclosure
- * @property boolean $noComments
- * @property boolean $published
+ * @property string|integer $id
+ * @property string|integer $pid
+ * @property string|integer $sorting
+ * @property string|integer $tstamp
+ * @property string         $question
+ * @property string         $alias
+ * @property string|integer $author
+ * @property string|null    $answer
+ * @property string         $pageTitle
+ * @property string         $robots
+ * @property string|null    $description
+ * @property string|boolean $addImage
+ * @property string|boolean $overwriteMeta
+ * @property string|null    $singleSRC
+ * @property string         $alt
+ * @property string         $imageTitle
+ * @property string|integer $size
+ * @property string|array   $imagemargin
+ * @property string         $imageUrl
+ * @property string|boolean $fullsize
+ * @property string         $caption
+ * @property string         $floating
+ * @property string|boolean $addEnclosure
+ * @property string|null    $enclosure
+ * @property string|boolean $noComments
+ * @property string|boolean $published
  *
  * @method static FaqModel|null findById($id, $opt=array())
  * @method static FaqModel|null findByPk($id, array $opt=array())
@@ -48,9 +54,14 @@ use Contao\Model\Collection;
  * @method static FaqModel|null findOneByAlias($val, $opt=array())
  * @method static FaqModel|null findOneByAuthor($val, $opt=array())
  * @method static FaqModel|null findOneByAnswer($val, $opt=array())
+ * @method static FaqModel|null findOneByPageTitle($val, $opt=array())
+ * @method static FaqModel|null findOneByRobots($val, $opt=array())
+ * @method static FaqModel|null findOneByDescription($val, $opt=array())
  * @method static FaqModel|null findOneByAddImage($val, $opt=array())
+ * @method static FaqModel|null findOneByOverwriteMeta($val, $opt=array())
  * @method static FaqModel|null findOneBySingleSRC($val, $opt=array())
  * @method static FaqModel|null findOneByAlt($val, $opt=array())
+ * @method static FaqModel|null findOneByImageTitle($val, $opt=array())
  * @method static FaqModel|null findOneBySize($val, $opt=array())
  * @method static FaqModel|null findOneByImagemargin($val, $opt=array())
  * @method static FaqModel|null findOneByImageUrl($val, $opt=array())
@@ -69,9 +80,14 @@ use Contao\Model\Collection;
  * @method static Collection|FaqModel[]|FaqModel|null findByAlias($val, $opt=array())
  * @method static Collection|FaqModel[]|FaqModel|null findByAuthor($val, $opt=array())
  * @method static Collection|FaqModel[]|FaqModel|null findByAnswer($val, $opt=array())
+ * @method static Collection|FaqModel[]|FaqModel|null findByPageTitle($val, $opt=array())
+ * @method static Collection|FaqModel[]|FaqModel|null findByRobots($val, $opt=array())
+ * @method static Collection|FaqModel[]|FaqModel|null findByDescription($val, $opt=array())
  * @method static Collection|FaqModel[]|FaqModel|null findByAddImage($val, $opt=array())
+ * @method static Collection|FaqModel[]|FaqModel|null findByOverwriteMeta($val, $opt=array())
  * @method static Collection|FaqModel[]|FaqModel|null findBySingleSRC($val, $opt=array())
  * @method static Collection|FaqModel[]|FaqModel|null findByAlt($val, $opt=array())
+ * @method static Collection|FaqModel[]|FaqModel|null findByImageTitle($val, $opt=array())
  * @method static Collection|FaqModel[]|FaqModel|null findBySize($val, $opt=array())
  * @method static Collection|FaqModel[]|FaqModel|null findByImagemargin($val, $opt=array())
  * @method static Collection|FaqModel[]|FaqModel|null findByImageUrl($val, $opt=array())
@@ -94,9 +110,14 @@ use Contao\Model\Collection;
  * @method static integer countByAlias($val, $opt=array())
  * @method static integer countByAuthor($val, $opt=array())
  * @method static integer countByAnswer($val, $opt=array())
+ * @method static integer countByPageTitle($val, $opt=array())
+ * @method static integer countByRobots($val, $opt=array())
+ * @method static integer countByDescription($val, $opt=array())
  * @method static integer countByAddImage($val, $opt=array())
+ * @method static integer countByOverwriteMeta($val, $opt=array())
  * @method static integer countBySingleSRC($val, $opt=array())
  * @method static integer countByAlt($val, $opt=array())
+ * @method static integer countByImageTitle($val, $opt=array())
  * @method static integer countBySize($val, $opt=array())
  * @method static integer countByImagemargin($val, $opt=array())
  * @method static integer countByImageUrl($val, $opt=array())
@@ -112,6 +133,8 @@ use Contao\Model\Collection;
  */
 class FaqModel extends Model
 {
+	use ModelMetadataTrait;
+
 	/**
 	 * Table name
 	 * @var string

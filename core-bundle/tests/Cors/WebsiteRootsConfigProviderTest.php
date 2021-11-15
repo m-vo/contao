@@ -14,8 +14,9 @@ namespace Contao\CoreBundle\Tests\Cors;
 
 use Contao\CoreBundle\Cors\WebsiteRootsConfigProvider;
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Driver\Statement;
-use Doctrine\DBAL\Schema\MySqlSchemaManager;
+use Doctrine\DBAL\Result;
+use Doctrine\DBAL\Schema\MySQLSchemaManager;
+use Doctrine\DBAL\Statement;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -27,6 +28,13 @@ class WebsiteRootsConfigProviderTest extends TestCase
         $request = Request::create('https://foobar.com');
         $request->headers->set('Origin', 'http://origin.com');
 
+        $result = $this->createMock(Result::class);
+        $result
+            ->expects($this->once())
+            ->method('fetchOne')
+            ->willReturn('1')
+        ;
+
         $statement = $this->createMock(Statement::class);
         $statement
             ->method('bindValue')
@@ -35,8 +43,8 @@ class WebsiteRootsConfigProviderTest extends TestCase
 
         $statement
             ->expects($this->once())
-            ->method('fetchColumn')
-            ->willReturn('1')
+            ->method('executeQuery')
+            ->willReturn($result)
         ;
 
         $connection = $this->mockConnection($statement);
@@ -59,6 +67,13 @@ class WebsiteRootsConfigProviderTest extends TestCase
         $request = Request::create('https://foobar.com');
         $request->headers->set('Origin', 'https://origin.com');
 
+        $result = $this->createMock(Result::class);
+        $result
+            ->expects($this->once())
+            ->method('fetchOne')
+            ->willReturn('0')
+        ;
+
         $statement = $this->createMock(Statement::class);
         $statement
             ->method('bindValue')
@@ -67,8 +82,8 @@ class WebsiteRootsConfigProviderTest extends TestCase
 
         $statement
             ->expects($this->once())
-            ->method('fetchColumn')
-            ->willReturn('0')
+            ->method('executeQuery')
+            ->willReturn($result)
         ;
 
         $connection = $this->mockConnection($statement);
@@ -118,7 +133,7 @@ class WebsiteRootsConfigProviderTest extends TestCase
         $request = Request::create('https://foobar.com');
         $request->headers->set('Origin', 'https://origin.com');
 
-        $schemaManager = $this->createMock(MySqlSchemaManager::class);
+        $schemaManager = $this->createMock(MySQLSchemaManager::class);
         $schemaManager
             ->expects($this->once())
             ->method('tablesExist')
@@ -127,7 +142,7 @@ class WebsiteRootsConfigProviderTest extends TestCase
 
         $connection = $this->createMock(Connection::class);
         $connection
-            ->method('getSchemaManager')
+            ->method('createSchemaManager')
             ->willReturn($schemaManager)
         ;
 
@@ -147,7 +162,7 @@ class WebsiteRootsConfigProviderTest extends TestCase
      */
     private function mockConnection(Statement $statement): Connection
     {
-        $schemaManager = $this->createMock(MySqlSchemaManager::class);
+        $schemaManager = $this->createMock(MySQLSchemaManager::class);
         $schemaManager
             ->expects($this->once())
             ->method('tablesExist')
@@ -163,7 +178,7 @@ class WebsiteRootsConfigProviderTest extends TestCase
 
         $connection
             ->expects($this->once())
-            ->method('getSchemaManager')
+            ->method('createSchemaManager')
             ->willReturn($schemaManager)
         ;
 

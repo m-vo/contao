@@ -10,6 +10,8 @@
 
 namespace Contao;
 
+use Contao\CoreBundle\Image\Studio\Studio;
+
 /**
  * Front end content element "accordion".
  *
@@ -33,20 +35,27 @@ class ContentAccordion extends ContentElement
 
 		$this->Template->text = StringUtil::encodeEmail($this->text);
 		$this->Template->addImage = false;
+		$this->Template->addBefore = false;
 
 		// Add an image
-		if ($this->addImage && $this->singleSRC)
+		if ($this->addImage)
 		{
-			$objModel = FilesModel::findByUuid($this->singleSRC);
+			$figure = System::getContainer()
+				->get(Studio::class)
+				->createFigureBuilder()
+				->from($this->singleSRC)
+				->setSize($this->size)
+				->setMetadata($this->objModel->getOverwriteMetadata())
+				->enableLightbox((bool) $this->fullsize)
+				->buildIfResourceExists();
 
-			if ($objModel !== null && is_file(System::getContainer()->getParameter('kernel.project_dir') . '/' . $objModel->path))
+			if (null !== $figure)
 			{
-				$this->singleSRC = $objModel->path;
-				$this->addImageToTemplate($this->Template, $this->arrData, null, null, $objModel);
+				$figure->applyLegacyTemplateData($this->Template, $this->imagemargin, $this->floating);
 			}
 		}
 
-		$classes = StringUtil::deserialize($this->mooClasses);
+		$classes = StringUtil::deserialize($this->mooClasses, true) + array(null, null);
 
 		$this->Template->toggler = $classes[0] ?: 'toggler';
 		$this->Template->accordion = $classes[1] ?: 'accordion';

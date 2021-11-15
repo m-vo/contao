@@ -13,6 +13,7 @@ namespace Contao;
 use Contao\CoreBundle\Exception\AccessDeniedException;
 use Contao\CoreBundle\Exception\ResponseException;
 use Contao\CoreBundle\Picker\PickerInterface;
+use Contao\CoreBundle\Util\LocaleUtil;
 use Contao\Database\Result;
 use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\Filesystem;
@@ -68,7 +69,7 @@ abstract class Backend extends Controller
 	{
 		$arrReturn = array();
 		$projectDir = System::getContainer()->getParameter('kernel.project_dir');
-		$arrThemes = scan($projectDir . '/system/themes');
+		$arrThemes = Folder::scan($projectDir . '/system/themes');
 
 		foreach ($arrThemes as $strTheme)
 		{
@@ -90,14 +91,13 @@ abstract class Backend extends Controller
 	 */
 	public static function getTinyMceLanguage()
 	{
-		$lang = $GLOBALS['TL_LANGUAGE'];
+		$lang = LocaleUtil::formatAsLocale((string) $GLOBALS['TL_LANGUAGE']);
 
 		if (!$lang)
 		{
 			return 'en';
 		}
 
-		$lang = str_replace('-', '_', $lang);
 		$projectDir = System::getContainer()->getParameter('kernel.project_dir');
 
 		// The translation exists
@@ -193,7 +193,7 @@ abstract class Backend extends Controller
 	 */
 	public static function getTinyTemplates()
 	{
-		$strDir = Config::get('uploadPath') . '/tiny_templates';
+		$strDir = System::getContainer()->getParameter('contao.upload_path') . '/tiny_templates';
 		$projectDir = System::getContainer()->getParameter('kernel.project_dir');
 
 		if (!is_dir($projectDir . '/' . $strDir))
@@ -202,7 +202,7 @@ abstract class Backend extends Controller
 		}
 
 		$arrFiles = array();
-		$arrTemplates = scan($projectDir . '/' . $strDir);
+		$arrTemplates = Folder::scan($projectDir . '/' . $strDir);
 
 		foreach ($arrTemplates as $strFile)
 		{
@@ -336,8 +336,8 @@ abstract class Backend extends Controller
 		/** @var Session $objSession */
 		$objSession = System::getContainer()->get('session');
 
-		$arrTables = (array) $arrModule['tables'];
-		$strTable = Input::get('table') ?: $arrTables[0];
+		$arrTables = (array) ($arrModule['tables'] ?? array());
+		$strTable = Input::get('table') ?: ($arrTables[0] ?? null);
 		$id = (!Input::get('act') && Input::get('id')) ? Input::get('id') : $objSession->get('CURRENT_ID');
 
 		// Store the current ID in the current session
@@ -347,7 +347,11 @@ abstract class Backend extends Controller
 		}
 
 		\define('CURRENT_ID', (Input::get('table') ? $id : Input::get('id')));
-		$this->Template->headline = $GLOBALS['TL_LANG']['MOD'][$module][0];
+
+		if (isset($GLOBALS['TL_LANG']['MOD'][$module][0]))
+		{
+			$this->Template->headline = $GLOBALS['TL_LANG']['MOD'][$module][0];
+		}
 
 		// Add the module style sheet
 		if (isset($arrModule['stylesheet']))
@@ -382,11 +386,11 @@ abstract class Backend extends Controller
 			$this->loadDataContainer($strTable);
 
 			// Include all excluded fields which are allowed for the current user
-			if ($GLOBALS['TL_DCA'][$strTable]['fields'])
+			if (\is_array($GLOBALS['TL_DCA'][$strTable]['fields'] ?? null))
 			{
 				foreach ($GLOBALS['TL_DCA'][$strTable]['fields'] as $k=>$v)
 				{
-					if ($v['exclude'] && $this->User->hasAccess($strTable . '::' . $k, 'alexf'))
+					if (($v['exclude'] ?? null) && $this->User->hasAccess($strTable . '::' . $k, 'alexf'))
 					{
 						if ($strTable == 'tl_user_group')
 						{
@@ -399,13 +403,13 @@ abstract class Backend extends Controller
 			}
 
 			// Fabricate a new data container object
-			if (!$GLOBALS['TL_DCA'][$strTable]['config']['dataContainer'])
+			if (!isset($GLOBALS['TL_DCA'][$strTable]['config']['dataContainer']))
 			{
 				$this->log('Missing data container for table "' . $strTable . '"', __METHOD__, TL_ERROR);
 				trigger_error('Could not create a data container object', E_USER_ERROR);
 			}
 
-			$dataContainer = 'DC_' . $GLOBALS['TL_DCA'][$strTable]['config']['dataContainer'];
+			$dataContainer = DataContainer::getDriverForTable($strTable);
 
 			/** @var DataContainer $dc */
 			$dc = new $dataContainer($strTable, $arrModule);
@@ -426,7 +430,7 @@ abstract class Backend extends Controller
 		}
 
 		// Trigger the module callback
-		elseif (class_exists($arrModule['callback']))
+		elseif (class_exists($arrModule['callback'] ?? null))
 		{
 			/** @var Module $objCallback */
 			$objCallback = new $arrModule['callback']($dc);
@@ -518,9 +522,9 @@ abstract class Backend extends Controller
 
 				$pid = $dc->id;
 				$table = $strTable;
-				$ptable = ($act != 'edit') ? $GLOBALS['TL_DCA'][$strTable]['config']['ptable'] : $strTable;
+				$ptable = $act != 'edit' ? ($GLOBALS['TL_DCA'][$strTable]['config']['ptable'] ?? null) : $strTable;
 
-				while ($ptable && !\in_array($GLOBALS['TL_DCA'][$table]['list']['sorting']['mode'], array(5, 6)) && ($GLOBALS['TL_DCA'][$ptable]['config']['dataContainer'] ?? null) === 'Table')
+				while ($ptable && !\in_array($GLOBALS['TL_DCA'][$table]['list']['sorting']['mode'] ?? null, array(DataContainer::MODE_TREE, DataContainer::MODE_TREE_EXTENDED)) && ($GLOBALS['TL_DCA'][$ptable]['config']['dataContainer'] ?? null) === 'Table')
 				{
 					$objRow = $this->Database->prepare("SELECT * FROM " . $ptable . " WHERE id=?")
 											 ->limit(1)
@@ -556,7 +560,7 @@ abstract class Backend extends Controller
 					// Next parent table
 					$pid = $objRow->pid;
 					$table = $ptable;
-					$ptable = ($GLOBALS['TL_DCA'][$ptable]['config']['dynamicPtable']) ? $objRow->ptable : $GLOBALS['TL_DCA'][$ptable]['config']['ptable'];
+					$ptable = ($GLOBALS['TL_DCA'][$ptable]['config']['dynamicPtable'] ?? null) ? $objRow->ptable : ($GLOBALS['TL_DCA'][$ptable]['config']['ptable'] ?? null);
 				}
 
 				// Add the last parent table
@@ -655,9 +659,13 @@ abstract class Backend extends Controller
 	 * @param boolean $blnIsXmlSitemap
 	 *
 	 * @return array
+	 *
+	 * @deprecated Deprecated since Contao 4.12, to be removed in Contao 5.0
 	 */
 	public static function findSearchablePages($pid=0, $domain='', $blnIsXmlSitemap=false)
 	{
+		trigger_deprecation('contao/core-bundle', '4.12', 'Using "Backend::findSearchablePages()" has been deprecated and will no longer work in Contao 5.0.');
+
 		// Since the publication status of a page is not inherited by its child
 		// pages, we have to use findByPid() instead of findPublishedByPid() and
 		// filter out unpublished pages in the foreach loop (see #2217)
@@ -669,14 +677,25 @@ abstract class Backend extends Controller
 		}
 
 		$arrPages = array();
+		$user = null;
+
+		if (Config::get('indexProtected') && System::getContainer()->get('contao.security.token_checker')->hasFrontendUser())
+		{
+			$user = FrontendUser::getInstance();
+		}
 
 		// Recursively walk through all subpages
 		foreach ($objPages as $objPage)
 		{
+			$objPage->loadDetails();
+
+			// PageModel->groups is an array after calling loadDetails()
+			// Cannot use security voters across firewall context (backend to frontend)
+			$indexProtected = (!$user && \in_array(-1, $objPage->groups)) || ($user && $user->isMemberOf($objPage->groups));
 			$isPublished = ($objPage->published && (!$objPage->start || $objPage->start <= time()) && (!$objPage->stop || $objPage->stop > time()));
 
 			// Searchable and not protected
-			if ($isPublished && $objPage->type == 'regular' && !$objPage->requireItem && (!$objPage->noSearch || $blnIsXmlSitemap) && (!$blnIsXmlSitemap || $objPage->robots != 'noindex,nofollow') && (!$objPage->protected || Config::get('indexProtected')))
+			if ($isPublished && $objPage->type == 'regular' && !$objPage->requireItem && (!$objPage->noSearch || $blnIsXmlSitemap) && (!$blnIsXmlSitemap || $objPage->robots != 'noindex,nofollow') && (!$objPage->protected || $indexProtected))
 			{
 				$arrPages[] = $objPage->getAbsoluteUrl();
 
@@ -691,7 +710,7 @@ abstract class Backend extends Controller
 			}
 
 			// Get subpages
-			if ((!$objPage->protected || Config::get('indexProtected')) && ($arrSubpages = static::findSearchablePages($objPage->id, $domain, $blnIsXmlSitemap)))
+			if ((!$objPage->protected || $indexProtected) && ($arrSubpages = static::findSearchablePages($objPage->id, $domain, $blnIsXmlSitemap)))
 			{
 				$arrPages = array_merge($arrPages, $arrSubpages);
 			}
@@ -711,7 +730,7 @@ abstract class Backend extends Controller
 	 */
 	public static function addFileMetaInformationToRequest($strUuid, $strPtable, $intPid)
 	{
-		@trigger_error('Using Backend::addFileMetaInformationToRequest() has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.4', 'Using "Contao\Backend::addFileMetaInformationToRequest()" has been deprecated and will no longer work in Contao 5.0.');
 
 		$objFile = FilesModel::findByUuid($strUuid);
 
@@ -763,7 +782,7 @@ abstract class Backend extends Controller
 		$objPage->loadDetails();
 
 		// Convert the language to a locale (see #5678)
-		$strLanguage = str_replace('-', '_', $objPage->rootLanguage);
+		$strLanguage = LocaleUtil::formatAsLocale($objPage->rootLanguage);
 
 		if (isset($arrMeta[$strLanguage]))
 		{
@@ -854,20 +873,14 @@ abstract class Backend extends Controller
 
 				$arrIds[] = $intId;
 
-				// No link for the active page
-				if ($objPage->id == $intNode)
+				// No link for the active page or pages in the trail
+				if ($objPage->id == $intNode || !$objUser->hasAccess($objPage->id, 'pagemounts'))
 				{
 					$arrLinks[] = self::addPageIcon($objPage->row(), '', null, '', true) . ' ' . $objPage->title;
 				}
 				else
 				{
 					$arrLinks[] = self::addPageIcon($objPage->row(), '', null, '', true) . ' <a href="' . self::addToUrl('pn=' . $objPage->id) . '" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['selectNode']) . '">' . $objPage->title . '</a>';
-				}
-
-				// Do not show the mounted pages
-				if (!$objUser->isAdmin && $objUser->hasAccess($objPage->id, 'pagemounts'))
-				{
-					break;
 				}
 
 				$intId = $objPage->pid;
@@ -882,15 +895,16 @@ abstract class Backend extends Controller
 			throw new AccessDeniedException('Page ID ' . $intNode . ' is not mounted.');
 		}
 
-		// Limit tree
+		// Limit tree and disable root trails
 		$GLOBALS['TL_DCA']['tl_page']['list']['sorting']['root'] = array($intNode);
+		$GLOBALS['TL_DCA']['tl_page']['list']['sorting']['showRootTrails'] = false;
 
 		// Add root link
 		$arrLinks[] = Image::getHtml('pagemounts.svg') . ' <a href="' . self::addToUrl('pn=0') . '" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['selectAllNodes']) . '">' . $GLOBALS['TL_LANG']['MSC']['filterAll'] . '</a>';
 		$arrLinks = array_reverse($arrLinks);
 
 		// Insert breadcrumb menu
-		$GLOBALS['TL_DCA']['tl_page']['list']['sorting']['breadcrumb'] .= '
+		$GLOBALS['TL_DCA']['tl_page']['list']['sorting']['breadcrumb'] = ($GLOBALS['TL_DCA']['tl_page']['list']['sorting']['breadcrumb'] ?? '') . '
 
 <nav aria-label="' . $GLOBALS['TL_LANG']['MSC']['breadcrumbMenu'] . '">
   <ul id="tl_breadcrumb">
@@ -908,10 +922,11 @@ abstract class Backend extends Controller
 	 * @param string        $imageAttribute
 	 * @param boolean       $blnReturnImage
 	 * @param boolean       $blnProtected
+	 * @param boolean       $isVisibleRootTrailPage
 	 *
 	 * @return string
 	 */
-	public static function addPageIcon($row, $label, DataContainer $dc=null, $imageAttribute='', $blnReturnImage=false, $blnProtected=false)
+	public static function addPageIcon($row, $label, DataContainer $dc=null, $imageAttribute='', $blnReturnImage=false, $blnProtected=false, $isVisibleRootTrailPage=false)
 	{
 		if ($blnProtected)
 		{
@@ -933,8 +948,15 @@ abstract class Backend extends Controller
 			$label = '<strong>' . $label . '</strong>';
 		}
 
-		// Add the breadcrumb link
-		$label = '<a href="' . self::addToUrl('pn=' . $row['id']) . '" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['selectNode']) . '">' . $label . '</a>';
+		// Add the breadcrumb link if you have access to that page
+		if (!$isVisibleRootTrailPage)
+		{
+			$label = '<a href="' . self::addToUrl('pn=' . $row['id']) . '" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['selectNode']) . '">' . $label . '</a>';
+		}
+		else
+		{
+			$label = '<span>' . $label . '</span>';
+		}
 
 		// Return the image
 		return '<a href="contao/preview.php?page=' . $row['id'] . '" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['view']) . '" target="_blank">' . Image::getHtml($image, '', $imageAttribute) . '</a> ' . $label;
@@ -1023,8 +1045,8 @@ abstract class Backend extends Controller
 		}
 
 		$objUser  = BackendUser::getInstance();
-		$strPath  = Config::get('uploadPath');
-		$arrNodes = explode('/', preg_replace('/^' . preg_quote(Config::get('uploadPath'), '/') . '\//', '', $strNode));
+		$strPath  = System::getContainer()->getParameter('contao.upload_path');
+		$arrNodes = explode('/', preg_replace('/^' . preg_quote($strPath, '/') . '\//', '', $strNode));
 		$arrLinks = array();
 
 		// Add root link
@@ -1064,7 +1086,7 @@ abstract class Backend extends Controller
 		$GLOBALS['TL_DCA']['tl_files']['list']['sorting']['root'] = array($strNode);
 
 		// Insert breadcrumb menu
-		$GLOBALS['TL_DCA']['tl_files']['list']['sorting']['breadcrumb'] .= '
+		$GLOBALS['TL_DCA']['tl_files']['list']['sorting']['breadcrumb'] = ($GLOBALS['TL_DCA']['tl_files']['list']['sorting']['breadcrumb'] ?? '') . '
 
 <nav aria-label="' . $GLOBALS['TL_LANG']['MSC']['breadcrumbMenu'] . '">
   <ul id="tl_breadcrumb">
@@ -1123,19 +1145,46 @@ abstract class Backend extends Controller
 			return '';
 		}
 
-		return ' <a href="' . ampersand($factory->getUrl($context, $extras)) . '" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['pagepicker']) . '" id="pp_' . $inputName . '">' . Image::getHtml((\is_array($extras) && isset($extras['icon']) ? $extras['icon'] : 'pickpage.svg'), $GLOBALS['TL_LANG']['MSC']['pagepicker']) . '</a>
+		return ' <a href="' . StringUtil::ampersand($factory->getUrl($context, $extras)) . '" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['pagepicker']) . '" id="pp_' . $inputName . '">' . Image::getHtml((\is_array($extras) && isset($extras['icon']) ? $extras['icon'] : 'pickpage.svg'), $GLOBALS['TL_LANG']['MSC']['pagepicker']) . '</a>
   <script>
     $("pp_' . $inputName . '").addEvent("click", function(e) {
       e.preventDefault();
       Backend.openModalSelector({
         "id": "tl_listing",
         "title": ' . json_encode($GLOBALS['TL_DCA'][$table]['fields'][$field]['label'][0]) . ',
-        "url": this.href + "&value=" + document.getElementById("ctrl_' . $inputName . '").value,
+        "url": this.href + "&value=" + $("ctrl_' . $inputName . '").value,
         "callback": function(picker, value) {
           $("ctrl_' . $inputName . '").value = value.join(",");
           $("ctrl_' . $inputName . '").fireEvent("change");
         }.bind(this)
       });
+    });
+  </script>';
+	}
+
+	/**
+	 * Generate the DCA toggle password wizard
+	 *
+	 * @param string $inputName
+	 *
+	 * @return string
+	 */
+	public static function getTogglePasswordWizard($inputName)
+	{
+		return ' ' . Image::getHtml('visible.svg', '', 'title="' . $GLOBALS['TL_LANG']['MSC']['showPassword'] . '" id="pw_' . $inputName . '"') . '
+  <script>
+    $("pw_' . $inputName . '").addEvent("click", function(e) {
+      e.preventDefault();
+      var el = $("ctrl_' . $inputName . '");
+      if (el.type == "password") {
+        el.type = "text";
+        this.store("tip:title", "' . $GLOBALS['TL_LANG']['MSC']['hidePassword'] . '");
+        this.src = this.src.replace("visible.svg", "visible_.svg");
+      } else {
+        el.type = "password";
+        this.store("tip:title", "' . $GLOBALS['TL_LANG']['MSC']['showPassword'] . '");
+        this.src = this.src.replace("visible_.svg", "visible.svg");
+      }
     });
   </script>';
 	}
@@ -1149,7 +1198,7 @@ abstract class Backend extends Controller
 	{
 		$host = Environment::get('host');
 
-		if (strpos($host, 'xn--') !== 'false')
+		if (strpos($host, 'xn--') !== false)
 		{
 			$host = Idna::decode($host);
 		}
@@ -1294,7 +1343,7 @@ abstract class Backend extends Controller
 		// Deprecated since Contao 4.0, to be removed in Contao 5.0
 		if ($strFilter === true)
 		{
-			@trigger_error('Passing "true" to Backend::createFileList() has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+			trigger_deprecation('contao/core-bundle', '4.0', 'Passing "true" to "Contao\Backend::createFileList()" has been deprecated and will no longer work in Contao 5.0.');
 
 			$strFilter = 'gif,jpg,jpeg,png';
 		}
@@ -1303,7 +1352,7 @@ abstract class Backend extends Controller
 
 		if ($this->User->isAdmin)
 		{
-			return $this->doCreateFileList(Config::get('uploadPath'), -1, $strFilter);
+			return $this->doCreateFileList(System::getContainer()->getParameter('contao.upload_path'), -1, $strFilter);
 		}
 
 		$return = '';
@@ -1344,13 +1393,13 @@ abstract class Backend extends Controller
 		// Deprecated since Contao 4.0, to be removed in Contao 5.0
 		if ($strFilter === true)
 		{
-			@trigger_error('Passing "true" to Backend::doCreateFileList() has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+			trigger_deprecation('contao/core-bundle', '4.0', 'Passing "true" to "Contao\Backend::doCreateFileList()" has been deprecated and will no longer work in Contao 5.0.');
 
 			$strFilter = 'gif,jpg,jpeg,png';
 		}
 
 		$projectDir = System::getContainer()->getParameter('kernel.project_dir');
-		$arrPages = scan($projectDir . '/' . $strFolder);
+		$arrPages = Folder::scan($projectDir . '/' . $strFolder);
 
 		// Empty folder
 		if (empty($arrPages))

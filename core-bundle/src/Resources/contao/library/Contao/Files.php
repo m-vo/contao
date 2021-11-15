@@ -128,7 +128,7 @@ class Files
 	public function rrdir($strFolder, $blnPreserveRoot=false)
 	{
 		$this->validate($strFolder);
-		$arrFiles = scan($this->strRootDir . '/' . $strFolder, true);
+		$arrFiles = Folder::scan($this->strRootDir . '/' . $strFolder, true);
 
 		foreach ($arrFiles as $strFile)
 		{
@@ -250,7 +250,7 @@ class Files
 		$this->validate($strSource, $strDestination);
 
 		$this->mkdir($strDestination);
-		$arrFiles = scan($this->strRootDir . '/' . $strSource, true);
+		$arrFiles = Folder::scan($this->strRootDir . '/' . $strSource, true);
 
 		foreach ($arrFiles as $strFile)
 		{

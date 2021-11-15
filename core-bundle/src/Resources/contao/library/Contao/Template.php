@@ -10,8 +10,16 @@
 
 namespace Contao;
 
-use Contao\CoreBundle\EventListener\SubrequestCacheSubscriber;
-use MatthiasMullie\Minify;
+use Contao\CoreBundle\Image\Studio\FigureRenderer;
+use Contao\CoreBundle\Routing\ResponseContext\JsonLd\JsonLdManager;
+use Contao\CoreBundle\Routing\ResponseContext\ResponseContext;
+use Contao\CoreBundle\Routing\ResponseContext\ResponseContextAccessor;
+use Contao\CoreBundle\String\HtmlDecoder;
+use Contao\Image\ImageInterface;
+use Contao\Image\PictureConfiguration;
+use MatthiasMullie\Minify\CSS;
+use MatthiasMullie\Minify\JS;
+use Spatie\SchemaOrg\Graph;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\VarDumper\VarDumper;
 
@@ -34,6 +42,7 @@ use Symfony\Component\VarDumper\VarDumper;
  * @property string       $inColumn
  * @property string       $headline
  * @property array        $hl
+ * @property string       $content
  * @property string       $action
  * @property string       $enforceTwoFactor
  * @property string       $targetPath
@@ -171,7 +180,7 @@ abstract class Template extends Controller
 			throw new \InvalidArgumentException("$strKey is not set or not a callable");
 		}
 
-		return \call_user_func_array($this->arrData[$strKey], $arrParams);
+		return ($this->arrData[$strKey])(...$arrParams);
 	}
 
 	/**
@@ -254,7 +263,7 @@ abstract class Template extends Controller
 	 */
 	public function showTemplateVars()
 	{
-		@trigger_error('Using Template::showTemplateVars() has been deprecated and will no longer work in Contao 5.0. Use Template::dumpTemplateVars() instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.0', 'Using "Contao\Template::showTemplateVars()" has been deprecated and will no longer work in Contao 5.0. Use "Contao\Template::dumpTemplateVars()" instead.');
 
 		$this->dumpTemplateVars();
 	}
@@ -300,11 +309,11 @@ abstract class Template extends Controller
 	 */
 	public function output()
 	{
-		@trigger_error('Using Template::output() has been deprecated and will no longer work in Contao 5.0. Use Template::getResponse() instead.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.0', 'Using "Contao\Template::output()" has been deprecated and will no longer work in Contao 5.0. Use "Contao\Template::getResponse()" instead.');
 
 		$this->compile();
 
-		header('Content-Type: ' . $this->strContentType . '; charset=' . Config::get('characterSet'));
+		header('Content-Type: ' . $this->strContentType . '; charset=' . System::getContainer()->getParameter('kernel.charset'));
 
 		echo $this->strBuffer;
 	}
@@ -319,11 +328,8 @@ abstract class Template extends Controller
 		$this->compile();
 
 		$response = new Response($this->strBuffer);
-		$response->headers->set('Content-Type', $this->strContentType . '; charset=' . Config::get('characterSet'));
-
-		// Mark this response to affect the caching of the current page but remove any default cache headers
-		$response->headers->set(SubrequestCacheSubscriber::MERGE_CACHE_HEADER, true);
-		$response->headers->remove('Cache-Control');
+		$response->headers->set('Content-Type', $this->strContentType);
+		$response->setCharset(System::getContainer()->getParameter('kernel.charset'));
 
 		return $response;
 	}
@@ -341,7 +347,7 @@ abstract class Template extends Controller
 		$strUrl = System::getContainer()->get('router')->generate($strName, $arrParams);
 		$strUrl = substr($strUrl, \strlen(Environment::get('path')) + 1);
 
-		return ampersand($strUrl);
+		return StringUtil::ampersand($strUrl);
 	}
 
 	/**
@@ -371,7 +377,7 @@ abstract class Template extends Controller
 
 		$context->setBaseUrl('');
 
-		return ampersand($strUrl);
+		return StringUtil::ampersand($strUrl);
 	}
 
 	/**
@@ -389,6 +395,77 @@ abstract class Template extends Controller
 	}
 
 	/**
+	 * Helper method to allow quick access in the Contao templates for safe raw (unencoded) output.
+	 * It replaces (or optionally removes) Contao insert tags and removes all HTML.
+	 *
+	 * Be careful when using this. It must NOT be used within regular HTML when $value
+	 * is uncontrolled user input. It's useful to ensure raw values within e.g. <code> examples
+	 * or JSON-LD arrays.
+	 */
+	public function rawPlainText(string $value, bool $removeInsertTags = false): string
+	{
+		return System::getContainer()->get(HtmlDecoder::class)->inputEncodedToPlainText($value, $removeInsertTags);
+	}
+
+	/**
+	 * Helper method to allow quick access in the Contao templates for safe raw (unencoded) output.
+	 *
+	 * Compared to $this->rawPlainText() it adds new lines before and after block level HTML elements
+	 * and only then removes the rest of the HTML tags.
+	 *
+	 * Be careful when using this. It must NOT be used within regular HTML when $value
+	 * is uncontrolled user input. It's useful to ensure raw values within e.g. <code> examples
+	 * or JSON-LD arrays.
+	 */
+	public function rawHtmlToPlainText(string $value, bool $removeInsertTags = false): string
+	{
+		return System::getContainer()->get(HtmlDecoder::class)->htmlToPlainText($value, $removeInsertTags);
+	}
+
+	/**
+	 * Adds schema.org JSON-LD data to the current response context
+	 */
+	public function addSchemaOrg(array $jsonLd): void
+	{
+		/** @var ResponseContext $responseContext */
+		$responseContext = System::getContainer()->get(ResponseContextAccessor::class)->getResponseContext();
+
+		if (!$responseContext || !$responseContext->has(JsonLdManager::class))
+		{
+			return;
+		}
+
+		/** @var JsonLdManager $jsonLdManager */
+		$jsonLdManager = $responseContext->get(JsonLdManager::class);
+		$type = $jsonLdManager->createSchemaOrgTypeFromArray($jsonLd);
+
+		$jsonLdManager
+			->getGraphForSchema(JsonLdManager::SCHEMA_ORG)
+			->set($type, $jsonLd['identifier'] ?? Graph::IDENTIFIER_DEFAULT)
+		;
+	}
+
+	/**
+	 * Render a figure
+	 *
+	 * The provided configuration array is used to configure a FigureBuilder.
+	 * If not explicitly set, the default template "image.html5" will be used
+	 * to render the results. To use the core's default Twig template, pass
+	 * "@ContaoCore/Image/Studio/figure.html.twig" as $template argument.
+	 *
+	 * @param int|string|FilesModel|ImageInterface       $from          Can be a FilesModel, an ImageInterface, a tl_files UUID/ID/path or a file system path
+	 * @param int|string|array|PictureConfiguration|null $size          A picture size configuration or reference
+	 * @param array<string, mixed>                       $configuration Configuration for the FigureBuilder
+	 * @param string                                     $template      A Contao or Twig template
+	 *
+	 * @return string|null Returns null if the resource is invalid
+	 */
+	public function figure($from, $size, $configuration = array(), $template = 'image')
+	{
+		return System::getContainer()->get(FigureRenderer::class)->render($from, $size, $configuration, $template);
+	}
+
+	/**
 	 * Returns an asset path
 	 *
 	 * @param string      $path
@@ -400,8 +477,21 @@ abstract class Template extends Controller
 	{
 		$url = System::getContainer()->get('assets.packages')->getUrl($path, $packageName);
 
+		$basePath = '/';
+		$request = System::getContainer()->get('request_stack')->getMainRequest();
+
+		if ($request !== null)
+		{
+			$basePath = $request->getBasePath() . '/';
+		}
+
+		if (0 === strncmp($url, $basePath, \strlen($basePath)))
+		{
+			return substr($url, \strlen($basePath));
+		}
+
 		// Contao paths are relative to the <base> tag, so remove leading slashes
-		return ltrim($url, '/');
+		return $url;
 	}
 
 	/**
@@ -436,7 +526,7 @@ abstract class Template extends Controller
 	 */
 	protected function getDebugBar()
 	{
-		@trigger_error('Using Template::getDebugBar() has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.0', 'Using "Contao\Template::getDebugBar()" has been deprecated and will no longer work in Contao 5.0.');
 	}
 
 	/**
@@ -448,7 +538,7 @@ abstract class Template extends Controller
 	 */
 	public function minifyHtml($strHtml)
 	{
-		if (Config::get('debugMode'))
+		if (System::getContainer()->getParameter('kernel.debug'))
 		{
 			return $strHtml;
 		}
@@ -514,13 +604,13 @@ abstract class Template extends Controller
 				// Minify inline scripts
 				if ($strType == 'js')
 				{
-					$objMinify = new Minify\JS();
+					$objMinify = new JS();
 					$objMinify->add($strChunk);
 					$strChunk = $objMinify->minify();
 				}
 				elseif ($strType == 'css')
 				{
-					$objMinify = new Minify\CSS();
+					$objMinify = new CSS();
 					$objMinify->add($strChunk);
 					$strChunk = $objMinify->minify();
 				}
@@ -563,7 +653,7 @@ abstract class Template extends Controller
 			{
 				$webDir = StringUtil::stripRootDir($container->getParameter('contao.web_dir'));
 
-				// Handle public bundle resources in web/
+				// Handle public bundle resources in the contao.web_dir folder
 				if (file_exists($projectDir . '/' . $webDir . '/' . $href))
 				{
 					$mtime = filemtime($projectDir . '/' . $webDir . '/' . $href);
@@ -619,7 +709,7 @@ abstract class Template extends Controller
 			{
 				$webDir = StringUtil::stripRootDir($container->getParameter('contao.web_dir'));
 
-				// Handle public bundle resources in web/
+				// Handle public bundle resources in the contao.web_dir folder
 				if (file_exists($projectDir . '/' . $webDir . '/' . $src))
 				{
 					$mtime = filemtime($projectDir . '/' . $webDir . '/' . $src);
@@ -668,7 +758,7 @@ abstract class Template extends Controller
 	 */
 	public function flushAllData()
 	{
-		@trigger_error('Using Template::flushAllData() has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+		trigger_deprecation('contao/core-bundle', '4.0', 'Using "Contao\Template::flushAllData()" has been deprecated and will no longer work in Contao 5.0.');
 
 		if (\function_exists('fastcgi_finish_request'))
 		{

@@ -10,6 +10,8 @@
 
 namespace Contao;
 
+use Contao\CoreBundle\Image\Studio\Studio;
+
 /**
  * Front end content element "hyperlink".
  *
@@ -34,20 +36,26 @@ class ContentHyperlink extends ContentElement
 		}
 		else
 		{
-			$this->url = ampersand($this->url);
+			$this->url = StringUtil::ampersand($this->url);
 		}
 
 		$embed = explode('%s', $this->embed);
 
 		// Use an image instead of the title
-		if ($this->useImage && $this->singleSRC)
+		if ($this->useImage)
 		{
-			$objModel = FilesModel::findByUuid($this->singleSRC);
+			$figure = System::getContainer()
+				->get(Studio::class)
+				->createFigureBuilder()
+				->from($this->singleSRC)
+				->setSize($this->size)
+				->setMetadata($this->objModel->getOverwriteMetadata())
+				->buildIfResourceExists();
 
-			if ($objModel !== null && is_file(System::getContainer()->getParameter('kernel.project_dir') . '/' . $objModel->path))
+			if (null !== $figure)
 			{
-				$this->singleSRC = $objModel->path;
-				$this->addImageToTemplate($this->Template, $this->arrData, null, null, $objModel);
+				$figure->applyLegacyTemplateData($this->Template);
+
 				$this->Template->useImage = true;
 			}
 		}
@@ -63,8 +71,8 @@ class ContentHyperlink extends ContentElement
 		}
 
 		$this->Template->href = $this->url;
-		$this->Template->embed_pre = $embed[0];
-		$this->Template->embed_post = $embed[1];
+		$this->Template->embed_pre = $embed[0] ?? null;
+		$this->Template->embed_post = $embed[1] ?? null;
 		$this->Template->link = $this->linkTitle;
 		$this->Template->target = '';
 		$this->Template->rel = '';

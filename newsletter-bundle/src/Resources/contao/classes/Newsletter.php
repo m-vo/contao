@@ -11,8 +11,10 @@
 namespace Contao;
 
 use Contao\CoreBundle\Exception\InternalServerErrorException;
+use Contao\CoreBundle\String\SimpleTokenParser;
 use Contao\Database\Result;
 use Symfony\Component\HttpFoundation\Session\Session;
+use Symfony\Component\Mime\Exception\RfcComplianceException;
 
 /**
  * Provide methods to handle newsletters.
@@ -30,7 +32,7 @@ class Newsletter extends Backend
 	 */
 	public function send(DataContainer $dc)
 	{
-		$objNewsletter = $this->Database->prepare("SELECT n.*, c.template AS channelTemplate, c.sender AS channelSender, c.senderName as channelSenderName FROM tl_newsletter n LEFT JOIN tl_newsletter_channel c ON n.pid=c.id WHERE n.id=?")
+		$objNewsletter = $this->Database->prepare("SELECT n.*, c.template AS channelTemplate, c.sender AS channelSender, c.senderName as channelSenderName, c.mailerTransport AS channelMailerTransport FROM tl_newsletter n LEFT JOIN tl_newsletter_channel c ON n.pid=c.id WHERE n.id=?")
 										->limit(1)
 										->execute($dc->id);
 
@@ -350,6 +352,12 @@ class Newsletter extends Backend
 			}
 		}
 
+		// Add transport
+		if (!empty($objNewsletter->mailerTransport) || !empty($objNewsletter->channelMailerTransport))
+		{
+			$objEmail->addHeader('X-Transport', $objNewsletter->mailerTransport ?: $objNewsletter->channelMailerTransport);
+		}
+
 		// Newsletters with an unsubscribe header are less likely to be blocked (see #2174)
 		$objEmail->addHeader('List-Unsubscribe', '<mailto:' . $objNewsletter->sender . '?subject=' . rawurlencode($GLOBALS['TL_LANG']['MSC']['unsubscribe']) . '>');
 
@@ -368,16 +376,19 @@ class Newsletter extends Backend
 	 */
 	protected function sendNewsletter(Email $objEmail, Result $objNewsletter, $arrRecipient, $text, $html, $css=null)
 	{
+		/** @var SimpleTokenParser $simpleTokenParser */
+		$simpleTokenParser = System::getContainer()->get(SimpleTokenParser::class);
+
 		// Prepare the text content
-		$objEmail->text = StringUtil::parseSimpleTokens($text, $arrRecipient);
+		$objEmail->text = $simpleTokenParser->parse($text, $arrRecipient);
 
 		if (!$objNewsletter->sendText)
 		{
 			$objTemplate = new BackendTemplate($objNewsletter->template ?: 'mail_default');
 			$objTemplate->setData($objNewsletter->row());
 			$objTemplate->title = $objNewsletter->subject;
-			$objTemplate->body = StringUtil::parseSimpleTokens($html, $arrRecipient);
-			$objTemplate->charset = Config::get('characterSet');
+			$objTemplate->body = $simpleTokenParser->parse($html, $arrRecipient);
+			$objTemplate->charset = System::getContainer()->getParameter('kernel.charset');
 			$objTemplate->recipient = $arrRecipient['email'];
 
 			// Deprecated since Contao 4.0, to be removed in Contao 5.0
@@ -393,7 +404,7 @@ class Newsletter extends Backend
 		{
 			$objEmail->sendTo($arrRecipient['email']);
 		}
-		catch (\Swift_RfcComplianceException $e)
+		catch (RfcComplianceException $e)
 		{
 			$_SESSION['REJECTED_RECIPIENTS'][] = $arrRecipient['email'];
 		}
@@ -508,11 +519,11 @@ class Newsletter extends Backend
 						continue;
 					}
 
-					// Check whether the e-mail address has been blacklisted
-					$objBlacklist = $this->Database->prepare("SELECT COUNT(*) AS count FROM tl_newsletter_blacklist WHERE pid=? AND hash=?")
+					// Check whether the e-mail address has been added to the deny list
+					$objDenyList = $this->Database->prepare("SELECT COUNT(*) AS count FROM tl_newsletter_deny_list WHERE pid=? AND hash=?")
 												   ->execute(Input::get('id'), md5($strRecipient));
 
-					if ($objBlacklist->count > 0)
+					if ($objDenyList->count > 0)
 					{
 						$this->log('Recipient "' . $strRecipient . '" has unsubscribed from channel ID "' . Input::get('id') . '" and was not imported', __METHOD__, TL_ERROR);
 						continue;
@@ -538,7 +549,7 @@ class Newsletter extends Backend
 		// Return form
 		return '
 <div id="tl_buttons">
-<a href="' . ampersand(str_replace('&key=import', '', Environment::get('request'))) . '" class="header_back" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']) . '" accesskey="b">' . $GLOBALS['TL_LANG']['MSC']['backBT'] . '</a>
+<a href="' . StringUtil::ampersand(str_replace('&key=import', '', Environment::get('request'))) . '" class="header_back" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']) . '" accesskey="b">' . $GLOBALS['TL_LANG']['MSC']['backBT'] . '</a>
 </div>
 ' . Message::generate() . '
 <form id="tl_recipients_import" class="tl_form tl_edit_form" method="post" enctype="multipart/form-data">
@@ -610,10 +621,10 @@ class Newsletter extends Backend
 	 */
 	public function createNewUser($intUser, $arrData)
 	{
-		$arrNewsletters = StringUtil::deserialize($arrData['newsletter'], true);
+		$arrNewsletters = StringUtil::deserialize($arrData['newsletter'] ?? '', true);
 
 		// Return if there are no newsletters
-		if (!\is_array($arrNewsletters))
+		if (empty($arrNewsletters) || !\is_array($arrNewsletters))
 		{
 			return;
 		}

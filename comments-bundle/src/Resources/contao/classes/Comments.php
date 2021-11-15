@@ -10,6 +10,7 @@
 
 namespace Contao;
 
+use Contao\CoreBundle\EventListener\Widget\HttpUrlListener;
 use Contao\CoreBundle\Exception\PageNotFoundException;
 use Contao\CoreBundle\OptIn\OptIn;
 
@@ -205,7 +206,7 @@ class Comments extends Frontend
 				'name'      => 'website',
 				'label'     => $GLOBALS['TL_LANG']['MSC']['com_website'],
 				'inputType' => 'text',
-				'eval'      => array('rgxp'=>'url', 'maxlength'=>128, 'decodeEntities'=>true)
+				'eval'      => array('rgxp'=>HttpUrlListener::RGXP_NAME, 'maxlength'=>128, 'decodeEntities'=>true)
 			)
 		);
 
@@ -246,8 +247,7 @@ class Comments extends Frontend
 		// Initialize the widgets
 		foreach ($arrFields as $arrField)
 		{
-			/** @var Widget $strClass */
-			$strClass = $GLOBALS['TL_FFL'][$arrField['inputType']];
+			$strClass = $GLOBALS['TL_FFL'][$arrField['inputType']] ?? null;
 
 			// Continue if the class is not defined
 			if (!class_exists($strClass))
@@ -255,10 +255,10 @@ class Comments extends Frontend
 				continue;
 			}
 
-			$arrField['eval']['required'] = $arrField['eval']['mandatory'];
+			$arrField['eval']['required'] = $arrField['eval']['mandatory'] ?? null;
 
 			/** @var Widget $objWidget */
-			$objWidget = new $strClass($strClass::getAttributesFromDca($arrField, $arrField['name'], $arrField['value']));
+			$objWidget = new $strClass($strClass::getAttributesFromDca($arrField, $arrField['name'], $arrField['value'] ?? null));
 
 			// Append the parent ID to prevent duplicate IDs (see #1493)
 			$objWidget->id .= '_' . $intParent;
@@ -292,12 +292,6 @@ class Comments extends Frontend
 
 			if ($flashBag->has('comment_added'))
 			{
-				/** @var PageModel $objPage */
-				global $objPage;
-
-				$objPage->noSearch = 1;
-				$objPage->cache = 0;
-
 				$objTemplate->confirm = $flashBag->get('comment_added')[0];
 			}
 		}
@@ -502,7 +496,7 @@ class Comments extends Frontend
 	 */
 	public function convertLineFeeds($strComment)
 	{
-		$strComment = nl2br_pre($strComment);
+		$strComment = preg_replace('/\r?\n/', '<br>', $strComment);
 
 		// Use paragraphs to generate new lines
 		if (strncmp('<p>', $strComment, 3) !== 0)
@@ -667,7 +661,7 @@ class Comments extends Frontend
 
 			while ($objNotify->next())
 			{
-				// Don't notify the commentor about his own comment
+				// Don't notify the commenter about his own comment
 				if ($objNotify->email == $objComment->email)
 				{
 					continue;

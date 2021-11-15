@@ -8,6 +8,15 @@
  * @license LGPL-3.0-or-later
  */
 
+use Contao\Backend;
+use Contao\BackendUser;
+use Contao\Controller;
+use Contao\CoreBundle\Exception\AccessDeniedException;
+use Contao\DataContainer;
+use Contao\Input;
+use Contao\StringUtil;
+use Contao\System;
+
 $GLOBALS['TL_DCA']['tl_undo'] = array
 (
 	// Config
@@ -38,7 +47,7 @@ $GLOBALS['TL_DCA']['tl_undo'] = array
 	(
 		'sorting' => array
 		(
-			'mode'                    => 2,
+			'mode'                    => DataContainer::MODE_SORTABLE,
 			'fields'                  => array('tstamp'),
 			'panelLayout'             => 'sort,search,limit'
 		),
@@ -80,7 +89,7 @@ $GLOBALS['TL_DCA']['tl_undo'] = array
 		'tstamp' => array
 		(
 			'sorting'                 => true,
-			'flag'                    => 6,
+			'flag'                    => DataContainer::SORT_DAY_DESC,
 			'sql'                     => "int(10) unsigned NOT NULL default 0"
 		),
 		'fromTable' => array
@@ -109,7 +118,7 @@ $GLOBALS['TL_DCA']['tl_undo'] = array
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
-class tl_undo extends Contao\Backend
+class tl_undo extends Backend
 {
 	/**
 	 * Import the back end user object
@@ -117,13 +126,13 @@ class tl_undo extends Contao\Backend
 	public function __construct()
 	{
 		parent::__construct();
-		$this->import('Contao\BackendUser', 'User');
+		$this->import(BackendUser::class, 'User');
 	}
 
 	/**
 	 * Check permissions to use table tl_undo
 	 *
-	 * @throws Contao\CoreBundle\Exception\AccessDeniedException
+	 * @throws AccessDeniedException
 	 */
 	public function checkPermission()
 	{
@@ -140,9 +149,9 @@ class tl_undo extends Contao\Backend
 		$GLOBALS['TL_DCA']['tl_undo']['list']['sorting']['root'] = $objSteps->numRows ? $objSteps->fetchEach('id') : array(0);
 
 		// Redirect if there is an error
-		if (Contao\Input::get('act') && !in_array(Contao\Input::get('id'), $GLOBALS['TL_DCA']['tl_undo']['list']['sorting']['root']))
+		if (Input::get('act') && !in_array(Input::get('id'), $GLOBALS['TL_DCA']['tl_undo']['list']['sorting']['root'] ?? array()))
 		{
-			throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to ' . Contao\Input::get('act') . ' undo step ID ' . Contao\Input::get('id') . '.');
+			throw new AccessDeniedException('Not enough permissions to ' . Input::get('act') . ' undo step ID ' . Input::get('id') . '.');
 		}
 	}
 
@@ -154,12 +163,12 @@ class tl_undo extends Contao\Backend
 	 */
 	public function showDeletedRecords($data, $row)
 	{
-		$arrData = Contao\StringUtil::deserialize($row['data']);
+		$arrData = StringUtil::deserialize($row['data']);
 
 		foreach ($arrData as $strTable=>$arrTableData)
 		{
-			Contao\System::loadLanguageFile($strTable);
-			Contao\Controller::loadDataContainer($strTable);
+			System::loadLanguageFile($strTable);
+			Controller::loadDataContainer($strTable);
 
 			foreach ($arrTableData as $arrRow)
 			{
@@ -167,7 +176,7 @@ class tl_undo extends Contao\Backend
 
 				foreach ($arrRow as $i=>$v)
 				{
-					if (is_array($array = Contao\StringUtil::deserialize($v)))
+					if (is_array($array = StringUtil::deserialize($v)))
 					{
 						if (isset($array['value'], $array['unit']))
 						{
@@ -179,12 +188,14 @@ class tl_undo extends Contao\Backend
 						}
 					}
 
+					$label = null;
+
 					// Get the field label
 					if (isset($GLOBALS['TL_DCA'][$strTable]['fields'][$i]['label']))
 					{
 						$label = is_array($GLOBALS['TL_DCA'][$strTable]['fields'][$i]['label']) ? $GLOBALS['TL_DCA'][$strTable]['fields'][$i]['label'][0] : $GLOBALS['TL_DCA'][$strTable]['fields'][$i]['label'];
 					}
-					else
+					elseif (isset($GLOBALS['TL_LANG']['MSC'][$i]))
 					{
 						$label = is_array($GLOBALS['TL_LANG']['MSC'][$i]) ? $GLOBALS['TL_LANG']['MSC'][$i][0] : $GLOBALS['TL_LANG']['MSC'][$i];
 					}

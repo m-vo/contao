@@ -25,30 +25,11 @@ abstract class AbstractTablePickerProvider implements PickerProviderInterface, D
     private const PREFIX = 'dc.';
     private const PREFIX_LENGTH = 3;
 
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
-
-    /**
-     * @var FactoryInterface
-     */
-    private $menuFactory;
-
-    /**
-     * @var RouterInterface
-     */
-    private $router;
-
-    /**
-     * @var TranslatorInterface
-     */
-    private $translator;
-
-    /**
-     * @var Connection
-     */
-    private $connection;
+    private ContaoFramework $framework;
+    private FactoryInterface $menuFactory;
+    private RouterInterface $router;
+    private TranslatorInterface $translator;
+    private Connection $connection;
 
     public function __construct(ContaoFramework $framework, FactoryInterface $menuFactory, RouterInterface $router, TranslatorInterface $translator, Connection $connection)
     {
@@ -82,6 +63,11 @@ abstract class AbstractTablePickerProvider implements PickerProviderInterface, D
 
         // If the table is the first in the module, we do not need to add table=xy to the URL
         if (0 === array_search($table, $modules[$module], true)) {
+            return $this->getUrlForValue($config, $module);
+        }
+
+        // If the pid is missing for a child table do not add table=xy to the URL
+        if ($ptable && !$pid) {
             return $this->getUrlForValue($config, $module);
         }
 
@@ -131,7 +117,8 @@ abstract class AbstractTablePickerProvider implements PickerProviderInterface, D
         $this->framework->initialize();
         $this->framework->createInstance(DcaLoader::class, [$table])->load();
 
-        return $this->getDataContainer() === $GLOBALS['TL_DCA'][$table]['config']['dataContainer']
+        return isset($GLOBALS['TL_DCA'][$table]['config']['dataContainer'])
+            && $this->getDataContainer() === $GLOBALS['TL_DCA'][$table]['config']['dataContainer']
             && 0 !== \count($this->getModulesForTable($table));
     }
 
@@ -226,14 +213,9 @@ abstract class AbstractTablePickerProvider implements PickerProviderInterface, D
         // Use the first value if array to find a database record
         $id = (int) explode(',', $value)[0];
 
-        if (!$value) {
-            return [null, null];
-        }
-
         $this->framework->initialize();
         $this->framework->createInstance(DcaLoader::class, [$table])->load();
 
-        $pid = null;
         $ptable = $GLOBALS['TL_DCA'][$table]['config']['ptable'] ?? null;
         $dynamicPtable = $GLOBALS['TL_DCA'][$table]['config']['dynamicPtable'] ?? false;
 
@@ -241,30 +223,34 @@ abstract class AbstractTablePickerProvider implements PickerProviderInterface, D
             return [null, null];
         }
 
-        $qb = $this->connection->createQueryBuilder();
-        $qb->select('pid')->from($table)->where($qb->expr()->eq('id', $id));
+        $data = false;
 
-        if ($dynamicPtable) {
-            $qb->addSelect('ptable');
+        if ($id) {
+            $qb = $this->connection->createQueryBuilder();
+            $qb->select('pid')->from($table)->where($qb->expr()->eq('id', $id));
+
+            if ($dynamicPtable) {
+                $qb->addSelect('ptable');
+            }
+
+            $data = $qb->executeQuery()->fetchAssociative();
         }
 
-        $data = $qb->execute()->fetch();
-
-        if (false === $data) {
-            return [null, null];
-        }
-
-        $pid = (int) $data['pid'];
-
         if ($dynamicPtable) {
-            $ptable = $data['ptable'] ?: $ptable;
+            if (!empty($data['ptable'])) {
+                $ptable = $data['ptable'];
+            }
 
             if (!$ptable) {
                 $ptable = 'tl_article'; // backwards compatibility
             }
         }
 
-        return [$ptable, $pid];
+        if (false === $data) {
+            return [$ptable, null];
+        }
+
+        return [$ptable, (int) $data['pid']];
     }
 
     /**

@@ -48,13 +48,11 @@ abstract class Model
 {
 	/**
 	 * Insert flag
-	 * @var integer
 	 */
 	const INSERT = 1;
 
 	/**
 	 * Update flag
-	 * @var integer
 	 */
 	const UPDATE = 2;
 
@@ -222,7 +220,7 @@ abstract class Model
 	 */
 	public function __set($strKey, $varValue)
 	{
-		if ($this->$strKey === $varValue)
+		if (isset($this->arrData[$strKey]) && $this->arrData[$strKey] === $varValue)
 		{
 			return;
 		}
@@ -446,7 +444,7 @@ abstract class Model
 
 			$arrSet = $this->preSave($arrSet);
 
-			// No modified fiels
+			// No modified fields
 			if (empty($arrSet))
 			{
 				return $this;
@@ -485,7 +483,7 @@ abstract class Model
 
 			$arrSet = $this->preSave($arrSet);
 
-			// No modified fiels
+			// No modified fields
 			if (empty($arrSet))
 			{
 				return $this;
@@ -583,7 +581,9 @@ abstract class Model
 		// The relation does not exist
 		if (!isset($this->arrRelations[$strKey]))
 		{
-			throw new \Exception("Field $strKey does not seem to be related");
+			$table = static::getTable();
+
+			throw new \Exception("Field $table.$strKey does not seem to be related");
 		}
 
 		// The relation exists but there is no reference yet (see #6161 and #458)
@@ -750,6 +750,13 @@ abstract class Model
 	 */
 	public static function findByPk($varValue, array $arrOptions=array())
 	{
+		if ($varValue === null)
+		{
+			trigger_deprecation('contao/core-bundle', '4.13', 'Passing "null" as primary key has been deprecated and will no longer work in Contao 5.0.', __CLASS__);
+
+			return null;
+		}
+
 		// Try to load from the registry
 		if (empty($arrOptions))
 		{
@@ -858,7 +865,6 @@ abstract class Model
 				array
 				(
 					'column' => array("$t.id IN(" . implode(',', array_map('\intval', $arrUnregistered)) . ")"),
-					'value'  => null,
 					'order'  => Database::getInstance()->findInSet("$t.id", $arrIds),
 					'return' => 'Collection'
 				),
@@ -930,6 +936,13 @@ abstract class Model
 		if (\count($arrColumn) == 1 && ($arrColumn[0] === static::getPk() || \in_array($arrColumn[0], static::getUniqueFields())))
 		{
 			$blnModel = true;
+
+			if ($varValue === null && $arrColumn[0] === static::getPk())
+			{
+				trigger_deprecation('contao/core-bundle', '4.13', 'Passing "null" as primary key has been deprecated and will no longer work in Contao 5.0.', __CLASS__);
+
+				return null;
+			}
 		}
 
 		$arrOptions = array_merge
@@ -1027,7 +1040,7 @@ abstract class Model
 		}
 
 		// Try to load from the registry
-		if ($arrOptions['return'] == 'Model')
+		if (($arrOptions['return'] ?? null) == 'Model')
 		{
 			$arrColumn = (array) $arrOptions['column'];
 
@@ -1038,7 +1051,7 @@ abstract class Model
 
 				if ($arrColumn[0] == static::$strPk || \in_array($arrColumn[0], static::getUniqueFields()))
 				{
-					$varKey = \is_array($arrOptions['value']) ? $arrOptions['value'][0] : $arrOptions['value'];
+					$varKey = \is_array($arrOptions['value'] ?? null) ? $arrOptions['value'][0] : ($arrOptions['value'] ?? null);
 					$objModel = Registry::getInstance()->fetch(static::$strTable, $varKey, $arrColumn[0]);
 
 					if ($objModel !== null)
@@ -1071,18 +1084,23 @@ abstract class Model
 			$objStatement->limit($arrOptions['limit'], $arrOptions['offset']);
 		}
 
+		if (!\array_key_exists('value', $arrOptions))
+		{
+			$arrOptions['value'] = array();
+		}
+
 		$objStatement = static::preFind($objStatement);
-		$objResult = $objStatement->execute($arrOptions['value']);
+		$objResult = $objStatement->execute(...(\is_array($arrOptions['value']) ? $arrOptions['value'] : array($arrOptions['value'])));
 
 		if ($objResult->numRows < 1)
 		{
-			return $arrOptions['return'] == 'Array' ? array() : null;
+			return ($arrOptions['return'] ?? null) == 'Array' ? array() : null;
 		}
 
 		$objResult = static::postFind($objResult);
 
 		// Try to load from the registry
-		if ($arrOptions['return'] == 'Model')
+		if (($arrOptions['return'] ?? null) == 'Model')
 		{
 			$objModel = Registry::getInstance()->fetch(static::$strTable, $objResult->{static::$strPk});
 
@@ -1094,7 +1112,7 @@ abstract class Model
 			return static::createModelFromDbResult($objResult);
 		}
 
-		if ($arrOptions['return'] == 'Array')
+		if (($arrOptions['return'] ?? null) == 'Array')
 		{
 			return static::createCollectionFromDbResult($objResult, static::$strTable)->getModels();
 		}
@@ -1155,7 +1173,7 @@ abstract class Model
 
 		$strQuery = static::buildCountQuery($arrOptions);
 
-		return (int) Database::getInstance()->prepare($strQuery)->execute($arrOptions['value'])->count;
+		return (int) Database::getInstance()->prepare($strQuery)->execute(...(array) ($arrOptions['value'] ?? array()))->count;
 	}
 
 	/**
@@ -1188,6 +1206,8 @@ abstract class Model
 
 			return static::$arrClassNames[$strTable];
 		}
+
+		trigger_deprecation('contao/core-bundle', '4.10', sprintf('Not registering table "%s" in $GLOBALS[\'TL_MODELS\'] has been deprecated and will no longer work in Contao 5.0.', $strTable));
 
 		$arrChunks = explode('_', $strTable);
 
@@ -1234,7 +1254,10 @@ abstract class Model
 	 */
 	protected static function createModelFromDbResult(Result $objResult)
 	{
-		/** @var static $strClass */
+		/**
+		 * @var static               $strClass
+		 * @var class-string<static> $strClass
+		 */
 		$strClass = static::getClassFromTable(static::$strTable);
 
 		return new $strClass($objResult);

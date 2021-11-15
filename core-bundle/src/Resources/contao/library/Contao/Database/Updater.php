@@ -10,18 +10,19 @@
 
 namespace Contao\Database;
 
-use Contao\Config;
+use Contao\ArrayUtil;
 use Contao\Controller;
 use Contao\Database;
 use Contao\Dbafs;
 use Contao\File;
 use Contao\Files;
 use Contao\FilesModel;
+use Contao\Folder;
 use Contao\StringUtil;
 use Contao\System;
 use Symfony\Component\Finder\SplFileInfo;
 
-@trigger_error('Using the "Contao\Database\Updater" class has been deprecated and will no longer work in Contao 5.0.', E_USER_DEPRECATED);
+trigger_deprecation('contao/core-bundle', '4.0', 'Using the "Contao\Database\Updater" class has been deprecated and will no longer work in Contao 5.0.');
 
 /**
  * Adjust the database if the system is updated.
@@ -556,7 +557,7 @@ class Updater extends Controller
 			{
 				if (($key = array_search('layout.css', $tmp)) !== false)
 				{
-					array_insert($tmp, $key + 1, 'responsive.css');
+					ArrayUtil::arrayInsert($tmp, $key + 1, 'responsive.css');
 				}
 
 				$strFramework = serialize(array_values(array_unique($tmp)));
@@ -642,15 +643,16 @@ class Updater extends Controller
 	{
 		if ($strPath === null)
 		{
-			$strPath = Config::get('uploadPath');
+			$strPath = System::getContainer()->getParameter('contao.upload_path');
 		}
 
 		$arrMeta = array();
 		$arrMapper = array();
 		$arrFolders = array();
 		$arrFiles = array();
+
 		$projectDir = System::getContainer()->getParameter('kernel.project_dir');
-		$arrScan = scan($projectDir . '/' . $strPath);
+		$arrScan = Folder::scan($projectDir . '/' . $strPath);
 
 		foreach ($arrScan as $strFile)
 		{
@@ -708,7 +710,7 @@ class Updater extends Controller
 			$arrMapper[basename($strFile)] = $strUuid;
 		}
 
-		// Insert the meta data AFTER the file entries have been created
+		// Insert the metadata AFTER the file entries have been created
 		if (!empty($arrMeta))
 		{
 			foreach ($arrMeta as $file=>$meta)
@@ -771,7 +773,7 @@ class Updater extends Controller
 			}
 
 			// Make sure there are fields (see #6437)
-			if (\is_array($GLOBALS['TL_DCA'][$strTable]['fields']))
+			if (\is_array($GLOBALS['TL_DCA'][$strTable]['fields'] ?? null))
 			{
 				foreach ($GLOBALS['TL_DCA'][$strTable]['fields'] as $strField=>$arrField)
 				{
@@ -779,7 +781,7 @@ class Updater extends Controller
 					{
 						if ($this->Database->fieldExists($strField, $strTable, true))
 						{
-							$key = $arrField['eval']['multiple'] ? 'multiple' : 'single';
+							$key = ($arrField['eval']['multiple'] ?? null) ? 'multiple' : 'single';
 							$arrFields[$key][] = $strTable . '.' . $strField;
 						}
 
@@ -972,17 +974,18 @@ class Updater extends Controller
 	protected static function generateHelperObject($value)
 	{
 		$return = new \stdClass();
+		$strUploadPath = System::getContainer()->getParameter('contao.upload_path');
 
 		if (!\is_array($value))
 		{
 			$return->value = rtrim($value, "\x00");
-			$return->isUuid = (\strlen($value) == 16 && !is_numeric($return->value) && strncmp($return->value, Config::get('uploadPath') . '/', \strlen(Config::get('uploadPath')) + 1) !== 0);
+			$return->isUuid = (\strlen($value) == 16 && !is_numeric($return->value) && strncmp($return->value, $strUploadPath . '/', \strlen($strUploadPath) + 1) !== 0);
 			$return->isNumeric = (is_numeric($return->value) && $return->value > 0);
 		}
 		else
 		{
 			$return->value = array_map(static function ($var) { return rtrim($var, "\x00"); }, $value);
-			$return->isUuid = (\strlen($value[0]) == 16 && !is_numeric($return->value[0]) && strncmp($return->value[0], Config::get('uploadPath') . '/', \strlen(Config::get('uploadPath')) + 1) !== 0);
+			$return->isUuid = (\strlen($value[0]) == 16 && !is_numeric($return->value[0]) && strncmp($return->value[0], $strUploadPath . '/', \strlen($strUploadPath) + 1) !== 0);
 			$return->isNumeric = (is_numeric($return->value[0]) && $return->value[0] > 0);
 		}
 

@@ -21,7 +21,7 @@ use Contao\Input;
 use Contao\PageModel;
 use Contao\System;
 use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\MockObject\Rule\InvokedCount;
+use Symfony\Bridge\PhpUnit\ExpectDeprecationTrait;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Exception\ResourceNotFoundException;
 use Symfony\Component\Routing\Matcher\RequestMatcherInterface;
@@ -31,24 +31,20 @@ use Symfony\Component\Routing\Matcher\RequestMatcherInterface;
  */
 class LegacyMatcherTest extends TestCase
 {
+    use ExpectDeprecationTrait;
+
     public function testDoesNothingIfNoHooksAreRegistered(): void
     {
         unset($GLOBALS['TL_HOOKS']['getPageIdFromUrl']);
 
         $matcher = new LegacyMatcher(
             $this->mockContaoFramework(),
-            $this->mockRequestMatcher($this->once()),
+            $this->mockRequestMatcher(),
             '.html',
             false
         );
 
-        $request = $this->createMock(Request::class);
-        $request
-            ->method('getPathInfo')
-            ->willReturn('foo.html')
-        ;
-
-        $matcher->matchRequest($request);
+        $matcher->matchRequest(Request::create('foo.html'));
     }
 
     /**
@@ -56,18 +52,11 @@ class LegacyMatcherTest extends TestCase
      */
     public function testDoesNotExecuteHooksIfTheRequestPathIsEmpty(string $pathInfo, bool $prependLocale, bool $noRouteFound = false): void
     {
-        $request = $this->createMock(Request::class);
-        $request
-            ->expects($this->once())
-            ->method('getPathInfo')
-            ->willReturn($pathInfo)
-        ;
-
         $GLOBALS['TL_HOOKS']['getPageIdFromUrl'] = ['foo', 'bar'];
 
         $matcher = new LegacyMatcher(
             $this->mockFrameworkWithAdapters(),
-            $this->mockRequestMatcher($noRouteFound ? $this->never() : $this->once()),
+            $this->mockRequestMatcher(),
             '.html',
             $prependLocale
         );
@@ -76,7 +65,7 @@ class LegacyMatcherTest extends TestCase
             $this->expectException(ResourceNotFoundException::class);
         }
 
-        $matcher->matchRequest($request);
+        $matcher->matchRequest(Request::create($pathInfo));
     }
 
     public function getRootRequestData(): \Generator
@@ -92,24 +81,15 @@ class LegacyMatcherTest extends TestCase
 
     /**
      * @group legacy
-     *
-     * @expectedDeprecation Using the "getPageIdFromUrl" hook has been deprecated %s
-     *
      * @dataProvider getRequestData
      */
     public function testMatchesRequestWithoutFolderUrl(string $requestPath, ?string $language, string $urlSuffix, bool $useAutoItem, string $resultPath, ...$hooks): void
     {
-        $request = $this->createMock(Request::class);
-        $request
-            ->expects($this->once())
-            ->method('getPathInfo')
-            ->willReturn($requestPath)
-        ;
+        $this->expectDeprecation('Since contao/core-bundle 4.0: Using the "getPageIdFromUrl" hook has been deprecated %s');
 
         $GLOBALS['TL_HOOKS']['getPageIdFromUrl'] = $hooks;
 
         $config = [
-            'folderUrl' => false,
             'useAutoItem' => $useAutoItem,
         ];
 
@@ -117,12 +97,12 @@ class LegacyMatcherTest extends TestCase
 
         $matcher = new LegacyMatcher(
             $framework,
-            $this->mockRequestMatcher($this->once(), $resultPath),
+            $this->mockRequestMatcher($resultPath),
             $urlSuffix,
             null !== $language
         );
 
-        $matcher->matchRequest($request);
+        $matcher->matchRequest(Request::create($requestPath));
     }
 
     /**
@@ -239,13 +219,12 @@ class LegacyMatcherTest extends TestCase
 
     /**
      * @group legacy
-     *
-     * @expectedDeprecation Using the "getPageIdFromUrl" hook has been deprecated %s
      */
     public function testMatchRequestFromPathIfFolderUrlIsNotFound(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.0: Using the "getPageIdFromUrl" hook has been deprecated %s');
+
         $config = [
-            'folderUrl' => true,
             'useAutoItem' => false,
         ];
 
@@ -256,13 +235,7 @@ class LegacyMatcherTest extends TestCase
         );
 
         $folderUrlMatched = 0;
-
-        $request = $this->createMock(Request::class);
-        $request
-            ->expects($this->once())
-            ->method('getPathInfo')
-            ->willReturn('foo.html')
-        ;
+        $request = Request::create('foo.html');
 
         $matcher = $this->createMock(RequestMatcherInterface::class);
         $matcher
@@ -300,13 +273,12 @@ class LegacyMatcherTest extends TestCase
 
     /**
      * @group legacy
-     *
-     * @expectedDeprecation Using the "getPageIdFromUrl" hook has been deprecated %s
      */
     public function testMatchRequestFromPathIfFolderUrlHasNoModel(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.0: Using the "getPageIdFromUrl" hook has been deprecated %s');
+
         $config = [
-            'folderUrl' => true,
             'useAutoItem' => false,
         ];
 
@@ -317,13 +289,7 @@ class LegacyMatcherTest extends TestCase
         );
 
         $folderUrlMatched = 0;
-
-        $request = $this->createMock(Request::class);
-        $request
-            ->expects($this->once())
-            ->method('getPathInfo')
-            ->willReturn('foo.html')
-        ;
+        $request = Request::create('foo.html');
 
         $matcher = $this->createMock(RequestMatcherInterface::class);
         $matcher
@@ -361,13 +327,12 @@ class LegacyMatcherTest extends TestCase
 
     /**
      * @group legacy
-     *
-     * @expectedDeprecation Using the "getPageIdFromUrl" hook has been deprecated %s
      */
     public function testUsesPageAliasFromFolderUrlRoute(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.0: Using the "getPageIdFromUrl" hook has been deprecated %s');
+
         $config = [
-            'folderUrl' => true,
             'useAutoItem' => false,
         ];
 
@@ -378,12 +343,7 @@ class LegacyMatcherTest extends TestCase
         );
 
         $folderUrlMatched = 0;
-
-        $request = $this->createMock(Request::class);
-        $request
-            ->method('getPathInfo')
-            ->willReturn('foo.html')
-        ;
+        $request = Request::create('foo.html');
 
         $matcher = $this->createMock(RequestMatcherInterface::class);
         $matcher
@@ -425,13 +385,12 @@ class LegacyMatcherTest extends TestCase
 
     /**
      * @group legacy
-     *
-     * @expectedDeprecation Using the "getPageIdFromUrl" hook has been deprecated %s
      */
     public function testMatchesFragmentsWithParametersFolderUrlRoute(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.0: Using the "getPageIdFromUrl" hook has been deprecated %s');
+
         $config = [
-            'folderUrl' => true,
             'useAutoItem' => false,
         ];
 
@@ -442,12 +401,7 @@ class LegacyMatcherTest extends TestCase
         );
 
         $folderUrlMatched = 0;
-
-        $request = $this->createMock(Request::class);
-        $request
-            ->method('getPathInfo')
-            ->willReturn('foo/bar/baz.html')
-        ;
+        $request = Request::create('foo/bar/baz.html');
 
         $matcher = $this->createMock(RequestMatcherInterface::class);
         $matcher
@@ -492,13 +446,12 @@ class LegacyMatcherTest extends TestCase
 
     /**
      * @group legacy
-     *
-     * @expectedDeprecation Using the "getPageIdFromUrl" hook has been deprecated %s
      */
     public function testAddsAutoItemToFragmentsOfFolderUrlRoute(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.0: Using the "getPageIdFromUrl" hook has been deprecated %s');
+
         $config = [
-            'folderUrl' => true,
             'useAutoItem' => true,
         ];
 
@@ -509,12 +462,7 @@ class LegacyMatcherTest extends TestCase
         );
 
         $folderUrlMatched = 0;
-
-        $request = $this->createMock(Request::class);
-        $request
-            ->method('getPathInfo')
-            ->willReturn('foo/baz.html')
-        ;
+        $request = Request::create('foo/baz.html');
 
         $matcher = $this->createMock(RequestMatcherInterface::class);
         $matcher
@@ -560,27 +508,18 @@ class LegacyMatcherTest extends TestCase
     public function testThrowsExceptionIfUrlSuffixDoesNotMatch(): void
     {
         $config = [
-            'folderUrl' => false,
             'useAutoItem' => false,
         ];
 
-        $framework = $this->mockFrameworkWithAdapters($this->mockConfigAdapter($config));
-
-        $request = $this->createMock(Request::class);
-        $request
-            ->expects($this->once())
-            ->method('getPathInfo')
-            ->willReturn('foo.php')
-        ;
-
         $GLOBALS['TL_HOOKS']['getPageIdFromUrl'] = [[]];
 
-        $matcher = new LegacyMatcher($framework, $this->mockRequestMatcher($this->never()), '.html', false);
+        $framework = $this->mockFrameworkWithAdapters($this->mockConfigAdapter($config));
+        $matcher = new LegacyMatcher($framework, $this->mockRequestMatcher(), '.html', false);
 
         $this->expectException(ResourceNotFoundException::class);
         $this->expectExceptionMessage('URL suffix does not match');
 
-        $matcher->matchRequest($request);
+        $matcher->matchRequest(Request::create('foo.php'));
     }
 
     public function testThrowsExceptionIfLanguageIsMissing(): void
@@ -590,34 +529,25 @@ class LegacyMatcherTest extends TestCase
             'useAutoItem' => false,
         ];
 
-        $framework = $this->mockFrameworkWithAdapters($this->mockConfigAdapter($config));
-
-        $request = $this->createMock(Request::class);
-        $request
-            ->expects($this->once())
-            ->method('getPathInfo')
-            ->willReturn('foo/bar.html')
-        ;
-
         $GLOBALS['TL_HOOKS']['getPageIdFromUrl'] = [[]];
 
-        $matcher = new LegacyMatcher($framework, $this->mockRequestMatcher($this->never()), '.html', true);
+        $framework = $this->mockFrameworkWithAdapters($this->mockConfigAdapter($config));
+        $matcher = new LegacyMatcher($framework, $this->mockRequestMatcher(), '.html', true);
 
         $this->expectException(ResourceNotFoundException::class);
         $this->expectExceptionMessage('Locale does not match');
 
-        $matcher->matchRequest($request);
+        $matcher->matchRequest(Request::create('foo/bar.html'));
     }
 
     /**
      * @group legacy
-     *
-     * @expectedDeprecation Using the "getPageIdFromUrl" hook has been deprecated %s
      */
     public function testThrowsExceptionIfHookReturnsAnEmptyAlias(): void
     {
+        $this->expectDeprecation('Since contao/core-bundle 4.0: Using the "getPageIdFromUrl" hook has been deprecated %s');
+
         $config = [
-            'folderUrl' => false,
             'useAutoItem' => false,
         ];
 
@@ -627,21 +557,14 @@ class LegacyMatcherTest extends TestCase
             [['foo', 'bar', ['foo'], ['']]]
         );
 
-        $request = $this->createMock(Request::class);
-        $request
-            ->expects($this->once())
-            ->method('getPathInfo')
-            ->willReturn('foo.html')
-        ;
-
         $GLOBALS['TL_HOOKS']['getPageIdFromUrl'] = [['foo', 'bar']];
 
-        $matcher = new LegacyMatcher($framework, $this->mockRequestMatcher($this->never()), '.html', false);
+        $matcher = new LegacyMatcher($framework, $this->mockRequestMatcher(), '.html', false);
 
         $this->expectException(ResourceNotFoundException::class);
         $this->expectExceptionMessage('Page alias is empty');
 
-        $matcher->matchRequest($request);
+        $matcher->matchRequest(Request::create('foo.html'));
     }
 
     /**
@@ -698,15 +621,23 @@ class LegacyMatcherTest extends TestCase
     /**
      * @return RequestMatcherInterface&MockObject
      */
-    private function mockRequestMatcher(InvokedCount $expects, string $pathInfo = null, array $match = []): RequestMatcherInterface
+    private function mockRequestMatcher(string $pathInfo = null, array $match = []): RequestMatcherInterface
     {
+        $expectCalls = null === $pathInfo ? 1 : 2;
+
         $matcher = $this->createMock(RequestMatcherInterface::class);
         $matcher
-            ->expects($expects)
+            ->expects($this->exactly($expectCalls))
             ->method('matchRequest')
             ->with($this->callback(
-                static function (Request $request) use ($pathInfo) {
-                    return null === $pathInfo || $request->getPathInfo() === $pathInfo;
+                static function (Request $request) use ($pathInfo, &$expectCalls) {
+                    if (1 === $expectCalls) {
+                        return null === $pathInfo || $request->getPathInfo() === $pathInfo;
+                    }
+
+                    --$expectCalls;
+
+                    return true;
                 }
             ))
             ->willReturn($match)
@@ -720,11 +651,7 @@ class LegacyMatcherTest extends TestCase
         $configAdapter = $this->mockAdapter(['get']);
         $configAdapter
             ->method('get')
-            ->willReturnCallback(
-                static function ($param) use ($config) {
-                    return $config[$param] ?? null;
-                }
-            )
+            ->willReturnCallback(static fn ($param) => $config[$param] ?? null)
         ;
 
         return $configAdapter;

@@ -10,6 +10,8 @@
 
 namespace Contao;
 
+use Contao\CoreBundle\Image\Studio\Studio;
+
 /**
  * Content element "Vimeo".
  *
@@ -112,15 +114,17 @@ class ContentVimeo extends ContentElement
 		// Add a splash image
 		if ($this->splashImage)
 		{
-			$objFile = FilesModel::findByUuid($this->singleSRC);
+			$figure = System::getContainer()
+				->get(Studio::class)
+				->createFigureBuilder()
+				->from($this->singleSRC)
+				->setSize($this->size)
+				->buildIfResourceExists();
 
-			if ($objFile !== null && is_file(TL_ROOT . '/' . $objFile->path))
+			if (null !== $figure)
 			{
-				$this->singleSRC = $objFile->path;
-
-				$objSplash = new \stdClass();
-				$this->addImageToTemplate($objSplash, $this->arrData, null, null, $objFile);
-				$this->Template->splashImage = $objSplash;
+				$this->Template->splashImage = (object) $figure->getLegacyTemplateData();
+				$this->Template->splashImage->figure = $figure;
 			}
 		}
 

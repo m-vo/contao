@@ -17,20 +17,9 @@ use Symfony\Component\Filesystem\Filesystem;
 
 class DotenvDumper
 {
-    /**
-     * @var string
-     */
-    private $dotenvFile;
-
-    /**
-     * @var Filesystem
-     */
-    private $filesystem;
-
-    /**
-     * @var array
-     */
-    private $parameters = [];
+    private string $dotenvFile;
+    private Filesystem $filesystem;
+    private array $parameters = [];
 
     public function __construct(string $dotenvFile, Filesystem $filesystem = null)
     {
@@ -41,7 +30,10 @@ class DotenvDumper
             return;
         }
 
-        $parameters = (new Dotenv(false))->parse(file_get_contents($dotenvFile));
+        $dotenv = new Dotenv();
+        $dotenv->usePutenv(false);
+
+        $parameters = $dotenv->parse(file_get_contents($dotenvFile));
 
         if (0 !== \count($parameters)) {
             $this->parameters = array_merge($this->parameters, $parameters);

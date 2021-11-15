@@ -61,6 +61,38 @@
         <source>The website is currently not available. Please come back later.</source>
         <target>El sitio web no está disponible actualmente. Por favor inténtelo más tarde.</target>
       </trans-unit>
+      <trans-unit id="XPT.missingRouteParameters.title">
+        <source>Unable to generate front end URL</source>
+        <target>No se puede generar la URL del front-end</target>
+      </trans-unit>
+      <trans-unit id="XPT.missingRouteParameters.matter">
+        <source>The URL could not be generated, because the route has mandatory parameters that are not given. Additional information (e.g. a news alias) must be provided.</source>
+        <target>No se pudo generar la URL porque la ruta tiene parámetros obligatorios que no se dan. Se debe proporcionar información adicional (por ejemplo, un alias de noticias).</target>
+      </trans-unit>
+      <trans-unit id="XPT.missingRouteParameters.explain">
+        <source>Symfony routes can have variable parameters, which are validated using regular expressions. The following configuration could not be resolved:</source>
+        <target>Las rutas de Symfony pueden tener parámetros variables, que se validan mediante expresiones regulares. No se pudo resolver la siguiente configuración:</target>
+      </trans-unit>
+      <trans-unit id="XPT.missingRouteParameters.path">
+        <source>Route path</source>
+        <target>Ruta path</target>
+      </trans-unit>
+      <trans-unit id="XPT.missingRouteParameters.parameterName">
+        <source>Name</source>
+        <target>Nombre</target>
+      </trans-unit>
+      <trans-unit id="XPT.missingRouteParameters.parameterRequirement">
+        <source>Requirement (Regex)</source>
+        <target>Requisito (Regex)</target>
+      </trans-unit>
+      <trans-unit id="XPT.missingRouteParameters.parameterDefault">
+        <source>Default value</source>
+        <target>Valor defecto</target>
+      </trans-unit>
+      <trans-unit id="XPT.missingRouteParameters.parameterEmpty">
+        <source>empty</source>
+        <target>vacío</target>
+      </trans-unit>
     </body>
   </file>
 </xliff>

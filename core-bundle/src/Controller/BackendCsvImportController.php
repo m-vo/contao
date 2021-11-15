@@ -25,6 +25,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Webmozart\PathUtil\Path;
 
 class BackendCsvImportController
 {
@@ -33,30 +34,11 @@ class BackendCsvImportController
     public const SEPARATOR_SEMICOLON = 'semicolon';
     public const SEPARATOR_TABULATOR = 'tabulator';
 
-    /**
-     * @var ContaoFramework
-     */
-    private $framework;
-
-    /**
-     * @var Connection
-     */
-    private $connection;
-
-    /**
-     * @var RequestStack
-     */
-    private $requestStack;
-
-    /**
-     * @var TranslatorInterface
-     */
-    private $translator;
-
-    /**
-     * @var string
-     */
-    private $projectDir;
+    private ContaoFramework $framework;
+    private Connection $connection;
+    private RequestStack $requestStack;
+    private TranslatorInterface $translator;
+    private string $projectDir;
 
     /**
      * @internal Do not inherit from this class; decorate the "Contao\CoreBundle\Controller\BackendCsvImportController" service instead
@@ -73,9 +55,7 @@ class BackendCsvImportController
     public function importListWizardAction(DataContainer $dc): Response
     {
         return $this->importFromTemplate(
-            static function (array $data, array $row): array {
-                return array_merge($data, $row);
-            },
+            static fn (array $data, array $row): array => array_merge($data, $row),
             $dc->table,
             'listitems',
             (int) $dc->id,
@@ -282,13 +262,13 @@ class BackendCsvImportController
         }
 
         foreach ($files as &$file) {
-            $extension = pathinfo($file, PATHINFO_EXTENSION);
+            $extension = Path::getExtension($file, true);
 
             if ('csv' !== $extension) {
                 throw new \RuntimeException(sprintf($this->translator->trans('ERR.filetype', [], 'contao_default'), $extension));
             }
 
-            $file = $this->projectDir.'/'.$file;
+            $file = Path::join($this->projectDir, $file);
         }
 
         return $files;

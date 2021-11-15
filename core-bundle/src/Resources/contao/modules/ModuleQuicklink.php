@@ -10,7 +10,7 @@
 
 namespace Contao;
 
-use Patchwork\Utf8;
+use Contao\CoreBundle\Security\ContaoCorePermissions;
 
 /**
  * Front end module "quick link".
@@ -37,7 +37,7 @@ class ModuleQuicklink extends Module
 		if ($request && System::getContainer()->get('contao.routing.scope_matcher')->isBackendRequest($request))
 		{
 			$objTemplate = new BackendTemplate('be_wildcard');
-			$objTemplate->wildcard = '### ' . Utf8::strtoupper($GLOBALS['TL_LANG']['FMD']['quicklink'][0]) . ' ###';
+			$objTemplate->wildcard = '### ' . $GLOBALS['TL_LANG']['FMD']['quicklink'][0] . ' ###';
 			$objTemplate->title = $this->headline;
 			$objTemplate->id = $this->id;
 			$objTemplate->link = $this->name;
@@ -72,7 +72,7 @@ class ModuleQuicklink extends Module
 		global $objPage;
 
 		// Get all active pages
-		$objPages = PageModel::findPublishedRegularWithoutGuestsByIds($this->pages);
+		$objPages = PageModel::findPublishedRegularByIds($this->pages);
 
 		// Return if there are no pages
 		if ($objPages === null)
@@ -80,75 +80,70 @@ class ModuleQuicklink extends Module
 			return;
 		}
 
-		$arrPages = array();
-
-		// Sort the array keys according to the given order
-		if ($this->orderPages)
-		{
-			$tmp = StringUtil::deserialize($this->orderPages);
-
-			if (!empty($tmp) && \is_array($tmp))
-			{
-				$arrPages = array_map(static function () {}, array_flip($tmp));
-			}
-		}
-
-		// Add the items to the pre-sorted array
-		while ($objPages->next())
-		{
-			$arrPages[$objPages->id] = $objPages->current();
-		}
-
 		$items = array();
-		$arrPages = array_values(array_filter($arrPages));
+		$security = System::getContainer()->get('security.helper');
+		$isMember = $security->isGranted('ROLE_MEMBER');
 
-		/** @var PageModel[] $arrPages */
-		foreach ($arrPages as $objSubpage)
+		/** @var PageModel[] $objPages */
+		foreach ($objPages as $objSubpage)
 		{
-			$objSubpage->title = StringUtil::stripInsertTags($objSubpage->title);
-			$objSubpage->pageTitle = StringUtil::stripInsertTags($objSubpage->pageTitle);
+			$objSubpage->loadDetails();
 
-			// Get href
-			switch ($objSubpage->type)
+			// Hide the page if it is not protected and only visible to guests (backwards compatibility)
+			if ($objSubpage->guests && !$objSubpage->protected && $isMember)
 			{
-				case 'redirect':
-					$href = $objSubpage->url;
-					break;
-
-				case 'forward':
-					if ($objSubpage->jumpTo)
-					{
-						$objNext = PageModel::findPublishedById($objSubpage->jumpTo);
-					}
-					else
-					{
-						$objNext = PageModel::findFirstPublishedRegularByPid($objSubpage->id);
-					}
-
-					if ($objNext instanceof PageModel)
-					{
-						$href = $objNext->getFrontendUrl();
-						break;
-					}
-					// no break
-
-				default:
-					$href = $objSubpage->getFrontendUrl();
-					break;
+				trigger_deprecation('contao/core-bundle', '4.12', 'Using the "show to guests only" feature has been deprecated an will no longer work in Contao 5.0. Use the "protect page" function instead.');
+				continue;
 			}
 
-			$items[] = array
-			(
-				'href' => $href,
-				'title' => StringUtil::specialchars($objSubpage->pageTitle ?: $objSubpage->title),
-				'link' => $objSubpage->title,
-				'active' => ($objPage->id == $objSubpage->id || ($objSubpage->type == 'forward' && $objPage->id == $objSubpage->jumpTo))
-			);
+			// PageModel->groups is an array after calling loadDetails()
+			if (!$objSubpage->protected || $this->showProtected || $security->isGranted(ContaoCorePermissions::MEMBER_IN_GROUPS, $objSubpage->groups))
+			{
+				$objSubpage->title = StringUtil::stripInsertTags($objSubpage->title);
+				$objSubpage->pageTitle = StringUtil::stripInsertTags($objSubpage->pageTitle);
+
+				// Get href
+				switch ($objSubpage->type)
+				{
+					case 'redirect':
+						$href = $objSubpage->url;
+						break;
+
+					case 'forward':
+						if ($objSubpage->jumpTo)
+						{
+							$objNext = PageModel::findPublishedById($objSubpage->jumpTo);
+						}
+						else
+						{
+							$objNext = PageModel::findFirstPublishedRegularByPid($objSubpage->id);
+						}
+
+						if ($objNext instanceof PageModel)
+						{
+							$href = $objNext->getFrontendUrl();
+							break;
+						}
+						// no break
+
+					default:
+						$href = $objSubpage->getFrontendUrl();
+						break;
+				}
+
+				$items[] = array
+				(
+					'href' => $href,
+					'title' => StringUtil::specialchars($objSubpage->pageTitle ?: $objSubpage->title),
+					'link' => $objSubpage->title,
+					'active' => ($objPage->id == $objSubpage->id || ($objSubpage->type == 'forward' && $objPage->id == $objSubpage->jumpTo))
+				);
+			}
 		}
 
 		$this->Template->items = $items;
 		$this->Template->formId = 'tl_quicklink_' . $this->id;
-		$this->Template->request = ampersand(Environment::get('request'));
+		$this->Template->request = StringUtil::ampersand(Environment::get('request'));
 		$this->Template->title = $this->customLabel ?: $GLOBALS['TL_LANG']['MSC']['quicklink'];
 		$this->Template->button = StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['go']);
 	}

@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace Contao\CoreBundle\Search;
 
+use Contao\ArrayUtil;
 use Nyholm\Psr7\Uri;
 use Psr\Http\Message\UriInterface;
 use Symfony\Component\DomCrawler\Crawler;
@@ -20,15 +21,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 class Document
 {
-    /**
-     * @var UriInterface
-     */
-    private $uri;
-
-    /**
-     * @var int
-     */
-    private $statusCode;
+    private UriInterface $uri;
+    private int $statusCode;
+    private string $body;
+    private ?Crawler $crawler = null;
+    private ?array $jsonLds = null;
 
     /**
      * The key is the header name in lowercase letters and the value is again
@@ -36,22 +33,7 @@ class Document
      *
      * @var array<string,array>
      */
-    private $headers;
-
-    /**
-     * @var string
-     */
-    private $body;
-
-    /**
-     * @var Crawler
-     */
-    private $crawler;
-
-    /**
-     * @var array|null
-     */
-    private $jsonLds;
+    private array $headers;
 
     public function __construct(UriInterface $uri, int $statusCode, array $headers = [], string $body = '')
     {
@@ -90,6 +72,30 @@ class Document
         return $this->crawler;
     }
 
+    public function extractCanonicalUri(): ?UriInterface
+    {
+        foreach ($this->getHeaders() as $key => $values) {
+            if ('link' === $key) {
+                foreach ($values as $value) {
+                    if (preg_match('@<(https?://(.+))>;\s*rel="canonical"@', $value, $matches)) {
+                        return new Uri($matches[1]);
+                    }
+                }
+            }
+        }
+
+        $headCanonical = $this->getContentCrawler()
+            ->filterXPath('//html/head/link[@rel="canonical"][starts-with(@href,"http")]')
+            ->first()
+        ;
+
+        if ($headCanonical->count()) {
+            return new Uri($headCanonical->attr('href'));
+        }
+
+        return null;
+    }
+
     /**
      * Extracts all <script type="application/ld+json"> script tags and returns their contents as a JSON decoded
      * array. Optionally allows to restrict it to a given context and type.
@@ -106,11 +112,11 @@ class Document
             return $this->jsonLds;
         }
 
-        $this->jsonLds = $this->getContentCrawler()
+        $jsonLds = $this->getContentCrawler()
             ->filterXPath('descendant-or-self::script[@type = "application/ld+json"]')
             ->each(
                 static function (Crawler $node) {
-                    $data = json_decode($node->text(), true);
+                    $data = json_decode($node->text(null, true), true);
 
                     if (JSON_ERROR_NONE !== json_last_error()) {
                         return null;
@@ -121,8 +127,23 @@ class Document
             )
         ;
 
-        // Filter invalid (null) values
-        $this->jsonLds = array_filter($this->jsonLds);
+        // Filter invalid (null) and parse all values
+        foreach (array_filter($jsonLds) as $jsonLd) {
+            // If array has numeric keys, it likely contains multiple data inside it which should be
+            // treated as if coming from separate sources, and thus moved to the root of an array.
+            $jsonLdItems = ArrayUtil::isAssoc($jsonLd) ? [$jsonLd] : $jsonLd;
+
+            // Parsed the grouped values under the @graph within the same context
+            foreach ($jsonLdItems as $jsonLdItem) {
+                if (\is_array($graphs = $jsonLdItem['@graph'] ?? null)) {
+                    foreach ($graphs as $graph) {
+                        $this->jsonLds[] = array_merge(array_diff_key($jsonLdItem, ['@graph' => null]), $graph);
+                    }
+                } else {
+                    $this->jsonLds[] = $jsonLdItem;
+                }
+            }
+        }
 
         return $this->filterJsonLd($this->jsonLds, $context, $type);
     }

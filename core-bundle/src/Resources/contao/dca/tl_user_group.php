@@ -8,7 +8,18 @@
  * @license LGPL-3.0-or-later
  */
 
-Contao\System::loadLanguageFile('tl_user');
+use Contao\Backend;
+use Contao\BackendUser;
+use Contao\CoreBundle\Exception\AccessDeniedException;
+use Contao\DataContainer;
+use Contao\Image;
+use Contao\Input;
+use Contao\Message;
+use Contao\StringUtil;
+use Contao\System;
+use Contao\Versions;
+
+System::loadLanguageFile('tl_user');
 
 $GLOBALS['TL_DCA']['tl_user_group'] = array
 (
@@ -35,9 +46,9 @@ $GLOBALS['TL_DCA']['tl_user_group'] = array
 	(
 		'sorting' => array
 		(
-			'mode'                    => 1,
+			'mode'                    => DataContainer::MODE_SORTED,
 			'fields'                  => array('name'),
-			'flag'                    => 1,
+			'flag'                    => DataContainer::SORT_INITIAL_LETTER_ASC,
 			'panelLayout'             => 'filter;search,limit',
 		),
 		'label' => array
@@ -71,7 +82,7 @@ $GLOBALS['TL_DCA']['tl_user_group'] = array
 			(
 				'href'                => 'act=delete',
 				'icon'                => 'delete.svg',
-				'attributes'          => 'onclick="if(!confirm(\'' . $GLOBALS['TL_LANG']['MSC']['deleteConfirm'] . '\'))return false;Backend.getScrollOffset()"'
+				'attributes'          => 'onclick="if(!confirm(\'' . ($GLOBALS['TL_LANG']['MSC']['deleteConfirm'] ?? null) . '\'))return false;Backend.getScrollOffset()"'
 			),
 			'toggle' => array
 			(
@@ -170,7 +181,6 @@ $GLOBALS['TL_DCA']['tl_user_group'] = array
 			'default'                 => array('regular', 'redirect', 'forward'),
 			'exclude'                 => true,
 			'inputType'               => 'checkbox',
-			'options'                 => array_keys($GLOBALS['TL_PTY']),
 			'reference'               => &$GLOBALS['TL_LANG']['PTY'],
 			'eval'                    => array('multiple'=>true, 'helpwizard'=>true),
 			'sql'                     => "blob NULL"
@@ -204,7 +214,7 @@ $GLOBALS['TL_DCA']['tl_user_group'] = array
 			'eval'                    => array('multiple'=>true),
 			'options_callback' => static function ()
 			{
-				return Contao\System::getContainer()->get('contao.image.image_sizes')->getAllOptions();
+				return System::getContainer()->get('contao.image.image_sizes')->getAllOptions();
 			},
 			'sql'                     => "blob NULL"
 		),
@@ -274,7 +284,7 @@ $GLOBALS['TL_DCA']['tl_user_group'] = array
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
-class tl_user_group extends Contao\Backend
+class tl_user_group extends Backend
 {
 	/**
 	 * Import the back end user object
@@ -282,7 +292,7 @@ class tl_user_group extends Contao\Backend
 	public function __construct()
 	{
 		parent::__construct();
-		$this->import('Contao\BackendUser', 'User');
+		$this->import(BackendUser::class, 'User');
 	}
 
 	/**
@@ -290,21 +300,26 @@ class tl_user_group extends Contao\Backend
 	 */
 	public function addTemplateWarning()
 	{
-		if (Contao\Input::get('act') && Contao\Input::get('act') != 'select')
+		if (Input::get('act') && Input::get('act') != 'select')
 		{
 			return;
 		}
 
-		$objResult = $this->Database->query("SELECT EXISTS(SELECT * FROM tl_user_group WHERE modules LIKE '%\"tpl_editor\"%') as showTemplateWarning, EXISTS(SELECT * FROM tl_user_group WHERE themes LIKE '%\"theme_import\"%') as showThemeWarning");
+		$objResult = $this->Database->query("SELECT EXISTS(SELECT * FROM tl_user_group WHERE modules LIKE '%\"tpl_editor\"%') as showTemplateWarning, EXISTS(SELECT * FROM tl_user_group WHERE themes LIKE '%\"theme_import\"%') as showThemeWarning, EXISTS(SELECT * FROM tl_user_group WHERE modules LIKE '%\"themes\"%' AND themes LIKE '%\"modules\"%' AND (alexf LIKE '%\"tl_module::list_table\"%' OR alexf LIKE '%\"tl_module::list_fields\"%' OR alexf LIKE '%\"tl_module::list_where\"%' OR alexf LIKE '%\"tl_module::list_search\"%' OR alexf LIKE '%\"tl_module::list_sort\"%' OR alexf LIKE '%\"tl_module::list_info\"%' OR alexf LIKE '%\"tl_module::list_info_where\"%')) as showListingWarning");
 
 		if ($objResult->showTemplateWarning > 0)
 		{
-			Contao\Message::addInfo($GLOBALS['TL_LANG']['MSC']['groupTemplateEditor']);
+			Message::addInfo($GLOBALS['TL_LANG']['MSC']['groupTemplateEditor']);
 		}
 
 		if ($objResult->showThemeWarning > 0)
 		{
-			Contao\Message::addInfo($GLOBALS['TL_LANG']['MSC']['groupThemeImport']);
+			Message::addInfo($GLOBALS['TL_LANG']['MSC']['groupThemeImport']);
+		}
+
+		if ($objResult->showListingWarning > 0)
+		{
+			Message::addInfo($GLOBALS['TL_LANG']['MSC']['groupListingModule']);
 		}
 	}
 
@@ -326,17 +341,17 @@ class tl_user_group extends Contao\Backend
 			$image .= '_';
 		}
 
-		return sprintf('<div class="list_icon" style="background-image:url(\'%ssystem/themes/%s/icons/%s.svg\')" data-icon="%s.svg" data-icon-disabled="%s.svg">%s</div>', Contao\System::getContainer()->get('contao.assets.assets_context')->getStaticUrl(), Contao\Backend::getTheme(), $image, $disabled ? $image : rtrim($image, '_'), rtrim($image, '_') . '_', $label);
+		return sprintf('<div class="list_icon" style="background-image:url(\'%ssystem/themes/%s/icons/%s.svg\')" data-icon="%s.svg" data-icon-disabled="%s.svg">%s</div>', System::getContainer()->get('contao.assets.assets_context')->getStaticUrl(), Backend::getTheme(), $image, $disabled ? $image : rtrim($image, '_'), rtrim($image, '_') . '_', $label);
 	}
 
 	/**
 	 * Return all modules except profile modules
 	 *
-	 * @param Contao\DataContainer $dc
+	 * @param DataContainer $dc
 	 *
 	 * @return array
 	 */
-	public function getModules(Contao\DataContainer $dc)
+	public function getModules(DataContainer $dc)
 	{
 		$arrModules = array();
 
@@ -358,7 +373,7 @@ class tl_user_group extends Contao\Backend
 			$arrModules[$k] = array_keys($v);
 		}
 
-		$modules = Contao\StringUtil::deserialize($dc->activeRecord->modules);
+		$modules = StringUtil::deserialize($dc->activeRecord->modules);
 
 		// Unset the template editor unless the user is an administrator or has been granted access to the template editor
 		if (!$this->User->isAdmin && (!is_array($modules) || !in_array('tpl_editor', $modules)) && ($key = array_search('tpl_editor', $arrModules['design'])) !== false)
@@ -390,7 +405,7 @@ class tl_user_group extends Contao\Backend
 		$processed = array();
 
 		/** @var SplFileInfo[] $files */
-		$files = Contao\System::getContainer()->get('contao.resource_finder')->findIn('dca')->depth(0)->files()->name('*.php');
+		$files = System::getContainer()->get('contao.resource_finder')->findIn('dca')->depth(0)->files()->name('*.php');
 
 		foreach ($files as $file)
 		{
@@ -403,7 +418,7 @@ class tl_user_group extends Contao\Backend
 
 			$strTable = $file->getBasename('.php');
 
-			Contao\System::loadLanguageFile($strTable);
+			System::loadLanguageFile($strTable);
 			$this->loadDataContainer($strTable);
 		}
 
@@ -422,9 +437,9 @@ class tl_user_group extends Contao\Backend
 						continue;
 					}
 
-					if ($vv['exclude'] || $vv['orig_exclude'])
+					if (($vv['exclude'] ?? null) || ($vv['orig_exclude'] ?? null))
 					{
-						$arrReturn[$k][Contao\StringUtil::specialchars($k . '::' . $kk)] = isset($vv['label'][0]) ? $vv['label'][0] . ' <span style="color:#999;padding-left:3px">[' . $kk . ']</span>' : $kk;
+						$arrReturn[$k][StringUtil::specialchars($k . '::' . $kk)] = isset($vv['label'][0]) ? $vv['label'][0] . ' <span style="color:#999;padding-left:3px">[' . $kk . ']</span>' : $kk;
 					}
 				}
 			}
@@ -449,9 +464,9 @@ class tl_user_group extends Contao\Backend
 	 */
 	public function toggleIcon($row, $href, $label, $title, $icon, $attributes)
 	{
-		if (Contao\Input::get('tid'))
+		if (Input::get('tid'))
 		{
-			$this->toggleVisibility(Contao\Input::get('tid'), (Contao\Input::get('state') == 1), (@func_get_arg(12) ?: null));
+			$this->toggleVisibility(Input::get('tid'), (Input::get('state') == 1), (func_num_args() <= 12 ? null : func_get_arg(12)));
 			$this->redirect($this->getReferer());
 		}
 
@@ -468,23 +483,23 @@ class tl_user_group extends Contao\Backend
 			$icon = 'invisible.svg';
 		}
 
-		return '<a href="' . $this->addToUrl($href) . '" title="' . Contao\StringUtil::specialchars($title) . '"' . $attributes . '>' . Contao\Image::getHtml($icon, $label, 'data-state="' . ($row['disable'] ? 0 : 1) . '"') . '</a> ';
+		return '<a href="' . $this->addToUrl($href) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label, 'data-state="' . ($row['disable'] ? 0 : 1) . '"') . '</a> ';
 	}
 
 	/**
 	 * Disable/enable a user group
 	 *
-	 * @param integer              $intId
-	 * @param boolean              $blnVisible
-	 * @param Contao\DataContainer $dc
+	 * @param integer       $intId
+	 * @param boolean       $blnVisible
+	 * @param DataContainer $dc
 	 *
-	 * @throws Contao\CoreBundle\Exception\AccessDeniedException
+	 * @throws AccessDeniedException
 	 */
-	public function toggleVisibility($intId, $blnVisible, Contao\DataContainer $dc=null)
+	public function toggleVisibility($intId, $blnVisible, DataContainer $dc=null)
 	{
 		// Set the ID and action
-		Contao\Input::setGet('id', $intId);
-		Contao\Input::setGet('act', 'toggle');
+		Input::setGet('id', $intId);
+		Input::setGet('act', 'toggle');
 
 		if ($dc)
 		{
@@ -492,7 +507,7 @@ class tl_user_group extends Contao\Backend
 		}
 
 		// Trigger the onload_callback
-		if (is_array($GLOBALS['TL_DCA']['tl_user_group']['config']['onload_callback']))
+		if (is_array($GLOBALS['TL_DCA']['tl_user_group']['config']['onload_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA']['tl_user_group']['config']['onload_callback'] as $callback)
 			{
@@ -511,7 +526,7 @@ class tl_user_group extends Contao\Backend
 		// Check the field access permissions
 		if (!$this->User->hasAccess('tl_user_group::disable', 'alexf'))
 		{
-			throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to activate/deactivate user group ID ' . $intId . '.');
+			throw new AccessDeniedException('Not enough permissions to activate/deactivate user group ID ' . $intId . '.');
 		}
 
 		$objRow = $this->Database->prepare("SELECT * FROM tl_user_group WHERE id=?")
@@ -520,7 +535,7 @@ class tl_user_group extends Contao\Backend
 
 		if ($objRow->numRows < 1)
 		{
-			throw new Contao\CoreBundle\Exception\AccessDeniedException('Invalid user group ID ' . $intId . '.');
+			throw new AccessDeniedException('Invalid user group ID ' . $intId . '.');
 		}
 
 		// Set the current record
@@ -529,14 +544,14 @@ class tl_user_group extends Contao\Backend
 			$dc->activeRecord = $objRow;
 		}
 
-		$objVersions = new Contao\Versions('tl_user_group', $intId);
+		$objVersions = new Versions('tl_user_group', $intId);
 		$objVersions->initialize();
 
 		// Reverse the logic (user groups have disable=1)
 		$blnVisible = !$blnVisible;
 
 		// Trigger the save_callback
-		if (is_array($GLOBALS['TL_DCA']['tl_user_group']['fields']['disable']['save_callback']))
+		if (is_array($GLOBALS['TL_DCA']['tl_user_group']['fields']['disable']['save_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA']['tl_user_group']['fields']['disable']['save_callback'] as $callback)
 			{
@@ -553,7 +568,7 @@ class tl_user_group extends Contao\Backend
 		}
 
 		// Trigger the onsubmit_callback
-		if (is_array($GLOBALS['TL_DCA']['tl_user_group']['config']['onsubmit_callback']))
+		if (is_array($GLOBALS['TL_DCA']['tl_user_group']['config']['onsubmit_callback'] ?? null))
 		{
 			foreach ($GLOBALS['TL_DCA']['tl_user_group']['config']['onsubmit_callback'] as $callback)
 			{
