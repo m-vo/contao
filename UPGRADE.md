@@ -127,16 +127,18 @@ documentation for more details.
 The following content element types have been rewritten as fragment controllers with
 Twig-only templates:
 
- - `code` (`ce_code` → `content_element/code`)
- - `headline` (`ce_headline` → `content_element/headline`)
- - `html` (`ce_html` → `content_element/html`)
- - `list` (`ce_list` → `content_element/list`)
- - `text` (`ce_text` → `content_element/text`)
- - `table` (`ce_table` → `content_element/table`)
- - `hyperlink` (`ce_hyperlink` → `content_element/hyperlink`)
- - `toplink` (`ce_toplink` → `content_element/toplink`)
- - `image` (`ce_image` → `content_element/image`)
- - `gallery` (`ce_gallery` → `content_element/gallery`)
+- `code` (`ce_code` → `content_element/code`)
+- `headline` (`ce_headline` → `content_element/headline`)
+- `html` (`ce_html` → `content_element/html`)
+- `list` (`ce_list` → `content_element/list`)
+- `text` (`ce_text` → `content_element/text`)
+- `table` (`ce_table` → `content_element/table`)
+- `hyperlink` (`ce_hyperlink` → `content_element/hyperlink`)
+- `toplink` (`ce_toplink` → `content_element/toplink`)
+- `image` (`ce_image` → `content_element/image`)
+- `gallery` (`ce_gallery` → `content_element/gallery`)
+- `youtube` (`ce_youtube` → `content_element/youtube`)
+- `vimeo` (`ce_vimeo` → `content_element/vimeo`)
 
 The legacy content elements and their templates are still around and will only be dropped in Contao 6.
 If you want to use them instead of the new ones, you can opt in on a per-element basis by adding the
@@ -154,6 +156,8 @@ $GLOBALS['TL_CTE']['links']['hyperlink'] = \Contao\ContentHyperlink::class;
 $GLOBALS['TL_CTE']['links']['toplink'] = \Contao\ContentToplink::class;
 $GLOBALS['TL_CTE']['media']['image'] = \Contao\ContentImage::class;
 $GLOBALS['TL_CTE']['media']['gallery'] = \Contao\ContentGallery::class;
+$GLOBALS['TL_CTE']['media']['youtube'] = \Contao\ContentYouTube::class;
+$GLOBALS['TL_CTE']['media']['vimeo'] = \Contao\ContentVimeo::class;
 ```
 
 ### Show to guests only
