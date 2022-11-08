@@ -50,4 +50,9 @@ abstract class AbstractBackendController extends AbstractController
 
         return parent::render($view, array_merge($backendContext, $parameters), $response);
     }
+
+    protected function renderNative(string $view, array $parameters = [], Response $response = null): Response
+    {
+        return parent::render($view, $parameters, $response);
+    }
 }

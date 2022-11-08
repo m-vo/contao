@@ -1,0 +1,73 @@
+{# @var current \Contao\CoreBundle\Filesystem\FilesystemItem #}
+{# @var items \Contao\CoreBundle\Filesystem\FilesystemItem[] #}
+
+<turbo-stream action="replace" target="file-manager-breadcrumb">
+    <template>
+        <turbo-frame id="file-manager-breadcrumb">
+            {# Breadcrumb navigation #}
+            <nav aria-label="Breadcrumb menu">
+                <ul id="tl_breadcrumb">
+                    {% for parent_path, parent_path_name in parent_paths %}
+                        <li>
+                            <a href="{{ path('_contao_file_manager_content', {path: parent_path}) }}">
+                                {{ parent_path_name }} ›
+                            </a>
+                        </li>
+                    {% endfor %}
+                    <li><span>{{ current.name|default }}</span></li>
+                </ul>
+            </nav>
+        </turbo-frame>
+    </template>
+</turbo-stream>
+
+<turbo-stream action="replace" target="file-manager-content">
+    <template>
+        <turbo-frame id="file-manager-content">
+            {# Listing #}
+            <ul>
+                {# Back icon #}
+                {% if parent_paths %}
+                    <li class="filesystem-content"><a
+                            href="{{ path('_contao_file_manager_content', {path: parent_paths|keys|last}) }}"
+                            class="back">..</a></li>
+                {% endif %}
+
+                {# Files and directories #}
+                {% for item in items %}
+                    <li class="filesystem-content">
+                        {% if item.file %}
+                            <a class="file mime--{{ item.mimeType(false) }}"
+                               href="{{ path('_contao_file_manager_select', {path: item.path}) }}/">
+                                <span>{{ item.name }}</span>
+                                <span class="tl_gray">({{ item.fileSize|format_bytes }})</span>
+                            </a>
+                        {% else %}
+                            <a class="directory"
+                               href="{{ path('_contao_file_manager_select', {path: item.path}) }}">
+                                <span data-path="{{ path('_contao_file_manager_content', {path: item.path}) }}">
+                                    {{ item.name }}
+                                </span>
+                            </a>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+
+            <script>
+                {
+                    {# Navigate content by double clicking #}
+                    const frame = document.querySelector('#file-manager-content');
+
+                    frame.querySelectorAll('*[data-path]').forEach((el) => {
+                        el.parentElement.addEventListener('dblclick', () => {
+                            console.log('x');
+                            frame.src = el.dataset.path;
+                            frame.reload();
+                        })
+                    });
+                }
+            </script>
+        </turbo-frame>
+    </template>
+</turbo-stream>

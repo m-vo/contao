@@ -1,0 +1,14 @@
+{% extends '@Contao/be_main.html5' %}
+
+{% block main_content %}
+    <div id="file-manager">
+        <turbo-frame id="file-manager-breadcrumb"></turbo-frame>
+        <turbo-frame id="file-manager-tree" src="{{ path('_contao_file_manager_tree') }}">
+            <span>Loading tree…</span>
+        </turbo-frame>
+        <turbo-frame id="file-manager-content" src="{{ path('_contao_file_manager_content') }}">
+            <span>Loading content…</span>
+        </turbo-frame>
+        <turbo-frame id="file-manager-select"></turbo-frame>
+    </div>
+{% endblock %}

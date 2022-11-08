@@ -39,6 +39,8 @@
     <script src="<?= $this->asset('backend.js', 'contao_core') ?>"></script>
     <script><?= $this->getDateString() ?></script>
     <?= $this->javascripts ?>
+    <script src="<?= $this->asset('backend.js', 'contao_core') ?>"></script>
+    <link rel="stylesheet" href="<?= $this->asset('backend.css', 'contao_core') ?>">
   <?php $this->endblock(); ?>
 
 </head>

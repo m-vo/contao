@@ -1,0 +1,21 @@
+{# @var current \Contao\CoreBundle\Filesystem\FilesystemItem #}
+
+{% macro tree(tree, prefix='') %}
+    <ul>
+        {% for name, children in tree %}
+            <li>
+                <a href="{{ path('_contao_file_manager_content', {path: prefix ~ name}) }}" class="directory">{{ name }}</a>
+                {% if children %}
+                    {{ _self.tree(children, prefix ~ name ~ '/') }}
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% endmacro %}
+
+<turbo-frame id="file-manager-tree">
+    <div class="filesystem-tree">
+        <p class="root">Files</p>
+        {{ _self.tree(tree) }}
+    </div>
+</turbo-frame>

@@ -32,6 +32,12 @@ services:
             - '@translator'
             - '%kernel.project_dir%'
 
+    Contao\CoreBundle\Controller\Backend\FileManager\FileManager:
+        arguments:
+            - '@contao.filesystem.virtual.files'
+            - '@contao.image.studio'
+            - '%contao.image.valid_extensions%'
+
     Contao\CoreBundle\Controller\BackendPreviewController:
         arguments:
             - '%contao.preview_script%'
