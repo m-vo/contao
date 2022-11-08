@@ -21,3 +21,8 @@ application.load(context.keys().map((key) => {
         return definitionForModuleAndIdentifier(context(key), `contao--${ identifier }`);
     }
 }).filter((value) => value));
+
+import './styles/backend.pcss';
+import './bootstrap';
+//import './turbo/turbo-helper';
+//import './turbo/prefetch';

@@ -1,0 +1,26 @@
+{
+  "private": true,
+  "scripts": {
+    "dev-server": "encore dev-server",
+    "dev": "encore dev",
+    "watch": "encore dev --watch",
+    "build": "encore production --progress"
+  },
+  "devDependencies": {
+    "@hotwired/stimulus": "^3.0.0",
+    "@hotwired/turbo": "^7.2.4",
+    "@symfony/stimulus-bridge": "^3.0.0",
+    "@symfony/ux-turbo": "file:../vendor/symfony/ux-turbo/Resources/assets",
+    "@symfony/webpack-encore": "^1.7.0",
+    "core-js": "^3.0.0",
+    "postcss-loader": "^6.0.0",
+    "postcss-nested": "^6.0.0",
+    "postcss-preset-env": "^7.8.2",
+    "regenerator-runtime": "^0.13.2",
+    "stimulus": "^2.0.0",
+    "stimulus-autocomplete": "https://github.com/weaverryan/stimulus-autocomplete#toggle-event-always-dist",
+    "stimulus-use": "^0.24.0-1",
+    "webpack-bundle-analyzer": "^4.4.0",
+    "webpack-notifier": "^1.6.0"
+  }
+}
