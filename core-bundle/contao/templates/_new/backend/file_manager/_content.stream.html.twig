@@ -23,7 +23,7 @@
 
 <turbo-stream action="replace" target="file-manager-content">
     <template>
-        <turbo-frame id="file-manager-content">
+        <turbo-frame id="file-manager-content" {{ stimulus_action('contao/file-manager', 'deselect', 'click') }}>
             {# Listing #}
             <ul>
                 {# Back icon #}
@@ -35,16 +35,14 @@
 
                 {# Files and directories #}
                 {% for item in items %}
-                    <li class="filesystem-content">
+                    <li class="filesystem-content" {{ stimulus_action('contao/file-manager', 'select', 'click', {path: item.path}) }}>
                         {% if item.file %}
-                            <a class="file mime--{{ item.mimeType(false) }}"
-                               href="{{ path('_contao_file_manager_select', {path: item.path}) }}/">
-                                <span>{{ item.name }}</span>
+                            <a class="file mime--{{ item.mimeType(false) }}">
+                                <span {{ stimulus_action('contao/file-manager', 'rename', 'click', {path: item.path}) }}>{{ item.name }}</span>
                                 <span class="tl_gray">({{ item.fileSize|format_bytes }})</span>
                             </a>
                         {% else %}
-                            <a class="directory"
-                               href="{{ path('_contao_file_manager_select', {path: item.path}) }}">
+                            <a class="directory">
                                 <span data-path="{{ path('_contao_file_manager_content', {path: item.path}) }}">
                                     {{ item.name }}
                                 </span>

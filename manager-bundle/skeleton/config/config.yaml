@@ -156,3 +156,7 @@ scheb_two_factor:
     backup_codes:
         enabled: true
         manager: contao.security.two_factor.backup_code_manager
+
+# Webpack Encore configuration
+webpack_encore:
+    output_path: ''

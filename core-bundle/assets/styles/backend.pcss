@@ -40,32 +40,39 @@
     }
 
     /* Select */
-    #file-manager-select {
-        .selection {
-            height: 100%;
+    #file-manager-properties {
+        header {
+            margin: 1em 1em 0 1em;
+            text-align: right;
+
+            a {
+                cursor: pointer;
+
+                &:not(a:hover) {
+                    color: var(--blue);
+                }
+            }
+        }
+
+        .properties {
             border-left: 1px solid var(--border);
-            padding: 1em;
+            padding: 0.5em 1em;
 
-            header {
-                width: 100%;
+            h3 {
                 display: flex;
-                justify-content: space-between;
-                gap: 1em;
+                align-items: center;
+                gap: 0.25em;
+                padding-top: 0.5em;
                 margin-bottom: 0.5em;
+                border-top: 1px solid var(--border);
 
-                h3 {
+                &::before {
+                    content: '';
                     display: flex;
-                    align-items: center;
-                    gap: 0.25em;
-
-                    &::before {
-                        content: '';
-                        display: flex;
-                        width: 1.5em;
-                        height: 1.5em;
-                        background-repeat: no-repeat;
-                        background-position: center center;
-                    }
+                    width: 1.5em;
+                    height: 1.5em;
+                    background-repeat: no-repeat;
+                    background-position: center center;
                 }
             }
 
@@ -188,6 +195,10 @@
             }
         }
 
+        &.selected > * {
+            background-color: rgba(0, 100, 148, .15) !important;
+        }
+
         .directory {
             font-weight: 600;
             background-color: var(--table-header);
@@ -195,6 +206,10 @@
 
         .file {
             background-color: var(--table-odd);
+        }
+
+        form+span {
+            display: none;
         }
     }
 

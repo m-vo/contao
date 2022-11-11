@@ -1,0 +1,69 @@
+{% use "@Contao/component/_figure.html.twig" %}
+
+<turbo-stream action="replace" target="file-manager-properties">
+    <template>
+        <turbo-frame id="file-manager-properties">
+            {% if items %}
+                <header>
+                    <a {{ stimulus_action('contao/file-manager', 'deselect', 'click') }} class="close">
+                        Selected ({{ items|length }}) ×
+                    </a>
+                </header>
+            {% endif %}
+
+            {% for data in items %}
+                {# @var item \Contao\CoreBundle\Filesystem\FilesystemItem #}
+                {% set item = data.item %}
+                <div class="properties">
+                    {# Title #}
+                    {% if item.file %}
+                        {% set item_attributes = attrs()
+                            .addClass('file')
+                            .addClass('mime--' ~ item.mimeType(false)) %}
+                    {% else %}
+                        {% set item_attributes = attrs()
+                            .addClass('directory') %}
+                    {% endif %}
+                    <h3{{ item_attributes }}>{{ item.name }}</h3>
+
+                    {# Image #}
+                    {% if data.preview_image %}
+                        {% with {figure: data.preview_image} %}{{ block('figure_component') }}{% endwith %}
+                    {% endif %}
+
+                    {# Properties #}
+                    <table class="tl_show">
+                        <tbody>
+                        <tr>
+                            <td><span class="tl_label">Relative path:</span></td>
+                            <td>{{ item.path }}</td>
+                        </tr>
+                        {% if item.lastModified %}
+                            <tr>
+                                <td><span class="tl_label">Last modified:</span></td>
+                                <td>{{ item.lastModified|format_datetime }}</td>
+                            </tr>
+                        {% endif %}
+                        {% if item.uuid %}
+                            <tr>
+                                <td><span class="tl_label">Unique ID:</span></td>
+                                <td>{{ item.uuid }}</td>
+                            </tr>
+                        {% endif %}
+
+                        {# File specific things #}
+                        {% if item.file %}
+                            {% if item.fileSize %}
+                                <tr>
+                                    <td><span class="tl_label">File size:</span></td>
+                                    <td>{{ item.fileSize|format_bytes }}</td>
+                                </tr>
+                            {% endif %}
+                        {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endfor %}
+        </turbo-frame>
+    </template>
+</turbo-stream>

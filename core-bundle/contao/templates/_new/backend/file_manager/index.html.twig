@@ -1,7 +1,10 @@
 {% extends '@Contao/be_main.html5' %}
 
 {% block main_content %}
-    <div id="file-manager">
+    <div id="file-manager" {{ stimulus_controller('contao/file-manager', {
+        propertiesUrl: path('_contao_file_manager_properties'),
+        renameUrl: path('_contao_file_manager_rename'),
+    }) }}>
         <turbo-frame id="file-manager-breadcrumb"></turbo-frame>
         <turbo-frame id="file-manager-tree" src="{{ path('_contao_file_manager_tree') }}">
             <span>Loading tree…</span>
@@ -9,6 +12,6 @@
         <turbo-frame id="file-manager-content" src="{{ path('_contao_file_manager_content') }}">
             <span>Loading content…</span>
         </turbo-frame>
-        <turbo-frame id="file-manager-select"></turbo-frame>
+        <turbo-frame id="file-manager-properties"></turbo-frame>
     </div>
 {% endblock %}

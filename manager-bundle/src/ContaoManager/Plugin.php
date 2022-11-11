@@ -50,6 +50,7 @@ use Symfony\Component\Finder\SplFileInfo;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Mailer\Transport\NativeTransportFactory;
 use Symfony\Component\Routing\RouteCollection;
+use Symfony\WebpackEncoreBundle\WebpackEncoreBundle;
 use Twig\Extra\TwigExtraBundle\TwigExtraBundle;
 
 /**
@@ -88,6 +89,7 @@ class Plugin implements BundlePluginInterface, ConfigPluginInterface, RoutingPlu
             BundleConfig::create(DebugBundle::class)->setLoadInProduction(false),
             BundleConfig::create(WebProfilerBundle::class)->setLoadInProduction(false),
             BundleConfig::create(FlysystemBundle::class)->setLoadAfter([ContaoCoreBundle::class]),
+            BundleConfig::create(WebpackEncoreBundle::class),
         ];
 
         // Autoload the legacy modules
