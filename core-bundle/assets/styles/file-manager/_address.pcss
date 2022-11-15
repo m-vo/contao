@@ -1,0 +1,42 @@
+#file-manager--address nav {
+    background-color: var(--table-header);
+
+    ol {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        align-items: center;
+
+        li {
+            display: flex;
+            align-items: center;
+
+            > * {
+                display: inline-flex;
+                align-items: center;
+                padding: .5em 0.3em;
+                height: 1.5em;
+            }
+
+            &:first-child > * {
+                width: 2em;
+                background-repeat: no-repeat;
+                background-size: 1.5em;
+                background-position: .8em center;
+                background-image: url("../../system/themes/flexible/icons/filemounts.svg");
+            }
+
+            & + li:before {
+                content: '►';
+                color: var(--nav);
+                padding: 0 0.2em;
+                font-size: 0.7em;
+            }
+
+            a:hover {
+                background-color: var(--nav-hover);
+                color: var(--text-hover);
+            }
+        }
+    }
+}

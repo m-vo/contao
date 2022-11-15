@@ -1,117 +1,119 @@
 import {Controller} from '@hotwired/stimulus';
 
 export default class extends Controller {
-    selected = [];
-    selectedElements = [];
-
-    renaming = null;
-    renameInput = null;
-
     static values = {
-        propertiesUrl: String,
-        renameUrl: String,
+        navigateUrl: String,
+        detailsUrl: String,
+        deleteUrl: String,
     }
 
-    select(event) {
-        event.stopPropagation();
+    static targets = ['controls', 'listing'];
+    static classes = ['grid', 'list'];
 
-        const selected = event.params.path;
-        const element = event.currentTarget;
+    abortController = null;
 
-        if (this.selected.contains(selected)) {
-            element.classList.remove('selected');
-
-            this.selected = this.selected.filter(v => v !== selected);
-            this.selectedElements = this.selectedElements.filter(v => v !== element);
-        } else {
-            element.classList.add('selected');
-
-            this.selected.push(event.params.path);
-            this.selectedElements.push(event.currentTarget);
-        }
-
-        this.requestPropertiesForSelection();
-
-        this.stopRename();
+    connect() {
+        this.viewList();
+        this.setupLoaderAnimation();
     }
 
-    rename(event) {
-        const selected = event.params.path;
-        const element = event.currentTarget;
+    viewList() {
+        this.element.classList.add(this.listClass);
+        this.element.classList.remove(this.gridClass);
+    }
 
-        if (!this.selected.contains(selected) || this.renaming === selected) {
+    viewGrid() {
+        this.element.classList.add(this.gridClass);
+        this.element.classList.remove(this.listClass);
+    }
+
+    select(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        e.currentTarget.previousElementSibling.click();
+
+        this.loadDetails();
+    }
+
+    deselect(e) {
+        if(e.target !== e.currentTarget) {
             return;
         }
 
-        event.stopPropagation();
+        const selected = this.getSelectedElements();
 
-        this.renaming = selected;
-        this.renameInput = document.createElement('form');
+        selected.forEach(el => {
+            el.checked = false;
+        })
 
-        const input = document.createElement('input');
-        input.value = element.innerText;
-        this.renameInput.append(input);
-        element.before(this.renameInput);
-        input.select();
+        this.loadDetails();
+    }
 
-        this.renameInput.addEventListener('submit', (e) => {
-           e.preventDefault();
+    delete(e) {
+        if(!confirm(e.currentTarget.dataset.confirm)) {
+            return;
+        }
 
-            fetch(this.renameUrlValue, {
-                method: 'POST',
-                headers: {
-                    'Accept': 'text/vnd.turbo-stream.html',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    path: this.renaming,
-                    new: input.value,
-                })
-            })
-                .then(response => response.text())
-                .then(html => {
-                    Turbo.renderStreamMessage(html)
-                })
+        this.fetchAndHandleStream(this.deleteUrlValue);
+    }
 
-           this.stopRename();
+    getSelectedElements() {
+        return Array
+            .from(this.listingTarget.querySelectorAll('input[type="checkbox"][data-item]'))
+            .filter(e => e.checked)
+        ;
+    }
+
+    getSelectedPaths() {
+        return this.getSelectedElements().map(el => el.dataset.item);
+    }
+
+    setupLoaderAnimation() {
+        document.addEventListener('turbo:before-fetch-request', (event) => {
+            if (!event.detail.url.pathname.startsWith(`${this.navigateUrlValue}/`)) {
+                return;
+            }
+
+            this.element.classList.add('loading');
+        });
+
+        document.addEventListener('turbo:before-fetch-response', () => {
+            this.element.classList.remove('loading');
         });
     }
 
-    stopRename() {
-        if (this.renaming === null) {
-            return;
-        }
-
-        this.renameInput.remove();
-        this.renameInput = null;
-        this.renaming = null;
+    loadDetails() {
+        this.fetchAndHandleStream(this.detailsUrlValue, true);
     }
 
-    deselect() {
-        this.selectedElements.forEach(el => el.classList.remove('selected'));
-
-        this.selected = [];
-        this.selectedElements = [];
-
-        this.requestPropertiesForSelection();
-
-        this.stopRename();
-    }
-
-    requestPropertiesForSelection() {
-        fetch(this.propertiesUrlValue, {
+    fetchAndHandleStream(url, abortPrevious = false) {
+        let params = {
             method: 'POST',
             headers: {
                 'Accept': 'text/vnd.turbo-stream.html',
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                paths: this.selected
-            })
-        })
+            body: JSON.stringify({paths: this.getSelectedPaths()}),
+        };
+
+        if(abortPrevious) {
+            if (null !== this.abortController) {
+                this.abortController.abort();
+            }
+
+            this.abortController = new AbortController();
+
+            params = {
+                ...params,
+                signal: this.abortController.signal,
+            }
+        }
+
+        fetch(url, params)
             .then(response => response.text())
-            .then(html => {
-                Turbo.renderStreamMessage(html)
-            })
+            .then(html => { Turbo.renderStreamMessage(html)})
+            .catch(() => {})
+        ;
     }
 }

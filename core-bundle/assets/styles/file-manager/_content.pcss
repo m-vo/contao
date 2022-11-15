@@ -1,0 +1,191 @@
+#file-manager--content main {
+    height: calc(100% - 8em);
+    padding: 4em 1em;
+
+    .controls {
+        position: absolute;
+        top: .75em;
+        right: .75em;
+        display: flex;
+        gap: .5em;
+
+        button {
+            width: 2.5em;
+            height: 2.5em;
+        }
+    }
+
+    .loader {
+        display: none;
+        position: absolute;
+        top: .75em;
+        left: .75em;
+        width: 1.5em;
+        height: 1.5em;
+        margin: .25em;
+
+        &:after {
+            content: " ";
+            display: block;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            box-sizing: border-box;
+            border: 2px solid;
+            border-color: var(--panel-border) transparent var(--panel-border) transparent;
+            animation: loader-ring 1.2s linear infinite;
+        }
+
+        @keyframes loader-ring {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    }
+
+    .listing {
+        display: none;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+
+        input[type="checkbox"] {
+            display: none;
+
+            &:checked + .item {
+                background-color: var(--selection);
+            }
+        }
+
+        li {
+            height: 100%;
+
+            .item {
+                display: flex;
+                height: 100%;
+                color: var(--text);
+                overflow: clip;
+
+                figure {
+                    height: 100%;
+
+                    img {
+                        height: 100%;
+                        width: 100%;
+                        overflow: hidden;
+                        border-radius: 3px;
+                        object-fit: cover;
+                    }
+                }
+
+                label {
+                    flex-shrink: 0;
+                    padding: .2em .2em;
+
+                    .name {
+                        word-break: break-word;
+                    }
+                }
+
+                &:hover {
+                    background-color: var(--hover);
+                }
+            }
+        }
+    }
+}
+
+/* List view variant */
+.view--list #file-manager--content {
+    button[data-action="contao--file-manager#viewList"] {
+        color: var(--blue);
+    }
+
+    .listing {
+        display: grid;
+        gap: .1em;
+
+        li {
+            .item {
+                display: flex;
+                align-items: center;
+                gap: .2em;
+                padding: .2em;
+                min-height: 2em;
+
+                figure {
+                    flex-shrink: 0;
+                    width: 1.6em;
+                    height: calc(100% - .4em);
+                    padding: .2em .3em .2em .1em;
+                }
+
+                .icon {
+                    width: 2em;
+                }
+
+                label {
+                    display: flex;
+                    justify-content: space-between;
+                    width: calc(100% - 3em);
+
+                    .file-details {
+                        flex-shrink: 0;
+                        color: var(--gray);
+                    }
+                }
+
+            }
+
+            &:nth-child(2n+1) {
+                background-color: var(--table-odd);
+            }
+        }
+    }
+}
+
+/* Grid view variant */
+.view--grid #file-manager--content {
+    button[data-action="contao--file-manager#viewGrid"] {
+        color: var(--blue);
+    }
+
+    .listing {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 1em;
+
+        input[type="checkbox"]:checked + .item {
+            transform: scale(1.05);
+        }
+
+        li {
+            .item {
+                min-height: 100px;
+                flex-direction: column;
+                justify-content: flex-end;
+
+                figure {
+                    flex-grow: 0;
+                    padding: .4em;
+                }
+
+                label {
+                    text-align: center;
+
+                    .file-details {
+                        display: none;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* Loader */
+.loading #file-manager--content .loader {
+    display: block;
+}

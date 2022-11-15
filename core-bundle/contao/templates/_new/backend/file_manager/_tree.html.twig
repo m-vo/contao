@@ -1,21 +1,23 @@
-{# @var current \Contao\CoreBundle\Filesystem\FilesystemItem #}
+{% import "@Contao/backend/file_manager/layout.html.twig" as util %}
 
-{% macro tree(tree, prefix='') %}
-    <ul>
+{% macro tree_node(tree, prefix='') %}
+    <ol>
         {% for name, children in tree %}
             <li>
-                <a href="{{ path('_contao_file_manager_content', {path: prefix ~ name}) }}" class="directory">{{ name }}</a>
+                <a href="{{ util.nav(prefix ~ name) }}">
+                    <div class="icon icon--directory"></div>
+                    <span>{{ name }}</span>
+                </a>
                 {% if children %}
-                    {{ _self.tree(children, prefix ~ name ~ '/') }}
+                    {{ _self.tree_node(children, prefix ~ name ~ '/') }}
                 {% endif %}
             </li>
         {% endfor %}
-    </ul>
+    </ol>
 {% endmacro %}
 
-<turbo-frame id="file-manager-tree">
-    <div class="filesystem-tree">
-        <p class="root">Files</p>
-        {{ _self.tree(tree) }}
-    </div>
+<turbo-frame id="file-manager--tree">
+    <nav>
+        {{ _self.tree_node(tree) }}
+    </nav>
 </turbo-frame>

@@ -1,0 +1,57 @@
+@import "_content.pcss";
+@import "_address.pcss";
+@import "_tree.pcss";
+@import "_details.pcss";
+@import "_message.pcss";
+@import "_icon.pcss";
+
+#file-manager {
+    --selection: rgb(157, 202, 219);
+    --hover: rgba(205, 228, 237, .4);
+    --text-hover: var(--blue);
+
+    display: grid;
+    grid-template-areas:
+        "address address address"
+        "tree    content details";
+    grid-template-columns: max-content minmax(min-content, 2fr) minmax(0, 1fr);
+    position: relative;
+
+    a, .item {
+        transition: all .1s;
+    }
+
+    button {
+        background-color: transparent;
+        background-repeat: no-repeat;
+        background-size: 80% 80%;
+        background-position: center center;
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        color: var(--gray);
+
+        &:hover {
+            background-color: var(--table-header);
+        }
+    }
+
+    #file-manager--content {
+        grid-area: content;
+        position: relative;
+    }
+
+    #file-manager--address {
+        grid-area: address;
+        border-bottom: 1px solid var(--border);
+    }
+
+    #file-manager--tree {
+        grid-area: tree;
+        border-right: 1px solid var(--border);
+    }
+
+    #file-manager--details {
+        grid-area: details;
+        border-left: 1px solid var(--border);
+    }
+}

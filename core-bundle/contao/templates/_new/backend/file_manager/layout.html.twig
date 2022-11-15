@@ -1,0 +1,28 @@
+{% extends '@Contao/be_main.html5' %}
+
+{% macro nav(path = '') -%}
+    {{ path('_contao_file_manager_navigate', {path: path ~ '/'}) }}
+{%- endmacro %}
+
+{% block main_content %}
+    <section
+        id="file-manager"
+        {{ stimulus_controller(
+            'contao/file-manager',
+            {
+                navigateUrl: path('_contao_file_manager_navigate'),
+                detailsUrl: path('_contao_file_manager_details'),
+                deleteUrl: path('_contao_file_manager_delete'),
+            },
+            {
+                'grid': 'view--grid',
+                'list': 'view--list',
+            }) }}>
+        <turbo-frame id="file-manager--message"></turbo-frame>
+        {{ include("@Contao/backend/file_manager/_content.html.twig") }}
+        {{ include("@Contao/backend/file_manager/_address.html.twig") }}
+        {{ include("@Contao/backend/file_manager/_tree.html.twig") }}
+        {{ include("@Contao/backend/file_manager/_details.html.twig") }}
+    </section>
+
+{% endblock %}

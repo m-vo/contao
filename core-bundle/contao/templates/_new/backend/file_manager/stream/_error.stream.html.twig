@@ -1,0 +1,7 @@
+<turbo-stream action="prepend" target="file-manager--message">
+    <template>
+        {% if message is defined %}
+            <div class="message message--error">{{ message }}</div>
+        {% endif %}
+    </template>
+</turbo-stream>

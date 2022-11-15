@@ -1,0 +1,58 @@
+{% use "@Contao/component/_figure.html.twig" %}
+
+<turbo-frame id="file-manager--content">
+    <main {{ stimulus_action('contao/file-manager', 'deselect', 'click') }}>
+        {# View controls #}
+        <div class="controls" {{ stimulus_target('contao/file-manager', 'controls') }}>
+            <button {{ stimulus_action('contao/file-manager', 'viewList') }}>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                     xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                          d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                </svg>
+            </button>
+            <button {{ stimulus_action('contao/file-manager', 'viewGrid') }}>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                     xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                          d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                </svg>
+            </button>
+        </div>
+
+        {# Loader #}
+        <span class="loader"></span>
+
+        {# Directory/file listing #}
+        <ol class="listing" {{ stimulus_target('contao/file-manager', 'listing') }}>
+            {% for data in listing %}
+                {# @var item \Contao\CoreBundle\Filesystem\FilesystemItem #}
+                {% set item = data.item %}
+                {% set id = 'item--' ~ item.path %}
+                <li>
+                    <input type="checkbox" id="{{ id }}" data-item="{{ item.path }}">
+                    <a class="item" href="#" {{ stimulus_action('contao/file-manager', 'select') }}>
+                        {# Preview image or icon #}
+                        {% if item.file %}
+                            {% if data.preview %}
+                                {% with {figure: data.preview} %}{{ block('figure_component') }}{% endwith %}
+                            {% else %}
+                                <div class="icon icon--{{ item.mimeType('default') }}"></div>
+                            {% endif %}
+                        {% else %}
+                            <div class="icon icon--directory"></div>
+                        {% endif %}
+
+                        {# Name #}
+                        <label for="{{ id }}">
+                            <span class="name">{{ item.name }}</span>
+                            {% if item.file %}
+                                <span class="file-details">{{ item.fileSize|format_bytes }}</span>
+                            {% endif %}
+                        </label>
+                    </a>
+                </li>
+            {% endfor %}
+        </ol>
+    </main>
+</turbo-frame>
