@@ -1,0 +1,27 @@
+<turbo-stream action="replace" target="file-manager--content">
+    <template>
+        {{ include("@Contao/backend/file_manager/_content.html.twig") }}
+    </template>
+</turbo-stream>
+
+<turbo-stream action="replace" target="file-manager--details">
+    <template>
+        {{ include("@Contao/backend/file_manager/_details.html.twig") }}
+    </template>
+</turbo-stream>
+
+<turbo-stream action="prepend" target="file-manager--message">
+    <template>
+        <div class="message message--info">
+            Successfully moved {{ stats.moved_files + stats.moved_directories }} elements to '{{ stats.targetPath }}'.
+        </div>
+    </template>
+</turbo-stream>
+
+{% if tree %}
+    <turbo-stream action="replace" target="file-manager--tree">
+        <template>
+            {{ include("@Contao/backend/file_manager/_tree.html.twig") }}
+        </template>
+    </turbo-stream>
+{% endif %}

@@ -13,16 +13,30 @@
                 navigateUrl: path('_contao_file_manager_navigate'),
                 detailsUrl: path('_contao_file_manager_details'),
                 deleteUrl: path('_contao_file_manager_delete'),
+                moveUrl: path('_contao_file_manager_move'),
             },
             {
                 'grid': 'view--grid',
                 'list': 'view--list',
-            }) }}>
+                'dragging': 'drag--active',
+                'dropping': 'drag--over',
+            }
+        ) }}
+        {{ stimulus_action({
+            'contao/file-manager': [
+                {'dragstart' : 'dragStart'},
+                {'dragenter' : 'dragEnter'},
+                {'dragover' : 'dragOver'},
+                {'dragleave' : 'dragLeave'},
+                {'dragend' : 'dragEnd'},
+                {'drop' : 'dragDrop'}
+            ]
+        }) }}>
         <turbo-frame id="file-manager--message"></turbo-frame>
+        {{ include("@Contao/backend/file_manager/_viewer.html.twig") }}
         {{ include("@Contao/backend/file_manager/_content.html.twig") }}
         {{ include("@Contao/backend/file_manager/_address.html.twig") }}
         {{ include("@Contao/backend/file_manager/_tree.html.twig") }}
         {{ include("@Contao/backend/file_manager/_details.html.twig") }}
     </section>
-
 {% endblock %}

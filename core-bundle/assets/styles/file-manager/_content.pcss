@@ -1,11 +1,16 @@
 #file-manager--content main {
-    height: calc(100% - 8em);
-    padding: 4em 1em;
+    display: grid;
+    grid-template-areas:
+        "top     controls"
+        "listing listing";
+    grid-template-rows: auto 1fr;
+    grid-template-columns: auto min-content;
+    gap: 1em;
+    padding: .75em;
+    height: calc(100% - 1.5em);
 
     .controls {
-        position: absolute;
-        top: .75em;
-        right: .75em;
+        grid-area: controls;
         display: flex;
         gap: .5em;
 
@@ -16,13 +21,12 @@
     }
 
     .loader {
+        grid-area: top;
         display: none;
-        position: absolute;
-        top: .75em;
-        left: .75em;
-        width: 1.5em;
-        height: 1.5em;
-        margin: .25em;
+        width: 1.8em;
+        height: 1.8em;
+        margin-top: .35em;
+        margin-left: .2em;
 
         &:after {
             content: " ";
@@ -46,7 +50,40 @@
         }
     }
 
+    .level_up {
+        grid-area: top;
+        align-self: center;
+
+        .item {
+            display: flex;
+            align-items: center;
+            gap: .2em;
+            height: 2.5em;
+            color: var(--text);
+            border: 1px solid transparent;
+            box-sizing: border-box;
+
+            &:hover {
+                background-color: var(--hover);
+            }
+
+            &.drag--over {
+                border: 1px solid var(--gray);
+            }
+
+            span {
+                padding: .2em .2em;
+            }
+
+            .icon {
+                width: 2em;
+            }
+        }
+    }
+
     .listing {
+        grid-area: listing;
+        height: max-content;
         display: none;
         margin: 0;
         padding: 0;
@@ -68,6 +105,8 @@
                 height: 100%;
                 color: var(--text);
                 overflow: clip;
+                border: 1px solid transparent;
+                box-sizing: border-box;
 
                 figure {
                     height: 100%;
@@ -93,6 +132,10 @@
                 &:hover {
                     background-color: var(--hover);
                 }
+
+                &.drag--over {
+                    border: 1px solid var(--gray);
+                }
             }
         }
     }
@@ -114,7 +157,7 @@
                 align-items: center;
                 gap: .2em;
                 padding: .2em;
-                min-height: 2em;
+                min-height: 2.5em;
 
                 figure {
                     flex-shrink: 0;
@@ -137,7 +180,6 @@
                         color: var(--gray);
                     }
                 }
-
             }
 
             &:nth-child(2n+1) {

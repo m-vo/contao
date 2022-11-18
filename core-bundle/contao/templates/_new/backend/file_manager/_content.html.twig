@@ -1,7 +1,8 @@
 {% use "@Contao/component/_figure.html.twig" %}
+{% import "@Contao/backend/file_manager/layout.html.twig" as util %}
 
 <turbo-frame id="file-manager--content">
-    <main {{ stimulus_action('contao/file-manager', 'deselect', 'click') }}>
+    <main {{ stimulus_action('contao/file-manager', 'deselectAll', 'click') }}>
         {# View controls #}
         <div class="controls" {{ stimulus_target('contao/file-manager', 'controls') }}>
             <button {{ stimulus_action('contao/file-manager', 'viewList') }}>
@@ -24,14 +25,24 @@
         <span class="loader"></span>
 
         {# Directory/file listing #}
+        {% if listing.parent_path is not null %}
+            <div class="level_up">
+                <a class="item" href="{{ util.nav(listing.parent_path) }}" title="One level up" draggable="false" data-item="{{ listing.parent_path }}">
+                    <div class="icon icon--level-up"></div>
+                    <span>..</span>
+                </a>
+            </div>
+        {% endif %}
+
         <ol class="listing" {{ stimulus_target('contao/file-manager', 'listing') }}>
-            {% for data in listing %}
+            {% for data in listing.data %}
                 {# @var item \Contao\CoreBundle\Filesystem\FilesystemItem #}
                 {% set item = data.item %}
                 {% set id = 'item--' ~ item.path %}
                 <li>
                     <input type="checkbox" id="{{ id }}" data-item="{{ item.path }}">
-                    <a class="item" href="#" {{ stimulus_action('contao/file-manager', 'select') }}>
+                    <a class="item" href="#" draggable="true" data-item="{{ item.path }}"
+                        {{ stimulus_action({'contao/file-manager': ['select', {'dblclick': 'navigate'}]}) }}>
                         {# Preview image or icon #}
                         {% if item.file %}
                             {% if data.preview %}

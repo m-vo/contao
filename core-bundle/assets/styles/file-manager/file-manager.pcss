@@ -3,6 +3,7 @@
 @import "_tree.pcss";
 @import "_details.pcss";
 @import "_message.pcss";
+@import "_viewer.pcss";
 @import "_icon.pcss";
 
 #file-manager {
@@ -53,5 +54,10 @@
     #file-manager--details {
         grid-area: details;
         border-left: 1px solid var(--border);
+    }
+
+    /* Disable pointer events for children of drag-targets while dragging */
+    &.drag--active *[draggable="true"] * {
+        pointer-events: none;
     }
 }

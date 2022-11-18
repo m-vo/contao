@@ -4,7 +4,8 @@
     <ol>
         {% for name, children in tree %}
             <li>
-                <a href="{{ util.nav(prefix ~ name) }}">
+                {% set path = prefix ~ name %}
+                <a class="item" href="{{ util.nav(path) }}" draggable="true" data-item="{{ prefix ~ name }}">
                     <div class="icon icon--directory"></div>
                     <span>{{ name }}</span>
                 </a>

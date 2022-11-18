@@ -1,0 +1,13 @@
+<turbo-stream action="prepend" target="file-manager--message">
+    <template>
+        <div class="message message--info">{{ item.name }} was updated.</div>
+    </template>
+</turbo-stream>
+
+{% if close_viewer %}
+    <turbo-stream action="replace" target="file-manager--viewer">
+        <template>
+            {{ include("@Contao/backend/file_manager/_viewer.html.twig") }}
+        </template>
+    </turbo-stream>
+{% endif %}

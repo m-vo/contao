@@ -50,8 +50,17 @@
                 padding: .3em .2em;
             }
 
-            a:hover {
-                color: var(--text-hover);
+            .item {
+                border: 1px solid transparent;
+                box-sizing: border-box;
+
+                &:hover {
+                    color: var(--text-hover);
+                }
+
+                &.drag--over {
+                    border: 1px solid var(--gray);
+                }
             }
         }
     }

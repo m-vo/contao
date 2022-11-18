@@ -114,4 +114,24 @@ export default class extends Controller {
                 Turbo.renderStreamMessage(html)
             })
     }
+
+    /**
+     *         const canvas = document.createElement('canvas');
+     *         this.element.append(canvas);
+     *         const context = canvas.getContext('2d');
+     *
+     *         canvas.width = 100;
+     *         canvas.height = 20;
+     *
+     *         context.fillStyle = '#333333';
+     *         context.fillRect(0, 0, canvas.width, canvas.height);
+     *
+     *         context.fillStyle = '#999999';
+     *         context.font = 'bold 13px Arial';
+     *         context.fillText('DRAGGING...', -5, 15);
+     *
+     *         event.dataTransfer.setData('text', 'lorem ipsum');
+     *         event.dataTransfer.effectAllowed = 'copy';
+     *         event.dataTransfer.setDragImage(canvas, 5, 9);
+     */
 }
