@@ -7,34 +7,12 @@
 @import "_icon.pcss";
 
 #file-manager {
-    --selection: rgb(157, 202, 219);
-    --hover: rgba(205, 228, 237, .4);
-    --text-hover: var(--blue);
-
     display: grid;
     grid-template-areas:
         "address address address"
         "tree    content details";
     grid-template-columns: max-content minmax(min-content, 2fr) minmax(0, 1fr);
     position: relative;
-
-    a, .item {
-        transition: all .1s;
-    }
-
-    button {
-        background-color: transparent;
-        background-repeat: no-repeat;
-        background-size: 80% 80%;
-        background-position: center center;
-        border: 1px solid var(--border);
-        border-radius: 3px;
-        color: var(--gray);
-
-        &:hover {
-            background-color: var(--table-header);
-        }
-    }
 
     #file-manager--content {
         grid-area: content;
@@ -56,8 +34,39 @@
         border-left: 1px solid var(--border);
     }
 
-    /* Disable pointer events for children of drag-targets while dragging */
+    /* Generic styling */
+    --selection: rgb(157, 202, 219);
+    --hover: rgba(205, 228, 237, .4);
+    --text-hover: var(--blue);
+
+    a, .item {
+        transition: all .1s;
+    }
+
+    button {
+        background-color: transparent;
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        padding: 0;
+        box-sizing: content-box;
+
+        &:hover {
+            background-color: var(--table-header);
+        }
+    }
+
+    /* Drag and drop */
+    *[data-droppable] {
+        border: 1px solid transparent;
+    }
+
+    *[data-droppable="directory"].drag--over {
+        border: 1px solid var(--gray);
+    }
+
     &.drag--active *[draggable="true"] * {
+        /* Disable pointer events for children of drag-targets while dragging
+           so that they do not fire events */
         pointer-events: none;
     }
 }

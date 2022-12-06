@@ -1,15 +1,13 @@
 import {Controller} from '@hotwired/stimulus';
 
 export default class ClipboardCopyController extends Controller {
-    static classes = ['base', 'copied'];
+    static classes = ['copied'];
     static instances = [];
 
     connect() {
         if(!ClipboardCopyController.instances.contains(this)) {
             ClipboardCopyController.instances.push(this);
         }
-
-        this.element.classList.add(this.baseClass);
 
         this.element.addEventListener('click', e => {
             e.preventDefault();

@@ -1,93 +1,91 @@
 {% trans_default_domain 'contao_default' %}
 
-<turbo-frame id="file-manager--details">
-    <aside>
-        {% if details|default %}
-            {# Operations #}
-            {% if details.operations %}
-                {% set operations = details.operations %}
-                <div class="operations">
-                    {% if operations.delete|default %}
-                        <button
-                            class="delete"
-                            title="{{ 'MSC.deleteSelected'|trans }}"
-                            {{ stimulus_action('contao/file-manager', 'delete') }}
-                            data-confirm="{{ 'MSC.delAllConfirm'|trans }}">
-                        </button>
-                    {% endif %}
-                    {% if operations.edit|default %}
-                        <button
-                            class="edit"
-                            title="{{ 'MSC.editSelected'|trans }}">
-                        </button>
-                    {% endif %}
-                </div>
-            {% endif %}
-            {% if details.items|length > 1 %}
-                <div class="selection">{{ details.items|length }} ausgewählte Elemente</div>
-            {% endif %}
-
-            {# Properties #}
-            <div class="items">
-                {% for item in details.items %}
-                    {# @var item \Contao\CoreBundle\Filesystem\FilesystemItem #}
-                    <div class="item">
-                        <h2>
-                            {# Icon #}
-                            {% set icon_attrs = attrs().addClass('icon') %}
-                            {% if item.file %}
-                                <div class="icon icon--{{ item.mimeType('default') }}"></div>
-                            {% else %}
-                                <div class="icon icon--directory"></div>
-                            {% endif %}
-
-                            {# Name #}
-                            <span>{{ item.name }}</span>
-                        </h2>
-
-                        {# Definitions #}
-                        <div class="properties">
-                            <dt>Path</dt>
-                            <dd title="{{ item.path }}">{{ item.path }}</dd>
-
-                            {% if item.file %}
-                                <dt>File size</dt>
-                                <dd>{{ item.fileSize|format_bytes }}</dd>
-                                {% set mime_type = item.mimeType('') %}
-                                {% if mime_type %}
-                                    <dt>Mime type</dt>
-                                    <dd>{{ mime_type }}</dd>
-                                {% endif %}
-                            {% endif %}
-
-                            {% if item.lastModified %}
-                                <dt>Last modified</dt>
-                                <dd>{{ item.lastModified|format_datetime }}</dd>
-                            {% endif %}
-
-                            {% if item.uuid %}
-                                <dt>UUID</dt>
-                                <dd class="technical"
-                                    title="{{ 'tl_preview_link.share.0'|trans([], 'contao_tl_preview_link') }}"
-                                    {{ stimulus_controller('contao/clipboard-copy', [], {'base': 'clipboard', 'copied': 'clipboard--copied'}) }}>
-                                    {{ item.uuid }}
-                                </dd>
-                            {% endif %}
-
-                            {% for lang, metadata in item.extraMetadata.metadata.all|default([]) %}
-                                {% set metadata_filtered = metadata.all|filter((v, k) => k != 'uuid' and v) %}
-                                {% if metadata_filtered %}
-                                    <span class="group">Metadata ({{ lang }})</span>
-                                    {% for key, value in metadata_filtered %}
-                                        <dt>{{ "MSC.aw_#{key}"|trans }}</dt>
-                                        <dd title="{{ value|insert_tag }}">{{ value|insert_tag }}</dd>
-                                    {% endfor %}
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
-                {% endfor %}
+<aside>
+    {% if details|default %}
+        {# Operations #}
+        {% if details.operations %}
+            {% set operations = details.operations %}
+            <div class="operations">
+                {% if operations.delete|default %}
+                    <button
+                        class="delete"
+                        title="{{ 'MSC.deleteSelected'|trans }}"
+                        {{ stimulus_action('contao/file-manager', 'delete') }}
+                        data-confirm="{{ 'MSC.delAllConfirm'|trans }}">
+                    </button>
+                {% endif %}
+                {% if operations.edit|default %}
+                    <button
+                        class="edit"
+                        title="{{ 'MSC.editSelected'|trans }}">
+                    </button>
+                {% endif %}
             </div>
         {% endif %}
-    </aside>
-</turbo-frame>
+        {% if details.items|length > 1 %}
+            <div class="selection">{{ details.items|length }} ausgewählte Elemente</div>
+        {% endif %}
+
+        {# Properties #}
+        <div class="items">
+            {% for item in details.items %}
+                {# @var item \Contao\CoreBundle\Filesystem\FilesystemItem #}
+                <div class="item">
+                    <h2>
+                        {# Icon #}
+                        {% set icon_attrs = attrs().addClass('icon') %}
+                        {% if item.file %}
+                            <div class="icon icon--{{ item.mimeType('default') }}"></div>
+                        {% else %}
+                            <div class="icon icon--directory"></div>
+                        {% endif %}
+
+                        {# Name #}
+                        <span>{{ item.name }}</span>
+                    </h2>
+
+                    {# Definitions #}
+                    <div class="properties">
+                        <dt>Path</dt>
+                        <dd title="{{ item.path }}">{{ item.path }}</dd>
+
+                        {% if item.file %}
+                            <dt>File size</dt>
+                            <dd>{{ item.fileSize|format_bytes }}</dd>
+                            {% set mime_type = item.mimeType('') %}
+                            {% if mime_type %}
+                                <dt>Mime type</dt>
+                                <dd>{{ mime_type }}</dd>
+                            {% endif %}
+                        {% endif %}
+
+                        {% if item.lastModified %}
+                            <dt>Last modified</dt>
+                            <dd>{{ item.lastModified|format_datetime }}</dd>
+                        {% endif %}
+
+                        {% if item.uuid %}
+                            <dt>UUID</dt>
+                            <button class="clipboard" {{ stimulus_controller('contao/clipboard-copy', [], {'copied': 'clipboard--copied'}) }}>
+                                <dd title="{{ 'tl_preview_link.share.0'|trans([], 'contao_tl_preview_link') }}">
+                                    {{- item.uuid -}}
+                                </dd>
+                            </button>
+                        {% endif %}
+
+                        {% for lang, metadata in item.extraMetadata.metadata.all|default([]) %}
+                            {% set metadata_filtered = metadata.all|filter((v, k) => k != 'uuid' and v) %}
+                            {% if metadata_filtered %}
+                                <span class="group">Metadata ({{ lang }})</span>
+                                {% for key, value in metadata_filtered %}
+                                    <dt>{{ "MSC.aw_#{key}"|trans }}</dt>
+                                    <dd title="{{ value|insert_tag }}">{{ value|insert_tag }}</dd>
+                                {% endfor %}
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</aside>

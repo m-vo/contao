@@ -1,11 +1,14 @@
 {% import "@Contao/backend/file_manager/layout.html.twig" as util %}
 
-<turbo-frame id="file-manager--address">
-    <nav>
-        <ol>
-            {% for path, name in address %}
-                <li><a href="{{ util.nav(path) }}">{{ name }}</a></li>
-            {% endfor %}
-        </ol>
-    </nav>
-</turbo-frame>
+<nav>
+    <ol>
+        {% for path, name in address %}
+            {% set item_attrs = attrs()
+                .set('href', path('_contao_file_manager_navigate', {path}))
+                .set('data-item', path)
+                .set('data-droppable')
+            %}
+            <li><a{{ item_attrs }}>{{ name }}</a></li>
+        {% endfor %}
+    </ol>
+</nav>

@@ -1,11 +1,13 @@
-{% import "@Contao/backend/file_manager/layout.html.twig" as util %}
-
 {% macro tree_node(tree, prefix='') %}
     <ol>
         {% for name, children in tree %}
             <li>
                 {% set path = prefix ~ name %}
-                <a class="item" href="{{ util.nav(path) }}" draggable="true" data-item="{{ prefix ~ name }}">
+                <a class="item"
+                   href="{{ path('_contao_file_manager_navigate', {path}) }}"
+                   draggable="true"
+                   data-droppable="directory"
+                   data-item="{{ prefix ~ name }}">
                     <div class="icon icon--directory"></div>
                     <span>{{ name }}</span>
                 </a>
@@ -17,8 +19,6 @@
     </ol>
 {% endmacro %}
 
-<turbo-frame id="file-manager--tree">
-    <nav>
-        {{ _self.tree_node(tree) }}
-    </nav>
-</turbo-frame>
+<nav>
+    {{ _self.tree_node(tree) }}
+</nav>

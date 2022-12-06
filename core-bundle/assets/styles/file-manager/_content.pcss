@@ -14,9 +14,23 @@
         display: flex;
         gap: .5em;
 
-        button {
-            width: 2.5em;
-            height: 2.5em;
+        .control {
+            > div {
+                width: 2.4em;
+                height: 2.4em;
+                background-color: var(--gray);
+                mask-repeat: no-repeat;
+                mask-size: 75% 75%;
+                mask-position: center center;
+            }
+
+            &--list > div {
+                mask-image: url("../../system/themes/flexible/icons/controlList.svg");
+            }
+
+            &--grid > div {
+                mask-image: url("../../system/themes/flexible/icons/controlGrid.svg");
+            }
         }
     }
 
@@ -60,7 +74,6 @@
             gap: .2em;
             height: 2.5em;
             color: var(--text);
-            border: 1px solid transparent;
             box-sizing: border-box;
 
             &:hover {
@@ -105,10 +118,9 @@
                 height: 100%;
                 color: var(--text);
                 overflow: clip;
-                border: 1px solid transparent;
                 box-sizing: border-box;
 
-                figure {
+                .preview {
                     height: 100%;
 
                     img {
@@ -120,7 +132,7 @@
                     }
                 }
 
-                label {
+                .label {
                     flex-shrink: 0;
                     padding: .2em .2em;
 
@@ -132,19 +144,21 @@
                 &:hover {
                     background-color: var(--hover);
                 }
-
-                &.drag--over {
-                    border: 1px solid var(--gray);
-                }
             }
         }
     }
+
+    > canvas {
+        position: absolute;
+        left: -100vw;
+        top: -100vh;
+    }
 }
 
-/* List view variant */
+/* Listing when in list view */
 .view--list #file-manager--content {
-    button[data-action="contao--file-manager#viewList"] {
-        color: var(--blue);
+    .control--list > div{
+        background-color: var(--blue) !important;
     }
 
     .listing {
@@ -159,7 +173,7 @@
                 padding: .2em;
                 min-height: 2.5em;
 
-                figure {
+                .preview {
                     flex-shrink: 0;
                     width: 1.6em;
                     height: calc(100% - .4em);
@@ -170,7 +184,7 @@
                     width: 2em;
                 }
 
-                label {
+                .label {
                     display: flex;
                     justify-content: space-between;
                     width: calc(100% - 3em);
@@ -189,10 +203,10 @@
     }
 }
 
-/* Grid view variant */
+/* Listing when in grid view */
 .view--grid #file-manager--content {
-    button[data-action="contao--file-manager#viewGrid"] {
-        color: var(--blue);
+    .control--grid > div {
+        background-color: var(--blue) !important;
     }
 
     .listing {
@@ -215,7 +229,7 @@
                     padding: .4em;
                 }
 
-                label {
+                .label {
                     text-align: center;
 
                     .file-details {
@@ -227,7 +241,7 @@
     }
 }
 
-/* Loader */
+/* Loader when active */
 .loading #file-manager--content .loader {
     display: block;
 }

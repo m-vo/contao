@@ -177,7 +177,7 @@ class VirtualFilesystem implements VirtualFilesystemInterface
             );
         }
 
-        if ($this->directoryExists($relativePath, $accessFlags)) {
+        if ('' === $relativePath || $this->directoryExists($relativePath, $accessFlags)) {
             return new FilesystemItem(
                 false,
                 $relativePath,

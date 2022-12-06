@@ -1,41 +1,39 @@
 {% trans_default_domain 'contao_default' %}
 
-<turbo-frame id="file-manager--viewer">
-    {% if viewer|default %}
-        <div {{ stimulus_target('contao/file-manager', 'modal') }}>
-            {# Full screen overlay #}
-            <div class="overlay" {{ stimulus_action('contao/file-manager', 'closeModal', 'click') }}></div>
+{% if viewer|default %}
+    <div {{ stimulus_target('contao/file-manager', 'modal') }}>
+        {# Full screen overlay #}
+        <div class="overlay" {{ stimulus_action('contao/file-manager', 'closeModal', 'click') }}></div>
 
-            {# Modal content #}
-            <aside>
-                <form action="{{ path('_contao_file_manager_edit_source') }}" method="post">
-                    {# Filename and close button #}
-                    <h2>{{ viewer.item.name }}</h2>
-                    <a class="close" href="#" {{ stimulus_action('contao/file-manager', 'closeModal') }}>×</a>
+        {# Modal content #}
+        <aside>
+            <form action="{{ path('_contao_file_manager_edit_source') }}" method="post">
+                {# Filename and close button #}
+                <h2>{{ viewer.item.name }}</h2>
+                <a class="close" href="#" {{ stimulus_action('contao/file-manager', 'closeModal') }}>×</a>
 
-                    {# Viewer content #}
-                    <div class="viewer">
-                        {% if viewer.source is not null %}
-                            <label for="file-manager--viewer-source">{{ 'tl_files.editor.0'|trans }}</label>
-                            <textarea id="file-manager--viewer-source" name="source" class="tl_textarea monospace">
-                                {{- viewer.source -}}
-                            </textarea>
-                            <p class="tl_help tl_tip">{{ 'tl_files.editor.1'|trans }}</p>
-                        {% else %}
-                            <p>No preview or source available.</p>
-                        {% endif %}
-                    </div>
-
-                    {# Save buttons #}
-                    {% if viewer.edit %}
-                        <div class="submit">
-                            <input type="hidden" name="path" value="{{ viewer.item.path }}">
-                            <button type="submit" name="save" accesskey="s">Save</button>
-                            <button type="submit" name="save_close" accesskey="c">Save and close</button>
-                        </div>
+                {# Viewer content #}
+                <div class="viewer">
+                    {% if viewer.source is not null %}
+                        <label for="file-manager--viewer-source">{{ 'tl_files.editor.0'|trans }}</label>
+                        <textarea id="file-manager--viewer-source" name="source" class="tl_textarea monospace">
+                            {{- viewer.source -}}
+                        </textarea>
+                        <p class="tl_help tl_tip">{{ 'tl_files.editor.1'|trans }}</p>
+                    {% else %}
+                        <p>No preview or source available.</p>
                     {% endif %}
-                </form>
-            </aside>
-        </div>
-    {% endif %}
-</turbo-frame>
+                </div>
+
+                {# Save buttons #}
+                {% if viewer.edit %}
+                    <div class="submit">
+                        <input type="hidden" name="path" value="{{ viewer.item.path }}">
+                        <button type="submit" name="save" accesskey="s">Save</button>
+                        <button type="submit" name="save_close" accesskey="c">Save and close</button>
+                    </div>
+                {% endif %}
+            </form>
+        </aside>
+    </div>
+{% endif %}

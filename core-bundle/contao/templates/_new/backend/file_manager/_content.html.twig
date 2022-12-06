@@ -1,69 +1,67 @@
-{% use "@Contao/component/_figure.html.twig" %}
-{% import "@Contao/backend/file_manager/layout.html.twig" as util %}
+{% use "@Contao/component/_picture.html.twig" %}
 
-<turbo-frame id="file-manager--content">
-    <main {{ stimulus_action('contao/file-manager', 'deselectAll', 'click') }}>
-        {# View controls #}
-        <div class="controls" {{ stimulus_target('contao/file-manager', 'controls') }}>
-            <button {{ stimulus_action('contao/file-manager', 'viewList') }}>
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                     xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                          d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
-                </svg>
-            </button>
-            <button {{ stimulus_action('contao/file-manager', 'viewGrid') }}>
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                     xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                          d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
-                </svg>
-            </button>
+<main {{ stimulus_action('contao/file-manager', 'deselectAll', 'click') }} data-droppable data-item="{{ listing.current_path }}">
+    {# View controls #}
+    <div class="controls" {{ stimulus_target('contao/file-manager', 'controls') }}>
+        <button class="control control--list" {{ stimulus_action('contao/file-manager', 'viewList') }}><div></div></button>
+        <button class="control control--grid" {{ stimulus_action('contao/file-manager', 'viewGrid') }}><div></div></button>
+    </div>
+
+    {# Loader #}
+    <span class="loader"></span>
+
+    {# Directory/file listing #}
+    {% if listing.parent_path is not null %}
+        <div class="level_up">
+            <a class="item"
+               href="{{ path('_contao_file_manager_navigate', {path: listing.parent_path}) }}"
+               title="One level up"
+               draggable="false"
+               data-droppable="directory"
+               data-item="{{ listing.parent_path }}">
+                <div class="icon icon--level-up"></div>
+                <span>..</span>
+            </a>
         </div>
+    {% endif %}
 
-        {# Loader #}
-        <span class="loader"></span>
-
-        {# Directory/file listing #}
-        {% if listing.parent_path is not null %}
-            <div class="level_up">
-                <a class="item" href="{{ util.nav(listing.parent_path) }}" title="One level up" draggable="false" data-item="{{ listing.parent_path }}">
-                    <div class="icon icon--level-up"></div>
-                    <span>..</span>
-                </a>
-            </div>
-        {% endif %}
-
-        <ol class="listing" {{ stimulus_target('contao/file-manager', 'listing') }}>
-            {% for data in listing.data %}
-                {# @var item \Contao\CoreBundle\Filesystem\FilesystemItem #}
-                {% set item = data.item %}
-                {% set id = 'item--' ~ item.path %}
-                <li>
-                    <input type="checkbox" id="{{ id }}" data-item="{{ item.path }}">
-                    <a class="item" href="#" draggable="true" data-item="{{ item.path }}"
-                        {{ stimulus_action({'contao/file-manager': ['select', {'dblclick': 'navigate'}]}) }}>
-                        {# Preview image or icon #}
-                        {% if item.file %}
-                            {% if data.preview %}
-                                {% with {figure: data.preview} %}{{ block('figure_component') }}{% endwith %}
-                            {% else %}
-                                <div class="icon icon--{{ item.mimeType('default') }}"></div>
-                            {% endif %}
+    <ol class="listing" {{ stimulus_target('contao/file-manager', 'listing') }}>
+        {% for data in listing.data %}
+            {# @var item \Contao\CoreBundle\Filesystem\FilesystemItem #}
+            {% set item = data.item %}
+            {% set id = 'item--' ~ item.path %}
+            <li>
+                <input type="checkbox" id="{{ id }}" data-item="{{ item.path }}" {{ stimulus_action('contao/file-manager', 'select') }}>
+                <label for="{{ id }}"
+                    class="item"
+                    draggable="true"
+                    data-droppable="{{ item.file ? 'file' : 'directory' }}"
+                    {{ stimulus_action({'contao/file-manager': {'dblclick': 'navigate'}}) }}>
+                    {# Preview image or icon #}
+                    {% if item.file %}
+                        {% if data.preview %}
+                            <span class="preview">
+                                {% with {figure: data.preview} %}{{ block('picture_component') }}{% endwith %}
+                            </span>
                         {% else %}
-                            <div class="icon icon--directory"></div>
+                            <span class="icon icon--{{ item.mimeType('default') }}"></span>
                         {% endif %}
+                    {% else %}
+                        <span class="icon icon--directory"></span>
+                    {% endif %}
 
-                        {# Name #}
-                        <label for="{{ id }}">
-                            <span class="name">{{ item.name }}</span>
-                            {% if item.file %}
-                                <span class="file-details">{{ item.fileSize|format_bytes }}</span>
-                            {% endif %}
-                        </label>
-                    </a>
-                </li>
-            {% endfor %}
-        </ol>
-    </main>
-</turbo-frame>
+                    {# Name and details #}
+                    <span class="label">
+                        <span class="name">{{ item.name }}</span>
+                        {% if item.file %}
+                            <span class="file-details">{{ item.fileSize|format_bytes }}</span>
+                        {% endif %}
+                    </span>
+                </label>
+            </li>
+        {% endfor %}
+    </ol>
+
+    {# Drag image helper #}
+    <canvas {{ stimulus_target('contao/file-manager', 'dragImage') }}></canvas>
+</main>

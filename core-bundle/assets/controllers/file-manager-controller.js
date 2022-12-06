@@ -8,9 +8,10 @@ export default class FileManagerController extends Controller {
         moveUrl: String,
     }
 
-    static targets = ['controls', 'listing', 'modal'];
+    static targets = ['controls', 'listing', 'modal', 'dragImage'];
     static classes = ['grid', 'list', 'dragging', 'dropping'];
 
+    // Used to abort ongoing fetches
     abortController = null;
 
     connect() {
@@ -19,7 +20,7 @@ export default class FileManagerController extends Controller {
     }
 
     /**
-     * Switch the view mode to "list".
+     * Action: Switch the view mode to "list".
      */
     viewList() {
         this.element.classList.add(this.listClass);
@@ -27,7 +28,7 @@ export default class FileManagerController extends Controller {
     }
 
     /**
-     * Switch the view mode to "grid".
+     * Action: Switch the view mode to "grid".
      */
     viewGrid() {
         this.element.classList.add(this.gridClass);
@@ -35,22 +36,14 @@ export default class FileManagerController extends Controller {
     }
 
     /**
-     * Select/deselect an item and load the details panel.
+     * Action: Load the details panel with the current selection.
      */
     select(e) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        // Select the corresponding checkbox
-        this.element
-            .querySelector(`input[type="checkbox"][data-item="${e.currentTarget.dataset.item}"]`)
-            ?.click();
-
         this.loadDetails();
     }
 
     /**
-     * Deselect all selected items and load the details panel.
+     * Action: Deselect all selected items and load the details panel.
      */
     deselectAll(e) {
         if (e.target !== e.currentTarget && e.target !== this.listingTarget) {
@@ -59,7 +52,7 @@ export default class FileManagerController extends Controller {
 
         const selected = this.getSelectedElements();
 
-        if(!selected.length) {
+        if (!selected.length) {
             return;
         }
 
@@ -71,7 +64,7 @@ export default class FileManagerController extends Controller {
     }
 
     /**
-     * Request deletion of the selected items.
+     * Action: Request deletion of the selected items.
      */
     delete(e) {
         if (!confirm(e.currentTarget.dataset.confirm)) {
@@ -87,30 +80,56 @@ export default class FileManagerController extends Controller {
     }
 
     /**
-     * Navigate to directory or open file after a double click.
+     * Action: Open the resource on double click (edit file/navigate to directory).
      */
     navigate(e) {
         e.preventDefault();
 
+        const path = this.getCurrentPath(e.currentTarget);
+
         this.fetchAndHandleStream(
-            `${this.navigateUrlValue}/${e.currentTarget.dataset.item}`,
+            this.navigateUrlValue + '?' + new URLSearchParams({path}).toString(),
         );
     }
 
     /**
-     * Close the modal by removing it from the DOM.
+     * Action: Close the modal by removing it from the DOM.
      */
     closeModal() {
         this.modalTarget?.remove();
     }
 
     dragStart(e) {
-        e.dataTransfer.setData(
-            'application/filesystem-item',
-            e.target.closest('*[data-item]').dataset.item
-        );
+        const path = this.getCurrentPath(e.path.find(el => el.nodeName === 'LABEL'));
 
+        e.dataTransfer.setData('application/filesystem-item', path);
         e.dataTransfer.effectAllowed = "move";
+
+        // Dynamic drag image
+        const radius = 15;
+        const paths = [...new Set([...this.getSelectedPaths(), path])];
+
+        const canvas = this.dragImageTarget;
+        canvas.width = canvas.height = 2 * radius;
+        const context = canvas.getContext('2d');
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        context.strokeStyle = '#d3d5d7';
+        context.strokeWidth = '2';
+        context.fillStyle = '#eaecef';
+        context.beginPath();
+        context.arc(radius, radius, radius - 2, 0, 2 * Math.PI);
+        context.fill();
+        context.stroke();
+        context.closePath();
+
+        context.font = 'bold 14px sans-serif';
+        context.textAlign = 'center';
+        context.textBaseline = "middle";
+        context.fillStyle = '#006494';
+        context.fillText(paths.length.toString(), radius, radius);
+
+        e.dataTransfer.setDragImage(canvas, radius, -10);
     }
 
     dragEnter(e) {
@@ -139,28 +158,30 @@ export default class FileManagerController extends Controller {
         e.preventDefault();
         e.target.classList.remove(this.droppingClass);
 
-        if (!e.target.hasAttribute('data-item')) {
-            // todo: default target
+        const targetElement = e.path.find(el => el.hasAttribute('data-droppable'));
 
+        if(targetElement?.dataset.droppable === 'file') {
             return;
         }
 
-        const to = e.target.dataset.item;
+        const source = e.dataTransfer.getData('application/filesystem-item');
+        const target = this.getCurrentPath(targetElement);
 
         // Move
-        const source = e.dataTransfer.getData('application/filesystem-item');
-
         if (source !== '') {
-            const from = [...new Set([...this.getSelectedPaths(), source])];
+            // Include currently selected
+            const paths = [...new Set([...this.getSelectedPaths(), source])];
 
-            if (from.contains(to)) {
+            // Ignore dropping to the same directory
+            const baseDir = paths[0].match(/^(.+)\/[^\/]+$/);
+            if(baseDir?.[1] ?? '' === target) {
                 return;
             }
 
             this.fetchAndHandleStream(
                 this.moveUrlValue,
                 'PATCH',
-                {from, to},
+                {paths, target},
                 false
             );
 
@@ -171,11 +192,19 @@ export default class FileManagerController extends Controller {
         [...e.dataTransfer.items].filter(i => i.kind === 'file').forEach(item => {
             if (item.kind === 'file') {
                 const file = item.getAsFile();
-                console.log(`File upload ${file.name} to ${to}`);
+                console.log(`File upload ${file.name} to ${target}`);
             } else {
                 console.log(item, item.kind);
             }
         });
+    }
+
+    getCurrentPath(target) {
+        if(target.nodeName === 'LABEL') {
+            target = this.listingTarget.getElementById(target.htmlFor);
+        }
+
+        return target.dataset.item;
     }
 
     getSelectedElements() {
@@ -218,7 +247,7 @@ export default class FileManagerController extends Controller {
             },
         };
 
-        if(method !== 'GET') {
+        if (method !== 'GET') {
             params = {
                 ...params,
                 body: JSON.stringify(data),
@@ -244,7 +273,7 @@ export default class FileManagerController extends Controller {
                 Turbo.renderStreamMessage(html)
             })
             .catch((e) => {
-                if(e.name !== 'AbortError')
+                if (e.name !== 'AbortError')
                     console.error(e, e.type);
             })
         ;

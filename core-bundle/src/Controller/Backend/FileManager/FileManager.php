@@ -1,9 +1,11 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Contao\CoreBundle\Controller\Backend\FileManager;
 
 use Contao\CoreBundle\Controller\AbstractBackendController;
+use Contao\CoreBundle\Filesystem\FileManager\PathParser;
 use Contao\CoreBundle\Filesystem\FilesystemItem;
 use Contao\CoreBundle\Filesystem\FilesystemItemIterator;
 use Contao\CoreBundle\Filesystem\VirtualFilesystemException;
@@ -20,7 +22,7 @@ use Symfony\UX\Turbo\TurboBundle;
 class FileManager extends AbstractBackendController
 {
     private array $editableFileTypes;
-    private int $maxEditFileSize = 2 * 1024 * 1024; // 2MiB
+    private int $maxEditFileSize;
 
     public function __construct(
         private readonly VirtualFilesystemInterface $storage,
@@ -28,9 +30,8 @@ class FileManager extends AbstractBackendController
         private readonly array                      $validImageExtensions,
     )
     {
-        $this->editableFileTypes = StringUtil::trimsplit(
-            ',', strtolower($GLOBALS['TL_DCA']['tl_files']['config']['editableFileTypes'] ?? '')
-        );
+        $this->editableFileTypes = StringUtil::trimsplit(',', strtolower($GLOBALS['TL_DCA']['tl_files']['config']['editableFileTypes'] ?? ''));
+        $this->maxEditFileSize = 2 * 1024 * 1024; // 2MiB;
     }
 
     #[Route('/contao/file-manager', name: 'contao_file_manager', defaults: ['_scope' => 'backend'])]
@@ -41,42 +42,39 @@ class FileManager extends AbstractBackendController
             [
                 'title' => 'File Manager',
                 'headline' => 'File Manager',
-                'listing' => $this->getListingData(),
-                'address' => $this->getAddressData(),
+                'listing' => $this->compileListingData(),
+                'address' => $this->compileAddressData(),
                 'tree' => $this->getTreeData(),
             ]
         );
     }
 
     #[Route(
-        '/contao/file-manager/_navigate/{path}',
+        '/contao/file-manager/_navigate',
         name: '_contao_file_manager_navigate',
-        requirements: ['path' => '.+'],
+        requirements: ['path' => '.*'],
         defaults: ['_scope' => 'backend', 'path' => '']
     )]
-    public function _navigate(string $path, Request $request): Response
+    public function _navigate(Request $request): Response
     {
-        $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
+        $parser = new PathParser($request, $this->storage);
 
-        $path = rtrim($path, '/');
-        $item = $this->storage->get($path);
-
-        if ($item?->isFile()) {
-            return $this->renderNative(
+        if (null !== ($file = $parser->getFileItem())) {
+            return $this->turboStream(
                 '@Contao/backend/file_manager/stream/viewer.stream.html.twig',
                 [
-                    'viewer' => $this->getViewerData($item),
+                    'viewer' => $this->compileViewerData($file),
                 ]
             );
         }
 
-        $path = $this->getDirectoryPathFromInput($path);
+        $directoryPath = $parser->getDirectoryItem()?->getPath() ?? '';
 
-        return $this->renderNative(
+        return $this->turboStream(
             '@Contao/backend/file_manager/stream/navigate.stream.html.twig',
             [
-                'listing' => $this->getListingData($path),
-                'address' => $this->getAddressData($path),
+                'listing' => $this->compileListingData($directoryPath),
+                'address' => $this->compileAddressData($directoryPath),
             ]
         );
     }
@@ -89,28 +87,25 @@ class FileManager extends AbstractBackendController
     )]
     public function _edit_source(Request $request): Response
     {
-        $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
+        $parser = new PathParser($request, $this->storage);
 
-        if (!is_string($path = $request->get('path')) ||
-            null === ($item = $this->storage->get($path)) ||
-            !$item->isFile()
-        ) {
-            return $this->renderNative('@Contao/backend/file_manager/stream/error.stream.html.twig');
+        if (null === ($item = $parser->getFileItem()) || null === ($source = $request->get('source'))) {
+            return $this->turboStream('@Contao/backend/file_manager/stream/error.stream.html.twig');
         }
 
         try {
-            $this->storage->write($item->getPath(), $request->get('source', ''));
+            $this->storage->write($item->getPath(), $source);
         } catch (VirtualFilesystemException $e) {
-            return $this->renderNative('@Contao/backend/file_manager/stream/error.stream.html.twig', [
+            return $this->turboStream('@Contao/backend/file_manager/stream/error.stream.html.twig', [
                 'message' => 'Could not write to file: ' . $e->getMessage(),
             ]);
         }
 
-        return $this->renderNative(
+        return $this->turboStream(
             '@Contao/backend/file_manager/stream/edit_source.stream.html.twig',
             [
-                'message' => $this->getViewerData($item),
-                'close_viewer' => $request->get('save_close') === '',
+                'message' => $this->compileViewerData($item),
+                'close_viewer' => '' === $request->get('save_close'),
                 'item' => $item,
             ]
         );
@@ -121,17 +116,17 @@ class FileManager extends AbstractBackendController
         name: '_contao_file_manager_details',
         defaults: ['_scope' => 'backend', '_token_check' => false],
         methods: 'POST',
+        condition: "request.headers.get('Accept') === 'text/vnd.turbo-stream.html'"
     )]
     public function _details(Request $request): Response
     {
-        $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
+        $parser = new PathParser($request, $this->storage);
+        $items = $parser->getItems();
 
-        $detailsData = $this->getDetailsData($this->parsePaths($request));
-
-        return $this->renderNative(
+        return $this->turboStream(
             '@Contao/backend/file_manager/stream/details.stream.html.twig',
             [
-                'details' => $detailsData ?: null,
+                'details' => $items ? $this->compileDetailsData($items) : null,
             ]
         );
     }
@@ -141,120 +136,110 @@ class FileManager extends AbstractBackendController
         name: '_contao_file_manager_delete',
         defaults: ['_scope' => 'backend', '_token_check' => false],
         methods: 'DELETE',
+        condition: "request.headers.get('Accept') === 'text/vnd.turbo-stream.html'"
     )]
     public function _delete(Request $request): Response
     {
-        $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
+        $parser = new PathParser($request, $this->storage);
+        $items = $parser->getItems();
 
-        $files = 0;
-        $directories = 0;
-
-        $paths = $this->parsePaths($request);
-
-        if (!$paths) {
-            return $this->renderNative('@Contao/backend/file_manager/stream/error.stream.html.twig');
+        if (!$items) {
+            return $this->turboStream('@Contao/backend/file_manager/stream/error.stream.html.twig');
         }
 
-        foreach ($paths as $path) {
-            if ($this->storage->fileExists($path)) {
+        $stats = [
+            'deleted_files' => 0,
+            'deleted_directories' => 0,
+        ];
+
+        foreach ($items as $item) {
+            if ($item->isFile()) {
                 try {
-                    $this->storage->delete($path);
+                    $this->storage->delete($item->getPath());
                 } catch (VirtualFilesystemException $e) {
-                    return $this->renderNative('@Contao/backend/file_manager/stream/error.stream.html.twig', [
+                    return $this->turboStream('@Contao/backend/file_manager/stream/error.stream.html.twig', [
                         'message' => 'Could not delete file: ' . $e->getMessage(),
                     ]);
                 }
-                $files++;
+                ++$stats['deleted_files'];
             } else {
                 try {
-                    $this->storage->deleteDirectory($path);
+                    $this->storage->deleteDirectory($item->getPath());
                 } catch (VirtualFilesystemException $e) {
-                    return $this->renderNative('@Contao/backend/file_manager/stream/error.stream.html.twig', [
+                    return $this->turboStream('@Contao/backend/file_manager/stream/error.stream.html.twig', [
                         'message' => 'Could not delete directory: ' . $e->getMessage(),
                     ]);
                 }
-                $directories++;
+                ++$stats['deleted_directories'];
             }
         }
 
-        return $this->renderNative(
+        return $this->turboStream(
             '@Contao/backend/file_manager/stream/delete.stream.html.twig',
             [
-                'listing' => $this->getListingData(Path::getDirectory($paths[0])),
-                'tree' => $directories ? $this->getTreeData() : null,
-                'stats' => [
-                    'deleted_files' => $files,
-                    'deleted_directories' => $directories,
-                ],
+                'listing' => $this->compileListingData(Path::getDirectory($items[0]->getPath())),
+                'tree' => $stats['deleted_directories'] ? $this->getTreeData() : null,
+                'stats' => $stats,
             ]
         );
     }
-
 
     #[Route(
         '/contao/file-manager/_move',
         name: '_contao_file_manager_move',
         defaults: ['_scope' => 'backend', '_token_check' => false],
         methods: 'PATCH',
+        condition: "request.headers.get('Accept') === 'text/vnd.turbo-stream.html'"
     )]
     public function _move(Request $request): Response
     {
-        $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
+        $parser = new PathParser($request, $this->storage);
 
-        $files = 0;
-        $directories = 0;
-
-        [$pathsFrom, $pathTo] = $this->parseMovePaths($request);
-
-        if ('' !== $pathTo && $this->storage->get($pathTo)?->isFile() !== false) {
-            return $this->renderNative('@Contao/backend/file_manager/stream/error.stream.html.twig', [
-                'message' => 'Can only move items to an existing directory.',
+        if (![$itemsFrom, $itemTo] = $parser->getMoveItemsAndTarget()) {
+            return $this->turboStream('@Contao/backend/file_manager/stream/error.stream.html.twig', [
+                'message' => 'Cannot move. Invalid source/targets.',
             ]);
         }
 
-        foreach ($pathsFrom as $index => $path) {
-            if (null === ($item = $this->storage->get($path))) {
-                unset($pathsFrom[$index]);
+        $stats = [
+            'moved_files' => 0,
+            'moved_directories' => 0,
+            'targetPath' => $itemTo->getPath(),
+        ];
 
-                continue;
-            }
-
-            if ($item->isFile()) {
+        foreach ($itemsFrom as $itemFrom) {
+            if ($itemFrom->isFile()) {
                 try {
-                    $this->storage->move($item->getPath(), Path::join($pathTo, $item->getName()));
+                    $this->storage->move($itemFrom->getPath(), Path::join($itemTo->getPath(), $itemFrom->getName()));
                 } catch (VirtualFilesystemException $e) {
-                    return $this->renderNative('@Contao/backend/file_manager/stream/error.stream.html.twig', [
+                    return $this->turboStream('@Contao/backend/file_manager/stream/error.stream.html.twig', [
                         'message' => 'Could not move: ' . $e->getMessage(),
                     ]);
                 }
-                $files++;
+                ++$stats['moved_files'];
             } else {
-                return $this->renderNative('@Contao/backend/file_manager/stream/error.stream.html.twig', [
+                return $this->turboStream('@Contao/backend/file_manager/stream/error.stream.html.twig', [
                     'message' => 'Moving directories is not implemented, yet',
                 ]);
-                //$directories++;
+                //++$stats['moved_directories'];
             }
         }
 
-        if ($directories + $files === 0) {
-            return $this->renderNative('@Contao/backend/file_manager/stream/error.stream.html.twig');
+        if (0 === $stats['moved_files'] + $stats['moved_directories']) {
+            return $this->turboStream('@Contao/backend/file_manager/stream/error.stream.html.twig');
         }
 
-        return $this->renderNative(
+        return $this->turboStream(
             '@Contao/backend/file_manager/stream/move.stream.html.twig',
             [
-                'listing' => $this->getListingData(Path::getDirectory($pathsFrom[array_key_first($pathsFrom)] ?? '')),
-                'tree' => $directories ? $this->getTreeData() : null,
-                'stats' => [
-                    'moved_files' => $files,
-                    'moved_directories' => $directories,
-                    'targetPath' => $pathTo,
-                ],
+                'listing' => $this->compileListingData(Path::getDirectory($itemsFrom[0]->getPath())),
+                'tree' => $stats['moved_directories'] ? $this->getTreeData() : null,
+                'stats' => $stats,
             ]
         );
     }
 
-    private function getListingData(string $path = ''): array
+    private function compileListingData(string $path = ''): array
     {
         $items = $this->storage->listContents($path);
         $items = $this->sortDefault($items);
@@ -269,18 +254,19 @@ class FileManager extends AbstractBackendController
 
         return [
             'data' => $data,
+            'current_path' => $path,
             'parent_path' => $path ? Path::getDirectory($path) : null,
         ];
     }
 
-    private function getAddressData(string $path = ''): array
+    private function compileAddressData(string $path = ''): array
     {
         $paths = [];
 
         while (true) {
             $paths[$path] = Path::getFilenameWithoutExtension($path);
 
-            if ($path === '') {
+            if ('' === $path) {
                 break;
             }
 
@@ -316,19 +302,11 @@ class FileManager extends AbstractBackendController
         return $prefixTree;
     }
 
-    private function getDetailsData(array $paths): array|null
+    /**
+     * @param list<FilesystemItem> $items
+     */
+    private function compileDetailsData(array $items): array|null
     {
-        $items = array_filter(
-            array_map(
-                fn(string $path): FilesystemItem|null => $this->storage->get($path),
-                $paths
-            )
-        );
-
-        if (!$items) {
-            return null;
-        }
-
         $items = $this->sortDefault(new FilesystemItemIterator($items));
 
         return [
@@ -341,7 +319,7 @@ class FileManager extends AbstractBackendController
         ];
     }
 
-    private function getViewerData(FilesystemItem $item): array
+    private function compileViewerData(FilesystemItem $item): array
     {
         $data = [
             'item' => $item,
@@ -351,7 +329,7 @@ class FileManager extends AbstractBackendController
 
         $extension = $item->getExtension(true);
 
-        if (in_array($extension, $this->editableFileTypes, true)) {
+        if (\in_array($extension, $this->editableFileTypes, true)) {
             $data['edit'] = true;
 
             if ($item->getFileSize() <= $this->maxEditFileSize) {
@@ -362,53 +340,7 @@ class FileManager extends AbstractBackendController
         return $data;
     }
 
-    private function getDirectoryPathFromInput(string $path): string
-    {
-        $path = rtrim($path, '/');
-
-        if (Path::isAbsolute($path)) {
-            return '';
-        }
-
-        while (!$this->storage->directoryExists($path) && $path) {
-            $path = Path::getDirectory($path);
-        }
-
-        return $path;
-    }
-
-    private function parsePaths(Request $request): array
-    {
-        try {
-            $data = json_decode($request->getContent() ?: '', true, 3, JSON_THROW_ON_ERROR)['paths'] ?? null;
-        } catch (\JsonException) {
-            return [];
-        }
-
-        return is_array($data) ?
-            array_filter($data, fn($path) => $this->storage->has((string)$path)) :
-            [];
-    }
-
-    private function parseMovePaths(Request $request): array
-    {
-        try {
-            $data = json_decode($request->getContent() ?: '', true, 3, JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
-            return [[], null];
-        }
-
-        $from = is_array($fromRaw = ($data['from'] ?? null)) ?
-            array_filter($fromRaw, fn($path) => $this->storage->has((string)$path)) :
-            [];
-
-        $to = is_string($toRaw = ($data['to'] ?? null)) && $this->storage->has($toRaw) ?
-            $toRaw :
-            '';
-
-        return [$from, $to];
-    }
-
+    /*
     #[Route(
         '/contao/file-manager/_rename',
         name: '_contao_file_manager_rename',
@@ -428,7 +360,6 @@ class FileManager extends AbstractBackendController
 
         $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
 
-
         return $this->renderNative(
             '@Contao/backend/file_manager/rename.stream.html.twig',
             [
@@ -441,8 +372,8 @@ class FileManager extends AbstractBackendController
                         [
                             'item' => $item = $this->storage->get($data['new']),
                             'preview_image' => $this->generatePreviewImage($item),
-                        ]
-                    ]
+                        ],
+                    ],
                 ],
             ],
         );
@@ -462,6 +393,7 @@ class FileManager extends AbstractBackendController
 
         return ['' => '', ...array_reverse($paths, true)];
     }
+    */
 
     private function sortDefault(FilesystemItemIterator $items): array
     {
@@ -470,16 +402,14 @@ class FileManager extends AbstractBackendController
 
     private function generatePreviewImage(FilesystemItem $item): Figure|null
     {
-        if (!in_array($item->getExtension(true), $this->validImageExtensions, true)) {
+        if (!\in_array($item->getExtension(true), $this->validImageExtensions, true)) {
             return null;
         }
 
-        $figure = $this->studio
+        return $this->studio
             ->createFigureBuilder()
             ->fromStorage($this->storage, $item->getPath())
             ->setSize([240, 180])
             ->buildIfResourceExists();
-
-        return $figure;
     }
 }

@@ -18,10 +18,20 @@ use Contao\BackendTemplate;
 use Contao\CoreBundle\ContaoCoreBundle;
 use Contao\Environment;
 use Contao\Input;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\UX\Turbo\TurboBundle;
 
 abstract class AbstractBackendController extends AbstractController
 {
+    public static function getSubscribedServices(): array
+    {
+        $services = parent::getSubscribedServices();
+        $services['request_stack'] = RequestStack::class;
+
+        return $services;
+    }
+
     /**
      * Renders a Twig template with additional context for "@Contao/be_main".
      */
@@ -51,8 +61,14 @@ abstract class AbstractBackendController extends AbstractController
         return parent::render($view, array_merge($backendContext, $parameters), $response);
     }
 
-    protected function renderNative(string $view, array $parameters = [], Response $response = null): Response
+    protected function turboStream(string $view, array $parameters = [], Response $response = null): Response
     {
+        $this->container
+            ->get('request_stack')
+            ->getCurrentRequest()
+            ?->setRequestFormat(TurboBundle::STREAM_FORMAT)
+        ;
+
         return parent::render($view, $parameters, $response);
     }
 }
