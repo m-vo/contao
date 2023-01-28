@@ -37,7 +37,7 @@
                 {% for item in items %}
                     <li class="filesystem-content" {{ stimulus_action('contao/file-manager', 'select', 'click', {path: item.path}) }}>
                         {% if item.file %}
-                            <a class="file mime--{{ item.mimeType(false) }}">
+                            <a class="file mime--{{ item.mimeType('default') }}">
                                 <span {{ stimulus_action('contao/file-manager', 'rename', 'click', {path: item.path}) }}>{{ item.name }}</span>
                                 <span class="tl_gray">({{ item.fileSize|format_bytes }})</span>
                             </a>

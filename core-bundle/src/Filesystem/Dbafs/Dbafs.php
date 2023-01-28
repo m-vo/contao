@@ -26,7 +26,7 @@ use Symfony\Component\Uid\Uuid;
 use Symfony\Contracts\Service\ResetInterface;
 
 /**
- * @phpstan-type DatabasePaths array<string, self::RESOURCE_FILE|self::RESOURCE_DIRECTORY>
+ * @phpstan-type DatabasePaths array<string|int, self::RESOURCE_FILE|self::RESOURCE_DIRECTORY>
  * @phpstan-type FilesystemPaths \Generator<string, self::RESOURCE_*>
  * @phpstan-type Record array{isFile: bool, path: string, lastModified: ?int, fileSize: ?int, mimeType: ?string, extra: array<string, mixed>}
  *
@@ -272,14 +272,14 @@ class Dbafs implements DbafsInterface, ResetInterface
     }
 
     /**
-     * @param array<string, int>      $dbPaths
-     * @param array<string, string>   $allDbHashesByPath
-     * @param array<string, int|null> $allLastModifiedByPath
-     * @param \Generator<string, int> $filesystemIterator
-     * @param array<string>           $searchPaths
+     * @param array<string|int, int>      $dbPaths
+     * @param array<string|int, string>   $allDbHashesByPath
+     * @param array<string|int, int|null> $allLastModifiedByPath
+     * @param \Generator<string, int>     $filesystemIterator
+     * @param array<string>               $searchPaths
      *
-     * @phpstan-param DatabasePaths   $dbPaths
-     * @phpstan-param FilesystemPaths $filesystemIterator
+     * @phpstan-param DatabasePaths       $dbPaths
+     * @phpstan-param FilesystemPaths     $filesystemIterator
      */
     private function doComputeChangeSet(array $dbPaths, array $allDbHashesByPath, array $allLastModifiedByPath, \Generator $filesystemIterator, array $searchPaths): ChangeSet
     {
@@ -338,6 +338,7 @@ class Dbafs implements DbafsInterface, ResetInterface
                     $directChildrenPattern = sprintf('@^%s/[^/]+[/]?$@', preg_quote($path, '@'));
 
                     foreach ($allDbHashesByPath as $childPath => $childHash) {
+                        $childPath = (string) $childPath;
                         $childName = basename($childPath);
 
                         if (\array_key_exists($childName, $childHashes) || 1 !== preg_match($directChildrenPattern, $childPath)) {

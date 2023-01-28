@@ -19,7 +19,7 @@
                     {% if item.file %}
                         {% set item_attributes = attrs()
                             .addClass('file')
-                            .addClass('mime--' ~ item.mimeType(false)) %}
+                            .addClass('mime--' ~ item.mimeType('default')) %}
                     {% else %}
                         {% set item_attributes = attrs()
                             .addClass('directory') %}

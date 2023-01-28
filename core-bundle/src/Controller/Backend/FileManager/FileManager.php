@@ -241,7 +241,7 @@ class FileManager extends AbstractBackendController
 
     private function compileListingData(string $path = ''): array
     {
-        $items = $this->storage->listContents($path);
+        $items = $this->storage->listContents($path, accessFlags: VirtualFilesystemInterface::FORCE_SYNC);
         $items = $this->sortDefault($items);
 
         $data = array_map(

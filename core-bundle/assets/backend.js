@@ -22,7 +22,6 @@ application.load(context.keys().map((key) => {
     }
 }).filter((value) => value));
 
+// noinspection ES6UnusedImports
+import * as Turbo from "@hotwired/turbo"
 import './styles/backend.pcss';
-import './bootstrap';
-//import './turbo/turbo-helper';
-//import './turbo/prefetch';

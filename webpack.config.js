@@ -8,6 +8,10 @@ Encore
     .disableSingleRuntimeChunk()
     .enableSourceMaps()
     .enableVersioning()
+    .enablePostCssLoader()
+    .configureCssLoader(config => {
+        config.url = false;
+    })
     .addEntry('ajax-form', './core-bundle/assets/ajax-form.js')
     .addEntry('backend', './core-bundle/assets/backend.js')
 ;

@@ -2,12 +2,15 @@
   "entrypoints": {
     "ajax-form": {
       "js": [
-        "/bundles/contaocore/ajax-form.8d9f14a4.js"
+        "/bundles/contaocore/ajax-form.f225843e.js"
       ]
     },
     "backend": {
+      "css": [
+        "/bundles/contaocore/backend.6315f804.css"
+      ],
       "js": [
-        "/bundles/contaocore/backend.b6443d10.js"
+        "/bundles/contaocore/backend.ef3605be.js"
       ]
     }
   }
