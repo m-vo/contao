@@ -9,6 +9,7 @@ Encore
     .disableSingleRuntimeChunk()
     .enableSourceMaps()
     .enableVersioning()
+    .enablePostCssLoader()
     .addEntry('backend', './core-bundle/assets/backend.js')
 ;
 

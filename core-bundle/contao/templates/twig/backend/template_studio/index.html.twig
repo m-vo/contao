@@ -1,0 +1,11 @@
+{% extends '@Contao/be_main.html5' %}
+
+{% block main_content %}
+    <section id="template-studio">
+        <turbo-frame id="template-studio--browser">
+            {{ include("@Contao/backend/template_studio/_browser.html.twig") }}
+        </turbo-frame>
+        <turbo-frame id="template-studio--editor">EDITOR</turbo-frame>
+        <turbo-frame id="template-studio--info">INFO</turbo-frame>
+    </section>
+{% endblock %}

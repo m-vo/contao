@@ -37,3 +37,6 @@ document.documentElement.addEventListener('turbo:render', () => {
         window.fireEvent('domready');
     }
 });
+
+/* Styles */
+import './styles/backend.pcss';

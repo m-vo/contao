@@ -1,0 +1,27 @@
+{% macro tree_node(tree, prefix='') %}
+    <ol>
+        {% for name, children in tree %}
+            <li>
+                {% if children %}
+                    <div class="item">
+                        <div class="icon icon--directory"></div>
+                        <span>{{ name }}</span>
+                    </div>
+                    {{ _self.tree_node(children, prefix ~ name ~ '/') }}
+                {% else %}
+                    {% set path = prefix ~ name %}
+                    <a class="item"
+                       href="{{ path('_contao_template_studio_navigate', {path}) }}"
+                       data-item="{{ prefix ~ name }}">
+                        <div class="icon icon--element"></div>
+                        <span>{{ name }}</span>
+                    </a>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ol>
+{% endmacro %}
+
+<nav>
+    {{ _self.tree_node(tree) }}
+</nav>

@@ -1,0 +1,29 @@
+@import "browser.pcss";
+
+#template-studio {
+    display: grid;
+    grid-template-areas:
+        "browser editor info";
+    grid-template-columns: max-content minmax(min-content, 2fr) minmax(0, 1fr);
+    position: relative;
+
+    #template-studio--browser {
+        grid-area: browser;
+        border-right: 1px solid var(--border);
+    }
+
+    #template-studio--editor {
+        grid-area: editor;
+        position: relative;
+    }
+
+    #template-studio--info {
+        grid-area: info;
+        border-left: 1px solid var(--border);
+    }
+
+    /* Generic styling */
+    --selection: rgb(157, 202, 219);
+    --hover: rgba(205, 228, 237, .4);
+    --text-hover: var(--blue);
+}
