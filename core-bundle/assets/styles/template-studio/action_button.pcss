@@ -1,0 +1,36 @@
+.actions {
+    display: flex;
+    justify-content: end;
+    gap: 15px;
+    margin-bottom: 12px;
+}
+
+.action {
+    border: none;
+    padding: 3px 0 3px 22px;
+    background: none no-repeat left center;
+
+    &:hover {
+        color: var(--contao);
+    }
+
+    &.action--create_custom_template {
+        background-image: url("../../../contao/themes/flexible/icons/new.svg");
+    }
+
+    &.action--save_custom_template {
+        background-image: url("../../../contao/themes/flexible/icons/editor.svg");
+    }
+
+    &.action--delete_custom_template {
+        background-image: url("../../../contao/themes/flexible/icons/delete.svg");
+    }
+
+    &.action--create_content_element_variant_template, &.action--create_frontend_module_variant_template {
+        background-image: url("../../../contao/themes/flexible/icons/copy.svg");
+    }
+
+    &.action--rename_content_element_variant_template, &.action--rename_frontend_module_variant_template {
+        background-image: url("../../../contao/themes/flexible/icons/edit.svg");
+    }
+}

@@ -1,0 +1,10 @@
+{# Show a message #}
+<turbo-stream action="prepend" target="template-studio--message">
+    <template>
+        {% embed "@Contao/backend/template_studio/overlay/_message.html.twig" with {success: true} %}
+            {% block message %}
+                The custom template <i>{{ identifier }}</i> was saved.
+            {% endblock %}
+        {% endembed %}
+    </template>
+</turbo-stream>

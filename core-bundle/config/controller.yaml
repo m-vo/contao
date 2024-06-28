@@ -62,6 +62,14 @@ services:
         tags:
             - controller.service_arguments
 
+    Contao\CoreBundle\Controller\BackendTemplateStudioController:
+        arguments:
+            - '@contao.twig.filesystem_loader'
+            - '@contao.twig.finder_factory'
+            - '@contao.twig.inspector'
+            - '%kernel.project_dir%'
+            - !tagged_iterator contao.template_studio_action_provider
+
     Contao\CoreBundle\Controller\CaptchaController:
         arguments:
             - '@contao.framework'

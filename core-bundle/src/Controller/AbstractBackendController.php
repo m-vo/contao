@@ -19,6 +19,7 @@ use Contao\CoreBundle\ContaoCoreBundle;
 use Contao\Environment;
 use Contao\Input;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\UX\Turbo\TurboBundle;
 
 abstract class AbstractBackendController extends AbstractController
 {
@@ -49,5 +50,16 @@ abstract class AbstractBackendController extends AbstractController
         })();
 
         return parent::render($view, [...$backendContext, ...$parameters], $response);
+    }
+
+    protected function turboStream(string $view, array $parameters = [], Response $response = null): Response
+    {
+        $this->container
+            ->get('request_stack')
+            ->getCurrentRequest()
+            ?->setRequestFormat(TurboBundle::STREAM_FORMAT)
+        ;
+
+        return parent::render($view, $parameters, $response);
     }
 }

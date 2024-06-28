@@ -1,0 +1,18 @@
+{# Close open dialogs  #}
+<turbo-stream action="update" target="template-studio--dialog">
+    <template></template>
+</turbo-stream>
+
+{# Show a message #}
+{% if message %}
+    <turbo-stream action="prepend" target="template-studio--message">
+        <template>
+            {% include "@Contao/backend/template_studio/overlay/_message.html.twig" %}
+        </template>
+    </turbo-stream>
+{% endif %}
+
+{# Reload components #}
+{% if reload_components %}
+    <turbo-stream action="refresh-components"></turbo-stream>
+{% endif %}

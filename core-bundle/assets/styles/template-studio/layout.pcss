@@ -1,0 +1,71 @@
+@import "panel.pcss";
+@import "message.pcss";
+@import "dialog.pcss";
+@import "browser.pcss";
+@import "editor.pcss";
+@import "info.pcss";
+@import "template_name.pcss";
+@import "badges.pcss";
+@import "action_button.pcss";
+
+.main_headline-wrapper {
+    display: flex;
+    align-items: center;
+
+    .fullscreen-mode {
+        height: fit-content;
+        padding: 2px 1px 0 1px;
+        border: none;
+        background: none;
+        color: var(--gray);
+        margin-top: 2px;
+
+        &:hover {
+            color: var(--text);
+        }
+    }
+}
+
+.chrome {
+    &.fullscreen {
+        position: fixed;
+        inset: 0;
+        height: auto;
+        margin: 0 !important;
+        border: 0 !important;
+    }
+
+    height: calc(100vh - 7rem);
+    overflow: hidden;
+
+    display: grid;
+    grid-template-areas:
+        "browser tabs info";
+    grid-template-columns: auto 1fr min-content;
+    position: relative;
+
+    #template-studio--browser {
+        grid-area: browser;
+        border-right: 1px solid var(--border);
+        overflow: auto;
+        resize: horizontal;
+        min-width: 100px;
+        max-width: max-content;
+    }
+
+    #template-studio--tabs {
+        grid-area: tabs;
+        position: relative;
+        overflow-y: auto;
+    }
+
+    #template-studio--info {
+        grid-area: info;
+        border-left: 1px solid var(--border);
+        overflow-y: auto;
+
+        &:empty {
+            display: none;
+        }
+    }
+}

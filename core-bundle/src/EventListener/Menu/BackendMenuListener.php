@@ -14,6 +14,7 @@ namespace Contao\CoreBundle\EventListener\Menu;
 
 use Contao\Backend;
 use Contao\BackendUser;
+use Contao\CoreBundle\Controller\BackendTemplateStudioController;
 use Contao\CoreBundle\Event\MenuEvent;
 use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\StringUtil;
@@ -104,6 +105,18 @@ class BackendMenuListener
                 ;
 
                 $categoryNode->addChild($moduleNode);
+            }
+
+            if($categoryName === 'design') {
+                $templateStudioNode = $factory
+                    ->createItem('template-studio')
+                    ->setUri('/contao/template-studio')
+                    ->setLabel('Template Studio')
+                    ->setLinkAttribute('title', 'Create and edit Twig templates')
+                    ->setCurrent($this->requestStack->getCurrentRequest()?->get('_controller') === BackendTemplateStudioController::class)
+                ;
+
+                $categoryNode->addChild($templateStudioNode);
             }
         }
     }

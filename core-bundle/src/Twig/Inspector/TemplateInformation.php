@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace Contao\CoreBundle\Twig\Inspector;
 
+use Contao\CoreBundle\Twig\ContaoTwigUtil;
 use Twig\Source;
 
 /**
@@ -20,14 +21,17 @@ use Twig\Source;
 final class TemplateInformation
 {
     /**
-     * @param list<string> $blocks
+     * @param list<string> $blockNames
+     * @param list<string> $slots
      *
      * @internal
      */
     public function __construct(
         private readonly Source $source,
-        private readonly array $blocks,
+        private readonly array $blockNames,
         private readonly array $slots,
+        private readonly string|null $extends,
+        private readonly array $uses,
     ) {
     }
 
@@ -44,9 +48,9 @@ final class TemplateInformation
     /**
      * @return list<string>
      */
-    public function getBlocks(): array
+    public function getBlockNames(): array
     {
-        return $this->blocks;
+        return $this->blockNames;
     }
 
     /**
@@ -55,5 +59,18 @@ final class TemplateInformation
     public function getSlots(): array
     {
         return $this->slots;
+    }
+
+    public function getExtends(): string|null
+    {
+        return $this->extends;
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    public function getUses(): array
+    {
+        return $this->uses;
     }
 }

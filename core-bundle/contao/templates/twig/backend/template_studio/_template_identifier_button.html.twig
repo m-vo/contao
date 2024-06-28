@@ -1,0 +1,8 @@
+{# todo i18n #}
+{% set button_attributes = attrs()
+    .set('data-action', 'contao--template-studio#visit')
+    .set('data-url', path('_contao_template_studio_open', {identifier}))
+    .set('aria-label', 'Open "' ~ identifier ~ '" template(s) in the editor')
+    .mergeWith(button_attributes|default)
+%}
+<button{{ button_attributes }}>{% block inner %}{{ identifier }}{% endblock %}</button>
