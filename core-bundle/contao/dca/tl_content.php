@@ -1293,7 +1293,7 @@ class tl_content extends Backend
 
 		return '
 <div class="cte_type ' . $key . '">' . $type . '</div>
-<div class="' . $class . '">' . $preview . '</div>';
+<div class="' . $class . '"><script>{ const scripts = document.getElementsByTagName(\'script\'); scripts[scripts.length - 1].previousSibling.srcdoc = `'. $preview .'`; }</script></div>';
 	}
 
 	/**

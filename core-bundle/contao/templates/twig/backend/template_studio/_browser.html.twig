@@ -10,12 +10,10 @@
                     {{ _self.tree_node(children, prefix ~ name ~ '/') }}
                 {% else %}
                     {% set path = prefix ~ name %}
-                    <a class="item"
-                       href="{{ path('_contao_template_studio_navigate', {path}) }}"
-                       data-item="{{ prefix ~ name }}">
-                        <div class="icon icon--element"></div>
+                    <button data-action="click->contao--template-studio#navigate" class="item" data-item="{{ prefix ~ name }}">
+                        <span class="icon icon--element"></span>
                         <span>{{ name }}</span>
-                    </a>
+                    </button>
                 {% endif %}
             </li>
         {% endfor %}

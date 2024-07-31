@@ -55,22 +55,96 @@ class Inspector
             $name = $this->filesystemLoader->getFirst($name);
         }
 
-        $blocks = $this->loadTemplate($name)->getBlockNames();
+        $data = $this->getData($name);
+
+        // Inspect source
         $source = $this->twig->getLoader()->getSourceContext($name);
-        $slots = [];
 
-        // Accumulate data for the template as well as all statically set parents
-        do {
-            $data = $this->getData($name);
-            $slots = array_unique([...$slots, ...$data['slots']]);
-            $name = $data['parent'] ?? false;
-        } while ($name);
+        // Inspect blocks
+        $blockNames = $this->loadTemplate($name)->getBlockNames();
 
-        sort($blocks);
+        // Inspect slots (accumulate data for the template as well as all statically set parents)
+        $slots = [$data['slots']];
+        $parent = $data['parent'] ?? false;
+
+        while($parent) {
+            $parentData = $this->getData($parent);
+            $slots = array_unique([...$slots, ...$parentData['slots']]);
+            $parent = $parentData['parent'] ?? false;
+        }
+
         sort($slots);
 
-        return new TemplateInformation($source, $blocks, $slots);
+        // Inspect extends tag
+        $extends = $data['parent'];
+
+        // Inspect use tags
+        $uses = $data['uses'];
+
+        return new TemplateInformation($source, $blockNames, $slots, $extends, $uses);
     }
+
+    public function getBlockHierarchy(string $baseTemplate, string $blockName): array
+    {
+        $data = $this->getData($baseTemplate);
+
+        /** @var list<BlockInformation> $hierarchy */
+        $hierarchy = [];
+
+        $addBlock = static function (string $template, string $block, array $properties) use (&$hierarchy): void {
+            $type = match($properties[0] ?? null) {
+                true => BlockType::enhance,
+                false => BlockType::overwrite,
+                default => BlockType::transparent,
+            };
+
+            $hierarchy[] = new BlockInformation($template, $block, $type, $properties[1] ?? false);
+        };
+
+        // Block in base template
+        $addBlock($baseTemplate, $blockName, $data['blocks'][$blockName] ?? []);
+
+        // Search used templates
+        $searchQueue = [...$data['uses']];
+
+        while ([$currentTemplate, $currentOverwrites]  = array_pop($searchQueue)) {
+            $currentData = $this->getData($currentTemplate);
+
+            foreach($currentData['blocks'] as $name => $properties) {
+                $importedName = $currentOverwrites[$name] ?? $name;
+
+                if($importedName === $blockName) {
+                    $addBlock($currentTemplate, $importedName, $properties);
+                }
+            }
+
+            $searchQueue = [...$searchQueue, ...$currentData['uses']];
+        }
+
+        // Walk up the inheritance tree
+        $currentData = $data;
+
+        while ($parent = ($currentData['parent'] ?? false)) {
+            $currentData = $this->getData($parent);
+            $addBlock($parent, $blockName, $currentData['blocks'][$blockName] ?? []);
+        }
+
+        // The last non-transparent template must be the origin. We fix the
+        // hierarchy by adjusting the BlockType and removing everything that
+        // comes after.
+        for($i = \count($hierarchy) - 1; $i>=0; $i--) {
+            if($hierarchy[$i]->getType() !== BlockType::transparent) {
+                 array_splice($hierarchy, $i, null, [
+                     new BlockInformation($hierarchy[$i]->getTemplateName(), $blockName, BlockType::origin, $hierarchy[$i]->isPrototype())
+                 ]);
+
+                break;
+            }
+        }
+
+        return $hierarchy;
+    }
+
 
     private function loadTemplate(string $name): TemplateWrapper
     {

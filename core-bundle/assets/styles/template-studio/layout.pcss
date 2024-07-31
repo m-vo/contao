@@ -1,10 +1,13 @@
 @import "browser.pcss";
+@import "editor.pcss";
+@import "info.pcss";
+@import "template_name.pcss";
 
 #template-studio {
     display: grid;
     grid-template-areas:
         "browser editor info";
-    grid-template-columns: max-content minmax(min-content, 2fr) minmax(0, 1fr);
+    grid-template-columns: max-content minmax(min-content, 3fr) minmax(0, 2fr);
     position: relative;
 
     #template-studio--browser {
@@ -23,7 +26,18 @@
     }
 
     /* Generic styling */
-    --selection: rgb(157, 202, 219);
-    --hover: rgba(205, 228, 237, .4);
-    --text-hover: var(--blue);
+    .badges {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+
+        .badge {
+            color: var(--info);
+            background-color: var(--info-bg);
+            display: inline-flex;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: .6rem;
+        }
+    }
 }

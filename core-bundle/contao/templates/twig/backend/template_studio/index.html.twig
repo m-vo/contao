@@ -1,11 +1,77 @@
 {% extends '@Contao/be_main.html5' %}
 
+{% use "@Contao/component/_figure.html.twig" with media as my_media, caption as my_caption %}
+
+{#{% block head %}#}
+{#    {{ parent() }}#}
+{#    <script src="{{ asset('js/ace.js', 'contao-components/ace') }}"></script>#}
+{#    <script src="{{ asset('js/ext-whitespace.js', 'contao-components/ace') }}"></script>#}
+{#{% endblock %}#}
+
 {% block main_content %}
-    <section id="template-studio">
+    <section
+        id="template-studio"
+        data-controller="contao--template-studio"
+        data-contao--template-studio-navigate-url-value="{{ path('_contao_template_studio_navigate') }}"
+        data-contao--template-studio-block-info-url-value="{{ path('_contao_template_studio_block_info') }}"
+    >
         <turbo-frame id="template-studio--browser">
             {{ include("@Contao/backend/template_studio/_browser.html.twig") }}
         </turbo-frame>
-        <turbo-frame id="template-studio--editor">EDITOR</turbo-frame>
-        <turbo-frame id="template-studio--info">INFO</turbo-frame>
+        <section id="template-studio--editor-tabs">
+            <turbo-frame id="template-studio--editor"></turbo-frame>
+        </section>
+        <turbo-frame id="template-studio--info">INFO{{ include("@Contao/backend/template_studio/test.html.twig") }}</turbo-frame>
     </section>
 {% endblock %}
+
+{#
+    CONCEPT
+
+    * tree of template identifiers in the @Contao namespace
+      |- component
+      |   |- _foo
+      |   |- _bar
+      |- content_element
+      |   |- text
+      |   |   |- special
+      |   |- image
+      | …
+
+    * selecting an element -> open all templates of the chain identified by their specific namespace as tabs
+      @Contao_App/content_element/text.html.twig
+      @Contao_FooBarBundle/content_element/text.html.twig
+      @Contao_ContaoCoreBundle/content_element/text.html.twig
+
+      analysis: if a subsequent template does not include {% extends "@Contao/content_element/text.html.twig" %},
+      output a warning/grey out chain to make it clear, that the hierarchy was broken/overridden.
+
+      open questions: what's with components?
+
+    * code lenses on blocks -> open inheritance information
+       - if a block is present in a parent template or a used template (including renames on import) or any
+         combination, show a code lense
+       - clicking on the code lense opens up an inheritance chain with template names as an overlay
+
+         @Contao_ContaoCoreBundle/content_element/content_element/_base.html.twig#content
+         [original]
+             <- @Contao_App/content_element/content_element/_base.html.twig#content
+             [via extends & parent()]
+                 <- @Contao_ContaoCoreBundle/content_element/list.html.twig#content
+                 [via extends & parent()]
+
+         @Contao_ContaoCoreBundle/component/_list.html.twig#list_item
+         [original]
+             <- @Contao_ContaoCoreBundle/content_element/list.html.twig#content (use)
+             [via use]
+                 <- @Contao_App/content_element/list.html.twig#content
+                 [via extends; shadows!]
+
+       - if a block shadows another, show a warning/grey out chain (and/or add a warning annotation)
+       - clicking on a template in the chain opens up the template as a tab
+
+    * the info panel is updated for each selected template to show the chain/relations. here you can click
+      to add a new custom version of a template. templates in the global namespace have a different look to
+      make clear, that these are editable. for those, the info panel has a save/restore(/undo?/redo?) section
+      to make changes.
+#}

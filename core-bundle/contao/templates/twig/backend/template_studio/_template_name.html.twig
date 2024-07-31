@@ -1,0 +1,24 @@
+{# @Contao_ContaoCoreBundle/content_element/_video.html.twig #}
+<div class="template_name">
+    <div class="structure">
+        <div class="namespace">@{{ namespace }}</div>
+        <div class="/">/</div>
+        <button
+            data-action="click->contao--template-studio#navigate"
+            class="identifier"
+            data-item="{{ identifier }}"
+            title="Open {{ identifier }} in editor tab."
+        >
+            {{ identifier }}
+        </button>
+        <div class="extension">.{{ extension }}</div>
+    </div>
+    {% if namespace starts with 'Contao_Global' %}
+        {% set namespace_info = 'Global namespace (/templates)' %}
+    {% elseif namespace starts with 'Contao_App' %}
+        {% set namespace_info = 'App namespace (/contao/templates)' %}
+    {% else %}
+        {% set namespace_info = 'Bundle namespace (' ~ namespace[7:]  ~')' %}
+    {% endif %}
+    <p class="namespace_info">{{ namespace_info }}</p>
+</div>
