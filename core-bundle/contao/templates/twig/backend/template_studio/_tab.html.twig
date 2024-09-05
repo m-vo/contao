@@ -1,0 +1,19 @@
+<div class="tab-panel" data-contao--tabs-target="tab" data-label="{{ item }}">
+    {% for source in sources|reverse %}
+        <div class="editor" data-contao--template-studio-target="editor">
+            <h3>
+                <label for="template-studio--editor_{{ loop.index }}">{{ source.name }}</label>
+                {% if loop.first %}<span>base</span>{% endif %}
+            </h3>
+            <textarea id="template-studio--editor_{{ loop.index }}" data-item="{{ source.name }}">{{ source.code }}</textarea>
+            <p class="editor--path tl_help tl_tip">{{ source.path }}</p>
+        </div>
+        {% if not loop.last %}
+            <div class="editor--inheritance-chain">
+                <div>⇡</div>
+                <span>inherits from previous template</span>
+            </div>
+        {% endif %}
+    {% endfor %}
+</div>
+

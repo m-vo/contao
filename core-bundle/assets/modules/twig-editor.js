@@ -15,6 +15,7 @@ export class TwigEditor {
             wrap: true,
             useSoftTabs: false,
             autoScrollEditorIntoView: true,
+            readOnly: true,
         });
 
         this.editor.container.style.lineHeight = '1.45';
@@ -22,6 +23,7 @@ export class TwigEditor {
 
         this.editor.commands.addCommand({
             name: 'showBlockInfo',
+            readOnly: true,
             exec: (editor, args) => {
                this.editor.container.dispatchEvent(
                    new CustomEvent('block-info', {
@@ -37,6 +39,7 @@ export class TwigEditor {
 
         this.editor.commands.addCommand({
             name: 'navigate',
+            readOnly: true,
             exec: (editor, args) => {
                 this.editor.container.dispatchEvent(
                     new CustomEvent('navigate', {

@@ -60,7 +60,7 @@ class BackendTemplateStudioController extends AbstractBackendController
         );
 
         return $this->turboStream(
-            '@Contao/backend/template_studio/stream/navigate.stream.html.twig',
+            '@Contao/backend/template_studio/stream/open_tab.stream.html.twig',
             [
                 'item' => $identifier,
                 'sources' => $sources,
@@ -202,11 +202,9 @@ class BackendTemplateStudioController extends AbstractBackendController
 
     private function getTemplateTree(): array
     {
-        $finder = $this->finder->create();
-
         $prefixTree = [];
 
-        foreach ($finder as $identifier => $chain) {
+        foreach ($this->finder->create() as $identifier => $extension) {
             $parts = explode('/', $identifier);
             $node = &$prefixTree;
 
@@ -219,10 +217,30 @@ class BackendTemplateStudioController extends AbstractBackendController
                 $node = &$node[$part];
             }
 
-            // $node = [...$node, ...$chain];
+            $node = [...$node, $identifier];
         }
 
-        return $prefixTree;
+        $sortRecursive = static function (&$node) use (&$sortRecursive): void {
+            if (!is_array($node)) {
+                return;
+            }
+
+            uksort($node, static function ($a, $b) {
+                if(!is_string($a)) {
+                    return -1;
+                }
+
+                return $a <=> $b;
+            });
+
+            foreach ($node as &$child) {
+                $sortRecursive($child);
+            }
+        };
+
+        $sortRecursive($prefixTree);
+
+        return array_merge(['content_element' => [], 'frontend_module' => [], 'component' => []], $prefixTree);
     }
 
 }

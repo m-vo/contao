@@ -9,20 +9,26 @@
 {#{% endblock %}#}
 
 {% block main_content %}
-    <section
+    <div
         id="template-studio"
         data-controller="contao--template-studio"
         data-contao--template-studio-navigate-url-value="{{ path('_contao_template_studio_navigate') }}"
         data-contao--template-studio-block-info-url-value="{{ path('_contao_template_studio_block_info') }}"
     >
+        {# Navigation #}
         <turbo-frame id="template-studio--browser">
             {{ include("@Contao/backend/template_studio/_browser.html.twig") }}
         </turbo-frame>
-        <section id="template-studio--editor-tabs">
-            <turbo-frame id="template-studio--editor"></turbo-frame>
+
+        {# Main editor section with multiple tabs #}
+        <section data-controller="contao--tabs" id="template-studio--tabs">
+            <ul class="tab-navigation" data-contao--tabs-target="navigation"></ul>
+            <turbo-frame id="template-studio--tab-panels"></turbo-frame>
         </section>
+
+        {# Info panel #}
         <turbo-frame id="template-studio--info">INFO{{ include("@Contao/backend/template_studio/test.html.twig") }}</turbo-frame>
-    </section>
+    </div>
 {% endblock %}
 
 {#

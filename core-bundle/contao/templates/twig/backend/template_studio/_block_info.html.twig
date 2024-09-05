@@ -3,7 +3,7 @@
     <p>
         Block <span class="token">{{ block }}</span> is originally defined in the
         <span class="token">{{ hierarchy|last.template.namespace }}</span>
-        namespace and is modified {{ hierarchy|length - 1 }} times when rendering
+        namespace and is modified {{ hierarchy|length - 1 }} time(s) when rendering
         the <span class="token">{{ short_name }}</span> template.
     </p>
 {% endif %}
@@ -81,6 +81,7 @@
                             class="token">parent()</i> expression. This overwrites previously defined content.
                     </div>
                 {% endif %}
+            </div>
             </div>
         {% endif %}
     {% endfor %}

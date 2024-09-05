@@ -1,9 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import { Stream } from '../modules/stream';
 import { TwigEditor } from "../modules/twig-editor";
-import {
-    singleProperty
-} from "../../public/vendors-node_modules_pnpm_ace-builds_1_35_2_node_modules_ace-builds_src-noconflict_worker-css_js.464efab6";
 
 export default class extends Controller {
     stream = new Stream();
@@ -17,6 +14,7 @@ export default class extends Controller {
     static classes = [];
 
     navigate(el) {
+
         // todo: open tab if already open
         this.stream.open(
             this.navigateUrlValue + '?' + new URLSearchParams({item: el.currentTarget.dataset.item}).toString(),
@@ -36,14 +34,14 @@ export default class extends Controller {
             )
         })
 
-        // // todo: remove test
-        // this.stream.open(
-        //     this.navigateUrlValue + '?' + new URLSearchParams({item: 'content_element/text/foo'}).toString(), 'GET', {}, false
-        // );
-        //
-        // this.stream.open(
-        //     this.blockInfoUrlValue + '?' + new URLSearchParams({item: '@Contao_Global/content_element/text/foo.html.twig', block: 'content'}).toString(),
-        // );
+        // todo: remove test
+        this.stream.open(
+            this.navigateUrlValue + '?' + new URLSearchParams({item: 'content_element/text/foo'}).toString(), 'GET', {}, false
+        );
+
+        this.stream.open(
+            this.blockInfoUrlValue + '?' + new URLSearchParams({item: '@Contao_Global/content_element/text/foo.html.twig', block: 'content'}).toString(),
+        );
     }
 
     editorTargetConnected(el) {

@@ -4,25 +4,34 @@
 @import "template_name.pcss";
 
 #template-studio {
+    height: calc(100vh - 7rem);
+    overflow: hidden;
+
     display: grid;
     grid-template-areas:
-        "browser editor info";
-    grid-template-columns: max-content minmax(min-content, 3fr) minmax(0, 2fr);
+        "browser tabs info";
+    grid-template-columns: auto 1fr min-content;
     position: relative;
 
     #template-studio--browser {
         grid-area: browser;
         border-right: 1px solid var(--border);
+        overflow: auto;
+        resize: horizontal;
+        min-width: 100px;
+        max-width: max-content;
     }
 
-    #template-studio--editor {
-        grid-area: editor;
+    #template-studio--tabs {
+        grid-area: tabs;
         position: relative;
+        overflow-y: auto;
     }
 
     #template-studio--info {
         grid-area: info;
         border-left: 1px solid var(--border);
+        overflow-y: auto;
     }
 
     /* Generic styling */
