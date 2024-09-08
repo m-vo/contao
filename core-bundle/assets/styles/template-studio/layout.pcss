@@ -1,9 +1,37 @@
+@import "message.pcss";
 @import "browser.pcss";
 @import "editor.pcss";
 @import "info.pcss";
 @import "template_name.pcss";
+@import "badges.pcss";
 
-#template-studio {
+.main_headline-wrapper {
+    display: flex;
+    align-items: center;
+
+    .fullscreen-mode {
+        height: fit-content;
+        padding: 2px 1px 0 1px;
+        border: none;
+        background: none;
+        color: var(--gray);
+        margin-top: 2px;
+
+        &:hover {
+            color: var(--text);
+        }
+    }
+}
+
+.chrome {
+    &.fullscreen {
+        position: fixed;
+        inset: 0;
+        height: auto;
+        margin: 0 !important;
+        border: 0 !important;
+    }
+
     height: calc(100vh - 7rem);
     overflow: hidden;
 
@@ -32,21 +60,5 @@
         grid-area: info;
         border-left: 1px solid var(--border);
         overflow-y: auto;
-    }
-
-    /* Generic styling */
-    .badges {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-
-        .badge {
-            color: var(--info);
-            background-color: var(--info-bg);
-            display: inline-flex;
-            border-radius: 4px;
-            padding: 2px 6px;
-            font-size: .6rem;
-        }
     }
 }

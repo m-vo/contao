@@ -1,7 +1,7 @@
 export class Stream {
     abortController = null;
 
-    open(url, method = 'GET', data = {}, single = true) {
+    performRequest(url, method = 'GET', data = {}, single = false) {
         let params = {
             method,
             headers: {
@@ -10,10 +10,12 @@ export class Stream {
             },
         };
 
-        if (method !== 'GET') {
+        if (method === 'GET') {
+            url += '?' + new URLSearchParams(data).toString();
+        } else {
             params = {
                 ...params,
-                body: JSON.stringify(data),
+                body: typeof data === 'object' ? JSON.stringify(data) : data,
             }
         }
 

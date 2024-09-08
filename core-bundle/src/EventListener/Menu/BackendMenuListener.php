@@ -110,7 +110,7 @@ class BackendMenuListener
             if($categoryName === 'design') {
                 $templateStudioNode = $factory
                     ->createItem('template-studio')
-                    ->setUri('contao/template-studio')
+                    ->setUri('/contao/template-studio')
                     ->setLabel('Template Studio')
                     ->setLinkAttribute('title', 'Create and edit Twig templates')
                     ->setCurrent($this->requestStack->getCurrentRequest()?->get('_controller') === BackendTemplateStudioController::class)

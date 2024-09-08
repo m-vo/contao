@@ -1,4 +1,4 @@
-import { Controller } from '@hotwired/stimulus';
+import {Controller} from '@hotwired/stimulus';
 
 export default class TabsController extends Controller {
     static targets = ['navigation', 'tab'];
@@ -13,11 +13,11 @@ export default class TabsController extends Controller {
         this.instanceId = TabsController.instanceCount;
     }
 
-    tabTargetConnected (panel) {
+    tabTargetConnected(panel) {
         this.lastTabId++;
 
         const control_reference = `tab-control_${this.instanceId}_${this.lastTabId}`;
-        const panel_reference = `tab-panel_${this.instanceId}_${this.lastTabId}`;
+        const panel_reference = panel.id || `tab-panel_${this.instanceId}_${this.lastTabId}`;
 
         // Create navigation elements
         const selectButton = document.createElement('button');
@@ -40,17 +40,8 @@ export default class TabsController extends Controller {
         closeButton.setAttribute('aria-label', 'Close'); // todo i18n
 
         closeButton.addEventListener('click', () => {
+            // Remove the panel and let the disconnect handler do the rest
             panel.remove();
-            li.remove();
-
-            // Select the first tab/no tab if the current tab was active before closing.
-            if(panel === this.activeTab) {
-                if(this.hasTabTarget) {
-                    this.selectTab(this.tabTarget);
-                } else {
-                    this.activeTab = null;
-                }
-            }
         });
 
         const li = document.createElement('li');
@@ -68,6 +59,21 @@ export default class TabsController extends Controller {
         this.selectTab(panel);
     }
 
+    tabTargetDisconnected(panel) {
+        // Remove controls
+        const li = document.getElementById(panel.getAttribute('aria-labelledby')).parentElement;
+        li.remove();
+
+        // Select the first tab/no tab if the current tab was active before closing.
+        if (panel === this.activeTab) {
+            if (this.hasTabTarget) {
+                this.selectTab(this.tabTarget);
+            } else {
+                this.activeTab = null;
+            }
+        }
+    }
+
     selectTab(panel) {
         this.tabTargets.forEach((el) => {
             const isTarget = el === panel;
@@ -76,8 +82,8 @@ export default class TabsController extends Controller {
             el.style.display = isTarget ? 'revert' : 'none';
 
             const selectButton = document.getElementById(el.getAttribute('aria-labelledby'));
-            selectButton.setAttribute('aria-selected', isTarget);
-            selectButton.parentElement.classList.toggle('active', isTarget);
+            selectButton?.setAttribute('aria-selected', isTarget);
+            selectButton?.parentElement.classList.toggle('active', isTarget);
         });
 
         this.activeTab = panel;

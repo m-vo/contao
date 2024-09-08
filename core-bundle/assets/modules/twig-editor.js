@@ -6,7 +6,8 @@ import whitespace from 'ace-builds/src-noconflict/ext-whitespace'
 
 export class TwigEditor {
     constructor(element) {
-        this.item = element.dataset.item;
+        this.name = element.dataset.name;
+        this.resourceUrl = element.dataset.resourceUrl;
 
         this.editor = ace.edit(element, {
             theme: document.documentElement.dataset.colorScheme === 'dark' ? 'ace/theme/twilight' : 'ace/theme/clouds',
@@ -15,22 +16,26 @@ export class TwigEditor {
             wrap: true,
             useSoftTabs: false,
             autoScrollEditorIntoView: true,
-            readOnly: true,
+            readOnly: element.hasAttribute('readonly'),
         });
 
         this.editor.container.style.lineHeight = '1.45';
         whitespace.detectIndentation(this.editor.getSession());
 
         this.editor.commands.addCommand({
-            name: 'showBlockInfo',
-            readOnly: true,
+            name: 'save',
+            bindKey: {win: 'Ctrl-S', mac: 'Command-S'},
             exec: (editor, args) => {
-               this.editor.container.dispatchEvent(
-                   new CustomEvent('block-info', {
+               if(editor.getSession().getUndoManager().isClean()) {
+                   return;
+               }
+
+                editor.container.dispatchEvent(
+                   new CustomEvent('save', {
                        bubbles: true,
                        detail: {
-                           item: this.item,
-                           block: args[0]
+                           resourceUrl: this.resourceUrl,
+                           content: editor.getValue(),
                        }
                    })
                );
@@ -38,14 +43,30 @@ export class TwigEditor {
         });
 
         this.editor.commands.addCommand({
-            name: 'navigate',
+            name: 'showBlockInfo',
             readOnly: true,
             exec: (editor, args) => {
-                this.editor.container.dispatchEvent(
-                    new CustomEvent('navigate', {
+               editor.container.dispatchEvent(
+                   new CustomEvent('block-info', {
+                       bubbles: true,
+                       detail: {
+                           name: this.name,
+                           block: args[0],
+                       }
+                   })
+               );
+            },
+        });
+
+        this.editor.commands.addCommand({
+            name: 'open',
+            readOnly: true,
+            exec: (editor, args) => {
+                editor.container.dispatchEvent(
+                    new CustomEvent('open', {
                         bubbles: true,
                         detail: {
-                            item: args[0]
+                            name: args[0]
                         }
                     })
                 );
@@ -72,7 +93,7 @@ export class TwigEditor {
                         payload.push({
                             start: {row: reference.row, column: reference.column},
                             command: {
-                                id: 'navigate',
+                                id: 'open',
                                 title: reference.name,
                                 arguments: [reference.name]
                             }

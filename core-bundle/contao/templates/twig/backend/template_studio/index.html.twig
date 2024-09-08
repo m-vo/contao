@@ -1,83 +1,96 @@
 {% extends '@Contao/be_main.html5' %}
 
-{% use "@Contao/component/_figure.html.twig" with media as my_media, caption as my_caption %}
-
-{#{% block head %}#}
-{#    {{ parent() }}#}
-{#    <script src="{{ asset('js/ace.js', 'contao-components/ace') }}"></script>#}
-{#    <script src="{{ asset('js/ext-whitespace.js', 'contao-components/ace') }}"></script>#}
-{#{% endblock %}#}
-
-{% block main_content %}
-    <div
-        id="template-studio"
-        data-controller="contao--template-studio"
-        data-contao--template-studio-navigate-url-value="{{ path('_contao_template_studio_navigate') }}"
-        data-contao--template-studio-block-info-url-value="{{ path('_contao_template_studio_block_info') }}"
+{% block main %}
+    <main id="main"
+          aria-labelledby="main_headline"
+          data-controller="contao--template-studio"
+          data-contao--template-studio-resolve-and-open-url-value="{{ path('_contao_template_studio_resolve_and_open') }}"
+          data-contao--template-studio-block-info-url-value="{{ path('_contao_template_studio_block_info') }}"
+          data-action="keydown@document->contao--template-studio#trackKeydown"
     >
-        {# Navigation #}
-        <turbo-frame id="template-studio--browser">
-            {{ include("@Contao/backend/template_studio/_browser.html.twig") }}
-        </turbo-frame>
+        {# Headline and fullscreen-mode button #}
+        <div class="main_headline-wrapper">
+            <h1 id="main_headline">{{ headline }}</h1>
+            <button role="button" class="fullscreen-mode" data-action="contao--template-studio#enterFullscreen">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     class="lucide lucide-expand">
+                    <path d="m21 21-6-6m6 6v-4.8m0 4.8h-4.8"/>
+                    <path d="M3 16.2V21m0 0h4.8M3 21l6-6"/>
+                    <path d="M21 7.8V3m0 0h-4.8M21 3l-6 6"/>
+                    <path d="M3 7.8V3m0 0h4.8M3 3l6 6"/>
+                </svg>
+            </button>
+        </div>
 
-        {# Main editor section with multiple tabs #}
-        <section data-controller="contao--tabs" id="template-studio--tabs">
-            <ul class="tab-navigation" data-contao--tabs-target="navigation"></ul>
-            <turbo-frame id="template-studio--tab-panels"></turbo-frame>
-        </section>
+        <div class="content chrome" data-contao--template-studio-target="chrome">
+            {# Overlays #}
+            <turbo-frame id="template-studio--message"></turbo-frame>
 
-        {# Info panel #}
-        <turbo-frame id="template-studio--info">INFO{{ include("@Contao/backend/template_studio/test.html.twig") }}</turbo-frame>
-    </div>
+            {# Navigation #}
+            <turbo-frame id="template-studio--browser">
+                {{ include("@Contao/backend/template_studio/_browser.html.twig") }}
+            </turbo-frame>
+
+            {# Main editor section with multiple tabs #}
+            <section data-controller="contao--tabs" id="template-studio--tabs">
+                <ul class="tab-navigation" data-contao--tabs-target="navigation"></ul>
+                <turbo-frame id="template-studio--tab-panels"></turbo-frame>
+            </section>
+
+            {# Info panel #}
+            <turbo-frame id="template-studio--info"></turbo-frame>
+        </div>
+    </main>
 {% endblock %}
 
 {#
-    CONCEPT
+CONCEPT
 
-    * tree of template identifiers in the @Contao namespace
-      |- component
-      |   |- _foo
-      |   |- _bar
-      |- content_element
-      |   |- text
-      |   |   |- special
-      |   |- image
-      | …
+* tree of template identifiers in the @Contao namespace
+  |- component
+  |   |- _foo
+  |   |- _bar
+  |- content_element
+  |   |- text
+  |   |   |- special
+  |   |- image
+  | …
 
-    * selecting an element -> open all templates of the chain identified by their specific namespace as tabs
-      @Contao_App/content_element/text.html.twig
-      @Contao_FooBarBundle/content_element/text.html.twig
-      @Contao_ContaoCoreBundle/content_element/text.html.twig
+* selecting an element -> open all templates of the chain identified by their specific namespace as tabs
+  @Contao_App/content_element/text.html.twig
+  @Contao_FooBarBundle/content_element/text.html.twig
+  @Contao_ContaoCoreBundle/content_element/text.html.twig
 
-      analysis: if a subsequent template does not include {% extends "@Contao/content_element/text.html.twig" %},
-      output a warning/grey out chain to make it clear, that the hierarchy was broken/overridden.
+  analysis: if a subsequent template does not include {% extends "@Contao/content_element/text.html.twig" %},
+  output a warning/grey out chain to make it clear, that the hierarchy was broken/overridden.
 
-      open questions: what's with components?
+  open questions: what's with components?
 
-    * code lenses on blocks -> open inheritance information
-       - if a block is present in a parent template or a used template (including renames on import) or any
-         combination, show a code lense
-       - clicking on the code lense opens up an inheritance chain with template names as an overlay
+* code lenses on blocks -> open inheritance information
+   - if a block is present in a parent template or a used template (including renames on import) or any
+     combination, show a code lense
+   - clicking on the code lense opens up an inheritance chain with template names as an overlay
 
-         @Contao_ContaoCoreBundle/content_element/content_element/_base.html.twig#content
-         [original]
-             <- @Contao_App/content_element/content_element/_base.html.twig#content
+     @Contao_ContaoCoreBundle/content_element/content_element/_base.html.twig#content
+     [original]
+         <- @Contao_App/content_element/content_element/_base.html.twig#content
+         [via extends & parent()]
+             <- @Contao_ContaoCoreBundle/content_element/list.html.twig#content
              [via extends & parent()]
-                 <- @Contao_ContaoCoreBundle/content_element/list.html.twig#content
-                 [via extends & parent()]
 
-         @Contao_ContaoCoreBundle/component/_list.html.twig#list_item
-         [original]
-             <- @Contao_ContaoCoreBundle/content_element/list.html.twig#content (use)
-             [via use]
-                 <- @Contao_App/content_element/list.html.twig#content
-                 [via extends; shadows!]
+     @Contao_ContaoCoreBundle/component/_list.html.twig#list_item
+     [original]
+         <- @Contao_ContaoCoreBundle/content_element/list.html.twig#content (use)
+         [via use]
+             <- @Contao_App/content_element/list.html.twig#content
+             [via extends; shadows!]
 
-       - if a block shadows another, show a warning/grey out chain (and/or add a warning annotation)
-       - clicking on a template in the chain opens up the template as a tab
+   - if a block shadows another, show a warning/grey out chain (and/or add a warning annotation)
+   - clicking on a template in the chain opens up the template as a tab
 
-    * the info panel is updated for each selected template to show the chain/relations. here you can click
-      to add a new custom version of a template. templates in the global namespace have a different look to
-      make clear, that these are editable. for those, the info panel has a save/restore(/undo?/redo?) section
-      to make changes.
+* the info panel is updated for each selected template to show the chain/relations. here you can click
+  to add a new custom version of a template. templates in the global namespace have a different look to
+  make clear, that these are editable. for those, the info panel has a save/restore(/undo?/redo?) section
+  to make changes.
 #}

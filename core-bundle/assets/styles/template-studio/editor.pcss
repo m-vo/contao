@@ -59,7 +59,7 @@
     }
 
     /* Editor */
-    .editor {
+    .template {
         h3 {
             font-size: .85rem;
             font-weight: inherit;
@@ -77,11 +77,11 @@
             }
         }
 
-        .editor--path {
+        .template--path {
             margin: 0 0 12px 2px;
         }
 
-        .editor--inheritance-chain {
+        .template--inheritance-chain {
             display: flex;
             gap: 8px;
             margin: 24px 0;
@@ -100,6 +100,12 @@
                 width: 20px;
                 font-size: 14px;
                 background-color: var(--info-bg);
+            }
+        }
+
+        .editor {
+            &.editable {
+                box-shadow: var(--content-bg) 0 0 0 1px, var(--orange) 0 0 0 2px;
             }
         }
 

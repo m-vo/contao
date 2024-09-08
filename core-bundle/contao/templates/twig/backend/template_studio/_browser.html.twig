@@ -1,25 +1,31 @@
 {% macro tree_node(tree) %}
     <ol>
-        {% for name, nodes in tree %}
+        {% for name, node in tree %}
             <li>
-                {% if nodes is iterable %}
-                    {% if nodes|length > 1 or nodes|first is iterable %}
+                {% if node is iterable %}
+                    {% if node|length > 1 or node|first is iterable %}
                         <span class="node">{{ name }}</span>
-                        {{ _self.tree_node(nodes) }}
+                        {{ _self.tree_node(node) }}
                     {% else %}
-                        {% with {nodes: nodes|first} %}{{ block('navigate_button') }}{% endwith %}
+                        {% with {node: node|first} %}{{ block('navigate_button') }}{% endwith %}
                     {% endif %}
                 {% else %}
+                    {# Leaf #}
                     {% block navigate_button %}
-                        {# todo i18n #}
-                        <button data-action="click->contao--template-studio#navigate" data-item="{{ nodes }}"
-                                role="button" aria-label="Open &quot;{{ nodes }}&quot; template(s) in the editor" title="{{ nodes }}">
-                            <img src="/system/themes/flexible/icons/code--dark.svg" width="16" height="16"
-                                 alt="PDF file" class="color-scheme--dark" loading="lazy">
-                            <img src="/system/themes/flexible/icons/code.svg" width="16" height="16" alt="PDF file"
-                                 class="color-scheme--light" loading="lazy">
-                            {{ nodes }}
-                        </button>
+                        {% with {identifier: node.identifier} %}
+                            {% embed('@Contao/backend/template_studio/_open_template_button.html.twig') %}
+                                {% block inner %}
+                                    <img src="/system/themes/flexible/icons/code--dark.svg" width="16" height="16"
+                                         alt="PDF file" class="color-scheme--dark" loading="lazy">
+                                    <img src="/system/themes/flexible/icons/code.svg" width="16" height="16"
+                                         alt="PDF file"
+                                         class="color-scheme--light" loading="lazy">
+                                    <span{{ attrs().addClass('customized', node.isCustomized) }}>
+                                        {{ identifier }}
+                                    </span>
+                                {% endblock %}
+                            {% endembed %}
+                        {% endwith %}
                     {% endblock %}
                 {% endif %}
             </li>

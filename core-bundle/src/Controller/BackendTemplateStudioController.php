@@ -9,6 +9,8 @@ use Contao\CoreBundle\Twig\Inspector\BlockInformation;
 use Contao\CoreBundle\Twig\Inspector\BlockType;
 use Contao\CoreBundle\Twig\Inspector\Inspector;
 use Contao\CoreBundle\Twig\Loader\ContaoFilesystemLoader;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Filesystem\Path;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -19,7 +21,8 @@ class BackendTemplateStudioController extends AbstractBackendController
     public function __construct(
         private readonly ContaoFilesystemLoader $loader,
         private readonly FinderFactory          $finder,
-        private readonly Inspector              $inspector
+        private readonly Inspector              $inspector,
+        private readonly string                 $projectDir,
     )
     {
     }
@@ -42,18 +45,15 @@ class BackendTemplateStudioController extends AbstractBackendController
     }
 
     #[Route(
-        '/contao/template-studio/_navigate',
-        name: '_contao_template_studio_navigate',
-        requirements: ['item' => '.*'],
-        defaults: ['_scope' => 'backend', 'item' => '']
+        '/contao/template-studio/resource/{identifier}',
+        name: '_contao_template_studio_open',
+        requirements: ['identifier' => '.+'],
+        defaults: ['_scope' => 'backend'],
+        methods: ['GET']
     )]
-    public function _navigate(Request $request): Response
+    public function open(Request $request, string $identifier): Response
     {
-        // todo: validate
-        $item = $request->query->get('item');
-
-        $identifier = ContaoTwigUtil::getIdentifier($item);
-
+        // todo: validate - should this consider unset elements from the tree?
         $sources = array_map(
             fn(string $name): Source => $this->loader->getSourceContext($name),
             $this->loader->getInheritanceChains()[$identifier] ?? []
@@ -62,26 +62,86 @@ class BackendTemplateStudioController extends AbstractBackendController
         return $this->turboStream(
             '@Contao/backend/template_studio/stream/open_tab.stream.html.twig',
             [
-                'item' => $identifier,
-                'sources' => $sources,
+                'identifier' => $identifier,
+                'templates' => array_map(
+                    function (Source $source) use ($identifier): array {
+                        $templateNameInformation = $this->getTemplateNameInformation($source->getName());
+
+                        return [
+                            ...$templateNameInformation,
+                            'path' => $source->getPath(),
+                            'code' => $source->getCode(),
+                        ];
+                    },
+                    $sources
+                ),
             ]
         );
     }
 
     #[Route(
-        '/contao/template-studio/_block_info',
-        name: '_contao_template_studio_block_info',
-        requirements: ['item' => '.*', 'block' => '.*'],
-        defaults: ['_scope' => 'backend', 'item' => '', 'block' => '']
+        '/contao/template-studio/resource',
+        name: '_contao_template_studio_resolve_and_open',
+        requirements: ['name' => '.+'],
+        defaults: ['_scope' => 'backend'],
+        methods: ['GET']
     )]
-    public function _block_info(Request $request): Response
+    public function resolveAndOpen(Request $request): Response
+    {
+        $identifier = ContaoTwigUtil::getIdentifier($request->get('name'));
+
+        return $this->open($request, $identifier);
+    }
+
+    #[Route(
+        '/contao/template-studio/resource/{identifier}',
+        name: '_contao_template_studio_save',
+        requirements: ['identifier' => '.+'],
+        defaults: ['_scope' => 'backend'],
+        methods: ['PUT']
+    )]
+    public function save(Request $request, string $identifier): Response
+    {
+        $data = $request->getContent();
+
+        // Get the file that an editor is allowed to edit
+        $first = $this->loader->getFirst($identifier);
+
+        if((ContaoTwigUtil::parseContaoName($first)[0] ?? '') !== 'Contao_Global') {
+            throw new \InvalidArgumentException(sprintf('There is no userland template for identifier "%s".', $identifier));
+        }
+
+        $sourceContext = $this->loader->getSourceContext($first);
+
+        // todo use VFS for this
+        $filesystem = new Filesystem();
+        $filesystem->dumpFile($sourceContext->getPath(), $data);
+
+        // todo: reparse file
+
+        return $this->turboStream(
+            '@Contao/backend/template_studio/stream/save.stream.html.twig',
+            [
+                'path' => Path::makeRelative($sourceContext->getPath(), $this->projectDir),
+            ]
+        );
+    }
+
+    #[Route(
+        '/contao/template-studio/block_info',
+        name: '_contao_template_studio_block_info',
+        requirements: ['name' => '.+', 'block' => '.+'],
+        defaults: ['_scope' => 'backend'],
+        methods: ['GET']
+    )]
+    public function block_info(Request $request): Response
     {
         // todo validate
 
-        $item = $request->query->get('item');
+        $name = $request->query->get('name');
         $block = $request->query->get('block');
 
-        $first = $this->loader->getFirst(ContaoTwigUtil::getIdentifier($item));
+        $first = $this->loader->getFirst(ContaoTwigUtil::getIdentifier($name));
 
 //        $blockHierarchy = [];
 //        $search = [$first];
@@ -139,16 +199,12 @@ class BackendTemplateStudioController extends AbstractBackendController
 
         $blockHierarchy = array_values(
             array_map(
-                static fn(BlockInformation $info): array => [
+                fn(BlockInformation $info): array => [
                     'target' => false,
                     'shadowed' => false,
                     'warning' => false,
                     'info' => $info,
-                    'template' => [
-                        'namespace' => ContaoTwigUtil::parseContaoName($info->getTemplateName())[0] ?? '?',
-                        'identifier' => ContaoTwigUtil::getIdentifier($info->getTemplateName()),
-                        'extension' => ContaoTwigUtil::getExtension($info->getTemplateName()),
-                    ],
+                    'template' => $this->getTemplateNameInformation($info->getTemplateName()),
                 ],
                 array_filter(
                     $this->inspector->getBlockHierarchy($first, $block),
@@ -160,7 +216,7 @@ class BackendTemplateStudioController extends AbstractBackendController
         $numBlocks = \count($blockHierarchy);
 
         for ($i = 0; $i < $numBlocks; $i++) {
-            if ($blockHierarchy[$i]['info']->getTemplateName() === $item) {
+            if ($blockHierarchy[$i]['info']->getTemplateName() === $name) {
                 $blockHierarchy[$i]['target'] = true;
                 break;
             }
@@ -175,7 +231,7 @@ class BackendTemplateStudioController extends AbstractBackendController
 
                 if ($lastOverwrite !== null) {
                     $blockHierarchy[$lastOverwrite]['warning'] = true;
-                    $blockHierarchy[$i]['shadowed'] = $shadowed;
+                    $blockHierarchy[$i]['shadowed'] = true;
                 }
 
                 $lastOverwrite = $i;
@@ -195,7 +251,8 @@ class BackendTemplateStudioController extends AbstractBackendController
             [
                 'hierarchy' => $blockHierarchy,
                 'block' => $block,
-                'short_name' => ContaoTwigUtil::parseContaoName($item)[1],
+                // todo: shall we use getTemplateNameInformation() here as well?
+                'short_name' => ContaoTwigUtil::parseContaoName($name)[1],
             ]
         );
     }
@@ -217,7 +274,17 @@ class BackendTemplateStudioController extends AbstractBackendController
                 $node = &$node[$part];
             }
 
-            $node = [...$node, $identifier];
+            $leaf = new class($identifier, $this->loader->exists("@Contao_Global/$identifier.$extension"))
+            {
+                public function __construct(
+                    public readonly string $identifier,
+                    public readonly bool $isCustomized,
+                )
+                {
+                }
+            };
+
+            $node = [...$node, $leaf];
         }
 
         $sortRecursive = static function (&$node) use (&$sortRecursive): void {
@@ -226,7 +293,7 @@ class BackendTemplateStudioController extends AbstractBackendController
             }
 
             uksort($node, static function ($a, $b) {
-                if(!is_string($a)) {
+                if(is_array($a)) {
                     return -1;
                 }
 
@@ -240,7 +307,21 @@ class BackendTemplateStudioController extends AbstractBackendController
 
         $sortRecursive($prefixTree);
 
+        // todo: event to adjust order/remove things instead of hardcoding?
+        unset($prefixTree['backend']);
+
         return array_merge(['content_element' => [], 'frontend_module' => [], 'component' => []], $prefixTree);
     }
 
+    private function getTemplateNameInformation(string $logicalName): array {
+        [$namespace, $shortName] = ContaoTwigUtil::parseContaoName($logicalName);
+
+        return [
+            'name' => $logicalName,
+            'short_name' => $shortName ?? '?',
+            'namespace' => $namespace ?? '?',
+            'identifier' => ContaoTwigUtil::getIdentifier($shortName) ?? '?',
+            'extension' => ContaoTwigUtil::getExtension($shortName) ?? '?',
+        ];
+    }
 }

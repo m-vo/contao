@@ -1,16 +1,10 @@
-{# @Contao_ContaoCoreBundle/content_element/_video.html.twig #}
 <div class="template_name">
     <div class="structure">
         <div class="namespace">@{{ namespace }}</div>
         <div class="/">/</div>
-        <button
-            data-action="click->contao--template-studio#navigate"
-            class="identifier"
-            data-item="{{ identifier }}"
-            aria-label="Open &quot;{{ identifier }}&quot; template(s) in the editor"
-        >
-            {{ identifier }}
-        </button>
+        {% with {button_attributes: attrs().addClass('identifier')} %}
+            {{ include('@Contao/backend/template_studio/_open_template_button.html.twig') }}
+        {% endwith %}
         <div class="extension">.{{ extension }}</div>
     </div>
     {% if namespace starts with 'Contao_Global' %}

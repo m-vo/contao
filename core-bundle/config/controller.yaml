@@ -67,6 +67,7 @@ services:
             - '@contao.twig.filesystem_loader'
             - '@contao.twig.finder_factory'
             - '@contao.twig.inspector'
+            - '%kernel.project_dir%'
 
     Contao\CoreBundle\Controller\CaptchaController:
         arguments:
