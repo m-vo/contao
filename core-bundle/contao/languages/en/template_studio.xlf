@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.1">
+    <file source-language="en">
+        <body>
+            <trans-unit id="action.update_custom_template.0">
+                <source>Save</source>
+            </trans-unit>
+            <trans-unit id="action.update_custom_template.1">
+                <source>Save the custom "%s" template</source>
+            </trans-unit>
+            <trans-unit id="action.delete_custom_template.0">
+                <source>Delete</source>
+            </trans-unit>
+            <trans-unit id="action.delete_custom_template.1">
+                <source>Delete the custom "%s" template</source>
+            </trans-unit>
+            <trans-unit id="action.create_custom_template.0">
+                <source>Create custom template</source>
+            </trans-unit>
+            <trans-unit id="action.create_custom_template.1">
+                <source>Modify "%s" by creating a custom template</source>
+            </trans-unit>
+            <trans-unit id="action.create_content_element_variant_template.0">
+                <source>Create variant</source>
+            </trans-unit>
+            <trans-unit id="action.create_content_element_variant_template.1">
+                <source>Create a new variant template for the "%s" content element</source>
+            </trans-unit>
+            <trans-unit id="action.rename_content_element_variant_template.0">
+                <source>Rename variant</source>
+            </trans-unit>
+            <trans-unit id="action.rename_content_element_variant_template.1">
+                <source>Rename the "%s" variant template</source>
+            </trans-unit>
+            <trans-unit id="action.create_frontend_module_variant_template.0">
+                <source>Create variant</source>
+            </trans-unit>
+            <trans-unit id="action.create_frontend_module_variant_template.1">
+                <source>Create a new variant template for the "%s" frontend module</source>
+            </trans-unit>
+            <trans-unit id="action.rename_frontend_module_variant_template.0">
+                <source>Rename variant</source>
+            </trans-unit>
+            <trans-unit id="action.rename_frontend_module_variant_template.1">
+                <source>Rename the "%s" variant template</source>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

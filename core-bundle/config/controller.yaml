@@ -68,6 +68,7 @@ services:
             - '@contao.twig.finder_factory'
             - '@contao.twig.inspector'
             - '%kernel.project_dir%'
+            - !tagged_iterator contao.template_studio_action_provider
 
     Contao\CoreBundle\Controller\CaptchaController:
         arguments:

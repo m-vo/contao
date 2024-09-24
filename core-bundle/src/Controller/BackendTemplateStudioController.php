@@ -9,6 +9,10 @@ use Contao\CoreBundle\Twig\Inspector\BlockInformation;
 use Contao\CoreBundle\Twig\Inspector\BlockType;
 use Contao\CoreBundle\Twig\Inspector\Inspector;
 use Contao\CoreBundle\Twig\Loader\ContaoFilesystemLoader;
+use Contao\CoreBundle\Twig\Studio\ActionContext;
+use Contao\CoreBundle\Twig\Studio\ActionInterface;
+use Contao\CoreBundle\Twig\Studio\ActionProviderInterface;
+use Contao\CoreBundle\Twig\Studio\ActionSignature;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Path;
 use Symfony\Component\HttpFoundation\Request;
@@ -18,13 +22,31 @@ use Twig\Source;
 
 class BackendTemplateStudioController extends AbstractBackendController
 {
+    /**
+     * @var array<string, ActionInterface>
+     */
+    private readonly array $actions;
+
+    /**
+     * @param iterable<int, ActionProviderInterface> $actionProviders
+     */
     public function __construct(
         private readonly ContaoFilesystemLoader $loader,
         private readonly FinderFactory          $finder,
         private readonly Inspector              $inspector,
         private readonly string                 $projectDir,
+        iterable                                $actionProviders = []
     )
     {
+        $actions = [];
+
+        foreach ($actionProviders as $provider) {
+            foreach ($provider->getActions() as $action) {
+                $actions[$action->getName()] = $action;
+            }
+        }
+
+        $this->actions = $actions;
     }
 
     #[Route(
@@ -64,7 +86,7 @@ class BackendTemplateStudioController extends AbstractBackendController
             [
                 'identifier' => $identifier,
                 'templates' => array_map(
-                    function (Source $source) use ($identifier): array {
+                    function (Source $source): array {
                         $templateNameInformation = $this->getTemplateNameInformation($source->getName());
 
                         return [
@@ -75,6 +97,14 @@ class BackendTemplateStudioController extends AbstractBackendController
                     },
                     $sources
                 ),
+                'actions' =>
+                    array_map(
+                        static fn(ActionInterface $action): string => $action->getName(),
+                        array_filter(
+                            [...$this->actions],
+                            fn(ActionInterface $action): bool => $action->canExecute($this->createActionContext($request, $identifier)),
+                        )
+                    ),
             ]
         );
     }
@@ -102,12 +132,13 @@ class BackendTemplateStudioController extends AbstractBackendController
     )]
     public function save(Request $request, string $identifier): Response
     {
+        // todo: should save maybe also be an action and just have an additional key binding?
         $data = $request->getContent();
 
         // Get the file that an editor is allowed to edit
         $first = $this->loader->getFirst($identifier);
 
-        if((ContaoTwigUtil::parseContaoName($first)[0] ?? '') !== 'Contao_Global') {
+        if ((ContaoTwigUtil::parseContaoName($first)[0] ?? '') !== 'Contao_Global') {
             throw new \InvalidArgumentException(sprintf('There is no userland template for identifier "%s".', $identifier));
         }
 
@@ -123,6 +154,41 @@ class BackendTemplateStudioController extends AbstractBackendController
             '@Contao/backend/template_studio/stream/save.stream.html.twig',
             [
                 'path' => Path::makeRelative($sourceContext->getPath(), $this->projectDir),
+            ]
+        );
+    }
+
+    #[Route(
+        '/contao/template-studio/resource/{identifier}/action/{action}',
+        name: '_contao_template_studio_action',
+        requirements: ['identifier' => '.+', 'action' => '.+'],
+        defaults: ['_scope' => 'backend'],
+        methods: ['POST']
+    )]
+    public function action(Request $request, string $identifier, string $actionName): Response
+    {
+        if (null === ($action = ($this->actions[$actionName] ?? null))) {
+            throw new \InvalidArgumentException(sprintf('The action "%s" is not defined.', $actionName));
+        }
+
+        $context = $this->createActionContext($request, $identifier);
+
+        if (!$action->canExecute($context)) {
+            throw new \RuntimeException(sprintf('The action "%s" cannot be executed in the current context.', $actionName));
+        }
+
+        $result = $action->execute($context);
+
+        if ($result->hasStep()) {
+            return $this->stream(...$result->getStep());
+        }
+
+        // todo: reload stuff?
+        return $this->stream(
+            '@Contao/backend/template_studio/action/result.stream.html.twig',
+            [
+                'success' => $result->isSuccessful(),
+                'message' => $result->getMessage(),
             ]
         );
     }
@@ -274,11 +340,10 @@ class BackendTemplateStudioController extends AbstractBackendController
                 $node = &$node[$part];
             }
 
-            $leaf = new class($identifier, $this->loader->exists("@Contao_Global/$identifier.$extension"))
-            {
+            $leaf = new class($identifier, $this->loader->exists("@Contao_Global/$identifier.$extension")) {
                 public function __construct(
                     public readonly string $identifier,
-                    public readonly bool $isCustomized,
+                    public readonly bool   $isCustomized,
                 )
                 {
                 }
@@ -293,7 +358,7 @@ class BackendTemplateStudioController extends AbstractBackendController
             }
 
             uksort($node, static function ($a, $b) {
-                if(is_array($a)) {
+                if (is_array($a)) {
                     return -1;
                 }
 
@@ -313,7 +378,8 @@ class BackendTemplateStudioController extends AbstractBackendController
         return array_merge(['content_element' => [], 'frontend_module' => [], 'component' => []], $prefixTree);
     }
 
-    private function getTemplateNameInformation(string $logicalName): array {
+    private function getTemplateNameInformation(string $logicalName): array
+    {
         [$namespace, $shortName] = ContaoTwigUtil::parseContaoName($logicalName);
 
         return [
@@ -323,5 +389,13 @@ class BackendTemplateStudioController extends AbstractBackendController
             'identifier' => ContaoTwigUtil::getIdentifier($shortName) ?? '?',
             'extension' => ContaoTwigUtil::getExtension($shortName) ?? '?',
         ];
+    }
+
+    private function createActionContext(Request $request, string $identifier): ActionContext
+    {
+        return new ActionContext([
+            'identifier' => $identifier,
+            'request' => $request,
+        ]);
     }
 }

@@ -1,4 +1,13 @@
-<div class="tab-panel" data-contao--tabs-target="tab" data-label="{{ identifier }}" id="template-studio--tab_{{ identifier }}">
+<div class="tab-panel" data-contao--tabs-target="tab" data-label="{{ identifier }}"
+     id="template-studio--tab_{{ identifier }}">
+    {% if actions %}
+        <div class="actions">
+            {% for action in actions %}
+                {% include '@Contao/backend/template_studio/_action_button.html.twig' with {identifier, action} only %}
+            {% endfor %}
+        </div>
+    {% endif %}
+
     {% for template in templates %}
         <div class="template">
             {# Label #}
@@ -26,8 +35,10 @@
 
         {% if not loop.last %}
             <div class="template--inheritance-chain">
-                <div>⇡</div>
-                <span>inherits from previous template</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-move-down">
+                    <path d="M8 18L12 22L16 18"></path>
+                    <path d="M12 2V22"></path>
+                </svg>
             </div>
         {% endif %}
     {% endfor %}

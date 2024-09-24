@@ -1,4 +1,6 @@
 #template-studio--tabs {
+    counter-reset: templates;
+
     /* Tab system */
     .tab-navigation {
         display: flex;
@@ -60,6 +62,27 @@
 
     /* Editor */
     .template {
+        border: 1px solid var(--chosen-border);
+        padding: 4px;
+        margin-left: 4px;
+        position: relative;
+
+        &:before {
+            counter-increment: templates;
+            content: counter(templates);
+            border: 1px solid var(--chosen-border);
+            background-color: var(--chosen-bg);
+            border-radius: 50%;
+            display: grid;
+            place-content: center;
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            width: 15px;
+            height: 15px;
+            font-size: 11px;
+        }
+
         h3 {
             font-size: .85rem;
             font-weight: inherit;
@@ -74,32 +97,6 @@
                 border-radius: 4px;
                 padding: 2px 6px;
                 font-size: .75rem;
-            }
-        }
-
-        .template--path {
-            margin: 0 0 12px 2px;
-        }
-
-        .template--inheritance-chain {
-            display: flex;
-            gap: 8px;
-            margin: 24px 0;
-            padding: 8px;
-            align-items: center;
-            color: var(--info);
-            font-size: .75rem;
-            background: var(--code-bg);
-
-            div {
-                display: grid;
-                place-items: center;
-                aspect-ratio: 1;
-                border-radius: 50%;
-                padding: 0;
-                width: 20px;
-                font-size: 14px;
-                background-color: var(--info-bg);
             }
         }
 
@@ -133,5 +130,13 @@
                 opacity: 1;
             }
         }
+    }
+
+    .template--inheritance-chain {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 56px;
+        color: var(--info);
     }
 }

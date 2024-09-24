@@ -240,6 +240,12 @@ class ContaoCoreExtension extends Extension implements PrependExtensionInterface
             ->mountLocalAdapter('var/backups', 'backups', 'backups')
             ->addVirtualFilesystem('backups', 'backups')
         ;
+
+        // User templates
+        $config
+            ->mountLocalAdapter('templates', 'custom_templates', 'custom_templates')
+            ->addVirtualFilesystem('custom_templates', 'custom_templates')
+        ;
     }
 
     private function handleMessengerConfig(array $config, ContainerBuilder $container): void

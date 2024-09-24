@@ -1252,6 +1252,14 @@ services:
             - '@contao.twig.loader.theme_namespace'
             - '@database_connection'
 
+    contao.twig.studio.action.core_action_provider:
+        class: Contao\CoreBundle\Twig\Studio\Action\CoreActionProvider
+        arguments:
+            - '@contao.twig.filesystem_loader'
+            - '@contao.filesystem.virtual.custom_templates'
+        tags:
+            - { name: contao.template_studio_action_provider }
+
     contao.twig.loader.theme_namespace:
         class: Contao\CoreBundle\Twig\Loader\ThemeNamespace
 
