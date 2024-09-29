@@ -1,0 +1,20 @@
+<dialog data-contao--template-studio-target="modal">
+    <div class="header_wrapper">
+        <h3>{% block title %}{% endblock %}</h3>
+        <button class="close" type="button" aria-label="Close" data-action="contao--template-studio#closeModal">x</button>
+    </div>
+    <p class="description">
+        {% block description %}{% endblock %}
+    </p>
+
+    <form data-action="contao--template-studio#submit"
+          action="{{ path('_contao_template_studio_action', {identifier, action}) }}" method="POST">
+        <div class="controls">
+            {% block controls %}{% endblock %}
+        </div>
+        <div class="buttons tl_submit_container">
+            <button class="tl_submit" type="button" data-action="contao--template-studio#closeModal">Cancel</button>
+            {% block buttons %}{% endblock %}
+        </div>
+    </form>
+</dialog>

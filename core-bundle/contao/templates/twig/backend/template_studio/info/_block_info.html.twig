@@ -1,9 +1,10 @@
 <div class="header_wrapper">
     <h3>Hierarchy of block "{{ block }}"</h3>
     <button class="close" type="button" aria-controls="template-studio--info" aria-label="Close"
-            data-action="contao--template-studio#closeInfo">x
+            data-action="contao--template-studio#closePanel">x
     </button>
 </div>
+
 {% if hierarchy|length > 1 %}
     <p>
         Block <span class="token">{{ block }}</span> is originally defined in the
@@ -21,10 +22,10 @@
             .addClass('target', element.target)
             .addClass('shadowed', element.shadowed) %}
         <div{{ element_attrs }}>
-            {% include '@Contao/backend/template_studio/_template_name.html.twig' with element.template %}
+            {% include '@Contao/backend/template_studio/_template_name_structure.html.twig' with element.template %}
             {% include '@Contao/backend/template_studio/_template_badges.html.twig' with {
                 badges: [
-                    element.template.namespace == 'Contao_Global' ? 'custom' : null,
+                    element.template.namespace == 'Contao_Global' ? 'user' : null,
                     element.info.type.value == 'origin' ? 'origin' : null,
                     element.info.prototype ? 'prototype' : null
                 ]|filter(e => e is not null)

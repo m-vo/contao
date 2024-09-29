@@ -1,0 +1,15 @@
+<turbo-stream action="update" target="template-studio--dialog">
+    <template>
+        {% embed "@Contao/backend/template_studio/overlay/_modal.html.twig" %}
+            {% block title %}Are you sure?{% endblock %}
+
+            {% block description %}
+                This is going to delete the custom template for <span class="token">{{ identifier }}</span> and cannot be made undone.
+            {% endblock %}
+
+            {% block buttons %}
+                <button class="tl_submit" name="confirm_delete" type="submit">Confirm Delete</button>
+            {% endblock %}
+        {% endembed %}
+    </template>
+</turbo-stream>

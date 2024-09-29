@@ -1,0 +1,25 @@
+<turbo-stream action="update" target="template-studio--dialog">
+    <template>
+        {% embed "@Contao/backend/template_studio/overlay/_modal.html.twig" %}
+            {% block title %}Rename{% endblock %}
+
+            {% block description %}
+                Define a new name for the <span class="token">{{ current_name }}</span> variant belonging to <span class="token">{{ base_identifier }}</span>.
+            {% endblock %}
+
+            {% block controls %}
+                <div class="template_name">
+                    <label class="structure">
+                        <span class="identifier">{{ base_identifier }}/</span>
+                        <input class="identifier" name="new_name" type="text" pattern="{{ pattern }}" placeholder="{{ current_name }}">
+                        <span class="extension">.{{ extension }}</span>
+                    </label>
+                </div>
+            {% endblock %}
+
+            {% block buttons %}
+                <button class="tl_submit" name="Rename" type="submit">Rename</button>
+            {% endblock %}
+        {% endembed %}
+    </template>
+</turbo-stream>

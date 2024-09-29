@@ -5,19 +5,19 @@ namespace Contao\CoreBundle\Twig\Studio\Action;
 
 use Contao\CoreBundle\Filesystem\VirtualFilesystemInterface;
 use Contao\CoreBundle\Twig\ContaoTwigUtil;
+use Contao\CoreBundle\Twig\Finder\FinderFactory;
 use Contao\CoreBundle\Twig\Loader\ContaoFilesystemLoader;
 use Contao\CoreBundle\Twig\Studio\ActionContext;
 use Contao\CoreBundle\Twig\Studio\ActionInterface;
 use Contao\CoreBundle\Twig\Studio\ActionResult;
-use Contao\CoreBundle\Twig\Studio\TemplateSkeleton;
-use Symfony\Component\Filesystem\Path;
 
 class RenameVariantTemplateAction implements ActionInterface
 {
     public function __construct(
         private readonly ContaoFilesystemLoader     $filesystemLoader,
         private readonly VirtualFilesystemInterface $customTemplatesStorage,
-        private readonly string $prefix
+        private readonly FinderFactory              $finderFactory,
+        private readonly string                     $prefix
     )
     {
     }
@@ -31,45 +31,62 @@ class RenameVariantTemplateAction implements ActionInterface
     {
         $identifier = $context->getParameter('identifier');
 
-        return preg_match('%^'. preg_quote($this->prefix, '%') .'/[^/]+/.+$%', $identifier) === 1;
+        return preg_match('%^' . preg_quote($this->prefix, '%') . '/[^/]+/.+$%', $identifier) === 1;
     }
 
     public function execute(ActionContext $context): ActionResult
     {
         $identifier = $context->getParameter('identifier');
-
-        if ($context->…) {
-            // Show textbox where the user can enter the name of the template
-            $invalidNames = [];
-            $pattern = sprintf('^(?!(%s)$).*', implode('|', array_map(preg_quote(...), $invalidNames)));
-
-            return ActionResult::streamStep('@Contao/backend/template_studio/action/rename.stream.html.twig', $context);
-        }
-
-        $name = $context->getParameter('name');
-
         $extension = ContaoTwigUtil::getExtension($this->filesystemLoader->getFirst($identifier));
 
-        $directory = Path::join($this->prefix, $identifier);
-        $filename = Path::join($directory, "$name.$extension");
+        preg_match('%^(' . preg_quote($this->prefix, '%') . '/[^/]+)/.+$%', $identifier, $matches);
+        $baseTemplateIdentifier = $matches[1];
 
-        if ($this->customTemplatesStorage->fileExists($filename)) {
+        // Show dialog to select a name
+        if (($newNameSuffix = $context->getParameter('request')->get('new_name')) === null) {
+            $existingVariants = array_diff(
+                array_keys(
+                    iterator_to_array(
+                        $this->finderFactory->create()
+                            ->identifier($baseTemplateIdentifier)
+                            ->withVariants()
+                    )
+                ),
+                [$baseTemplateIdentifier]
+            );
+
+            $getName = static fn(string $identifier): string => substr($identifier, strlen($baseTemplateIdentifier) + 1);
+
+            // Disallow selecting a name of an existing variant
+            $pattern = sprintf('^(?!(%s)$).*', implode('|', array_map(preg_quote(...), array_map($getName(...), $existingVariants))));
+
+            return ActionResult::streamStep(
+                '@Contao/backend/template_studio/editor/action/rename_variant_template.stream.html.twig',
+                [
+                    'identifier' => $identifier,
+                    'action' => $this->getName(),
+                    'base_identifier' => $baseTemplateIdentifier,
+                    'current_name' => $getName($identifier),
+                    'extension' => $extension,
+                    'pattern' => $pattern,
+                ]
+            );
+        }
+
+        // Rename template
+        $oldName = "$identifier.$extension";
+        $newName = "$baseTemplateIdentifier/$newNameSuffix.$extension";
+
+        if ($this->customTemplatesStorage->fileExists($newName)) {
             return ActionResult::error('The given name already exists.');
         }
 
-        // Create a new template skeleton for the variant
-        $templateSkeleton = new TemplateSkeleton();
+        // todo: recursively create directories if necessary
 
-        if (!$this->customTemplatesStorage->directoryExists($directory)) {
-            $this->customTemplatesStorage->createDirectory($directory);
-        }
-
-        $this->customTemplatesStorage->write($filename, $templateSkeleton->getContent());
+        $this->customTemplatesStorage->move($oldName, $newName);
 
         // Reset and prime filesystem loader // todo check if this is needed
-        $this->filesystemLoader->reset();
-        $this->filesystemLoader->exists("@Contao/$filename");
 
-        return ActionResult::success('The new variant was created.');
+        return ActionResult::success('The variant template was renamed.');
     }
 }

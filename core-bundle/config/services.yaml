@@ -1257,8 +1257,16 @@ services:
         arguments:
             - '@contao.twig.filesystem_loader'
             - '@contao.filesystem.virtual.custom_templates'
+            - '@contao.twig.finder_factory'
+            - '@contao.twig.studio.template_skeleton_factory'
         tags:
             - { name: contao.template_studio_action_provider }
+
+    contao.twig.studio.template_skeleton_factory:
+        class: Contao\CoreBundle\Twig\Studio\TemplateSkeletonFactory
+        arguments:
+            - '@twig'
+            - '@contao.twig.inspector'
 
     contao.twig.loader.theme_namespace:
         class: Contao\CoreBundle\Twig\Loader\ThemeNamespace

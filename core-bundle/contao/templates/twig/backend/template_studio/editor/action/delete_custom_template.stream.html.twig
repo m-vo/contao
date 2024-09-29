@@ -1,0 +1,25 @@
+{# Close open dialogs  #}
+<turbo-stream action="update" target="template-studio--dialog">
+    <template></template>
+</turbo-stream>
+
+{# Close current tab #}
+{% if close_tab %}
+    <turbo-stream action="remove" target="template-studio--tab_{{ identifier }}">
+        <template></template>
+    </turbo-stream>
+{% endif %}
+
+{# Show a message #}
+<turbo-stream action="prepend" target="template-studio--message">
+    <template>
+        {% embed "@Contao/backend/template_studio/overlay/_message.html.twig" with {success: true} %}
+            {% block message %}
+                The custom template <i>{{ identifier }}</i> was deleted.
+            {% endblock %}
+        {% endembed %}
+    </template>
+</turbo-stream>
+
+{# Reload components #}
+<turbo-stream action="refresh-components"></turbo-stream>

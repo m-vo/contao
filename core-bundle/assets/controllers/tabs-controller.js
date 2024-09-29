@@ -78,12 +78,13 @@ export default class TabsController extends Controller {
         this.tabTargets.forEach((el) => {
             const isTarget = el === panel;
 
-            el.setAttribute('aria-selected', isTarget ? 'true' : 'false');
+            el.toggleAttribute('aria-selected', isTarget);
+            el.toggleAttribute('data-active', isTarget);
             el.style.display = isTarget ? 'revert' : 'none';
 
             const selectButton = document.getElementById(el.getAttribute('aria-labelledby'));
-            selectButton?.setAttribute('aria-selected', isTarget);
-            selectButton?.parentElement.classList.toggle('active', isTarget);
+            selectButton?.toggleAttribute('aria-selected', isTarget);
+            selectButton?.parentElement.toggleAttribute('data-active', isTarget);
         });
 
         this.activeTab = panel;

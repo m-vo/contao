@@ -2,6 +2,7 @@
 
 {% set button_attributes = attrs()
     .set('data-action', 'contao--template-studio#action')
+    .set('data-action-name', action)
     .set('data-url', path('_contao_template_studio_action', {identifier, action}))
     .set('title',  ('action.' ~ action ~ '.1')|trans([identifier]))
     .addClass('action action--' ~ action)

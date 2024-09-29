@@ -12,9 +12,6 @@ use Contao\CoreBundle\Twig\Loader\ContaoFilesystemLoader;
 use Contao\CoreBundle\Twig\Studio\ActionContext;
 use Contao\CoreBundle\Twig\Studio\ActionInterface;
 use Contao\CoreBundle\Twig\Studio\ActionProviderInterface;
-use Contao\CoreBundle\Twig\Studio\ActionSignature;
-use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Filesystem\Path;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -52,8 +49,9 @@ class BackendTemplateStudioController extends AbstractBackendController
     #[Route(
         '/contao/template-studio',
         name: self::class,
-        defaults: ['_scope' => 'backend'])
-    ]
+        defaults: ['_scope' => 'backend'],
+        methods: ['GET'],
+    )]
     public function __invoke(): Response
     {
         return $this->render(
@@ -81,8 +79,16 @@ class BackendTemplateStudioController extends AbstractBackendController
             $this->loader->getInheritanceChains()[$identifier] ?? []
         );
 
+        $actions = array_map(
+            static fn(ActionInterface $action): string => $action->getName(),
+            array_filter(
+                [...$this->actions],
+                fn(ActionInterface $action): bool => $action->canExecute($this->createActionContext($request, $identifier)),
+            )
+        );
+
         return $this->turboStream(
-            '@Contao/backend/template_studio/stream/open_tab.stream.html.twig',
+            '@Contao/backend/template_studio/editor/open_tab.stream.html.twig',
             [
                 'identifier' => $identifier,
                 'templates' => array_map(
@@ -97,14 +103,9 @@ class BackendTemplateStudioController extends AbstractBackendController
                     },
                     $sources
                 ),
-                'actions' =>
-                    array_map(
-                        static fn(ActionInterface $action): string => $action->getName(),
-                        array_filter(
-                            [...$this->actions],
-                            fn(ActionInterface $action): bool => $action->canExecute($this->createActionContext($request, $identifier)),
-                        )
-                    ),
+                'actions' => $actions,
+                'can_edit' => in_array('save_custom_template', $actions, true),
+                'reference' => $request->getUri(),
             ]
         );
     }
@@ -125,48 +126,15 @@ class BackendTemplateStudioController extends AbstractBackendController
 
     #[Route(
         '/contao/template-studio/resource/{identifier}',
-        name: '_contao_template_studio_save',
-        requirements: ['identifier' => '.+'],
-        defaults: ['_scope' => 'backend'],
-        methods: ['PUT']
-    )]
-    public function save(Request $request, string $identifier): Response
-    {
-        // todo: should save maybe also be an action and just have an additional key binding?
-        $data = $request->getContent();
-
-        // Get the file that an editor is allowed to edit
-        $first = $this->loader->getFirst($identifier);
-
-        if ((ContaoTwigUtil::parseContaoName($first)[0] ?? '') !== 'Contao_Global') {
-            throw new \InvalidArgumentException(sprintf('There is no userland template for identifier "%s".', $identifier));
-        }
-
-        $sourceContext = $this->loader->getSourceContext($first);
-
-        // todo use VFS for this
-        $filesystem = new Filesystem();
-        $filesystem->dumpFile($sourceContext->getPath(), $data);
-
-        // todo: reparse file
-
-        return $this->turboStream(
-            '@Contao/backend/template_studio/stream/save.stream.html.twig',
-            [
-                'path' => Path::makeRelative($sourceContext->getPath(), $this->projectDir),
-            ]
-        );
-    }
-
-    #[Route(
-        '/contao/template-studio/resource/{identifier}/action/{action}',
         name: '_contao_template_studio_action',
         requirements: ['identifier' => '.+', 'action' => '.+'],
-        defaults: ['_scope' => 'backend'],
+        defaults: ['_scope' => 'backend', '_token_check' => false],
         methods: ['POST']
     )]
-    public function action(Request $request, string $identifier, string $actionName): Response
+    public function action(Request $request, string $identifier): Response
     {
+        $actionName = $request->query->get('action', '');
+
         if (null === ($action = ($this->actions[$actionName] ?? null))) {
             throw new \InvalidArgumentException(sprintf('The action "%s" is not defined.', $actionName));
         }
@@ -180,15 +148,15 @@ class BackendTemplateStudioController extends AbstractBackendController
         $result = $action->execute($context);
 
         if ($result->hasStep()) {
-            return $this->stream(...$result->getStep());
+            return $this->turboStream(...$result->getStep());
         }
 
-        // todo: reload stuff?
-        return $this->stream(
-            '@Contao/backend/template_studio/action/result.stream.html.twig',
+        return $this->turboStream(
+            '@Contao/backend/template_studio/editor/action/result.stream.html.twig',
             [
                 'success' => $result->isSuccessful(),
                 'message' => $result->getMessage(),
+                'reload_components' => true,  // todo: only on demand
             ]
         );
     }
@@ -313,12 +281,29 @@ class BackendTemplateStudioController extends AbstractBackendController
         }
 
         return $this->turboStream(
-            '@Contao/backend/template_studio/stream/block_info.stream.html.twig',
+            '@Contao/backend/template_studio/info/block_info.stream.html.twig',
             [
                 'hierarchy' => $blockHierarchy,
                 'block' => $block,
                 // todo: shall we use getTemplateNameInformation() here as well?
                 'short_name' => ContaoTwigUtil::parseContaoName($name)[1],
+                'reference' => $request->getUri(),
+            ]
+        );
+    }
+
+
+    #[Route(
+        '/contao/template-studio/browser',
+        name: '_contao_template_studio_browser',
+        defaults: ['_scope' => 'backend'],
+        methods: ['GET']
+    )]
+    public function browser(Request $request): Response {
+        return $this->turboStream(
+            '@Contao/backend/template_studio/browser/browser.stream.html.twig',
+            [
+                'tree' => $this->getTemplateTree(),
             ]
         );
     }

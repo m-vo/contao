@@ -49,8 +49,42 @@
                 }
             }
 
-            &.active {
+            &[data-active] {
                 background: var(--panel-bg);
+            }
+        }
+    }
+
+    #template-studio--howto {
+        display: none;
+    }
+
+    #template-studio--tab-panels:empty {
+        height: 100%;
+        position: relative;
+        background-color: var(--chosen-bg);
+
+        &+#template-studio--howto {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+
+            .box {
+                max-width: 60ch;
+                background-color: var(--content-bg);
+                padding: 12px;
+                line-height: 1.3;
+
+                h3 {
+                    margin-bottom: 12px;
+                }
+
+                svg {
+                    vertical-align: middle;
+                }
             }
         }
     }
@@ -81,6 +115,16 @@
             width: 15px;
             height: 15px;
             font-size: 11px;
+        }
+
+        &.editable {
+            border: 1px solid var(--blue);
+            background-color: rgba(0, 100, 148, 0.05);
+
+            &:before {
+                color: var(--blue);
+                border: 1px solid var(--blue);
+            }
         }
 
         h3 {
@@ -132,7 +176,7 @@
         }
     }
 
-    .template--inheritance-chain {
+    .relation {
         display: flex;
         align-items: center;
         justify-content: center;

@@ -25,74 +25,40 @@
             </button>
         </div>
 
-        <div class="content chrome" data-contao--template-studio-target="chrome">
-            {# Overlays #}
-            <turbo-frame id="template-studio--message"></turbo-frame>
-
+        <section id="template-studio" class="content chrome" data-contao--template-studio-target="chrome">
             {# Navigation #}
-            <turbo-frame id="template-studio--browser">
-                {{ include("@Contao/backend/template_studio/_browser.html.twig") }}
-            </turbo-frame>
+            <div id="template-studio--browser" data-component-url="{{ path('_contao_template_studio_browser') }}">
+                {% include("@Contao/backend/template_studio/browser/_browser.html.twig") %}
+            </div>
 
             {# Main editor section with multiple tabs #}
-            <section data-controller="contao--tabs" id="template-studio--tabs">
+            <div data-controller="contao--tabs" id="template-studio--tabs">
                 <ul class="tab-navigation" data-contao--tabs-target="navigation"></ul>
-                <turbo-frame id="template-studio--tab-panels"></turbo-frame>
-            </section>
+                <div id="template-studio--tab-panels"></div>
+                <div id="template-studio--howto">
+                    <div class="box">
+                        <h3>Getting started</h3>
+                        <p>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                 fill="none"
+                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                 class="lucide lucide-arrow-left">
+                                <path d="m12 19-7-7 7-7"/>
+                                <path d="M19 12H5"/>
+                            </svg>
+                            Start by selecting a template from the browser. You can then view all its representations
+                            and make your own adjustments.
+                        </p>
+                    </div>
+                </div>
+            </div>
 
             {# Info panel #}
-            <turbo-frame id="template-studio--info"></turbo-frame>
-        </div>
+            <div id="template-studio--info" data-panel></div>
+
+            {# Overlays #}
+            <div id="template-studio--message"></div>
+            <div id="template-studio--dialog" data-panel></div>
+        </section>
     </main>
 {% endblock %}
-
-{#
-CONCEPT
-
-* tree of template identifiers in the @Contao namespace
-  |- component
-  |   |- _foo
-  |   |- _bar
-  |- content_element
-  |   |- text
-  |   |   |- special
-  |   |- image
-  | …
-
-* selecting an element -> open all templates of the chain identified by their specific namespace as tabs
-  @Contao_App/content_element/text.html.twig
-  @Contao_FooBarBundle/content_element/text.html.twig
-  @Contao_ContaoCoreBundle/content_element/text.html.twig
-
-  analysis: if a subsequent template does not include {% extends "@Contao/content_element/text.html.twig" %},
-  output a warning/grey out chain to make it clear, that the hierarchy was broken/overridden.
-
-  open questions: what's with components?
-
-* code lenses on blocks -> open inheritance information
-   - if a block is present in a parent template or a used template (including renames on import) or any
-     combination, show a code lense
-   - clicking on the code lense opens up an inheritance chain with template names as an overlay
-
-     @Contao_ContaoCoreBundle/content_element/content_element/_base.html.twig#content
-     [original]
-         <- @Contao_App/content_element/content_element/_base.html.twig#content
-         [via extends & parent()]
-             <- @Contao_ContaoCoreBundle/content_element/list.html.twig#content
-             [via extends & parent()]
-
-     @Contao_ContaoCoreBundle/component/_list.html.twig#list_item
-     [original]
-         <- @Contao_ContaoCoreBundle/content_element/list.html.twig#content (use)
-         [via use]
-             <- @Contao_App/content_element/list.html.twig#content
-             [via extends; shadows!]
-
-   - if a block shadows another, show a warning/grey out chain (and/or add a warning annotation)
-   - clicking on a template in the chain opens up the template as a tab
-
-* the info panel is updated for each selected template to show the chain/relations. here you can click
-  to add a new custom version of a template. templates in the global namespace have a different look to
-  make clear, that these are editable. for those, the info panel has a save/restore(/undo?/redo?) section
-  to make changes.
-#}

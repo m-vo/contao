@@ -1,0 +1,39 @@
+
+#template-studio--dialog {
+    dialog {
+        border: none;
+        padding: 0;
+        box-shadow: 0 0 48px rgb(0 0 0 / .3);
+
+        > .header_wrapper, .description, .controls {
+            padding: 8px 12px;
+        }
+
+        &::backdrop {
+            background: rgb(0 0 0 / .35);
+        }
+
+        .description {
+            max-width: 60ch;
+            margin-bottom: 0;
+            line-height: 1.5;
+            border-left: 2px solid var(--content-border);
+            margin-left: 15px;
+
+            .token {
+                background-color: var(--code-bg);
+                color: var(--text);
+                padding: 0 4px;
+                font-variant: none;
+            }
+        }
+
+        .buttons {
+            border-top: 1px solid var(--border);
+        }
+
+        input:invalid {
+            background-color: var(--diff-del);
+        }
+    }
+}

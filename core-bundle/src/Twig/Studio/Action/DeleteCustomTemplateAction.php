@@ -9,10 +9,8 @@ use Contao\CoreBundle\Twig\Loader\ContaoFilesystemLoader;
 use Contao\CoreBundle\Twig\Studio\ActionContext;
 use Contao\CoreBundle\Twig\Studio\ActionInterface;
 use Contao\CoreBundle\Twig\Studio\ActionResult;
-use Contao\CoreBundle\Twig\Studio\TemplateSkeleton;
-use Symfony\Component\Filesystem\Path;
 
-class DeleteTemplateAction implements ActionInterface
+class DeleteCustomTemplateAction implements ActionInterface
 {
     public function __construct(
         private readonly ContaoFilesystemLoader     $filesystemLoader,
@@ -40,7 +38,34 @@ class DeleteTemplateAction implements ActionInterface
     {
         $identifier = $context->getParameter('identifier');
 
+        // Show dialog to confirm deletion
+        if($context->getParameter('request')->get('confirm_delete') === null) {
+            return ActionResult::streamStep(
+                '@Contao/backend/template_studio/editor/action/confirm_delete_custom_template.stream.html.twig',
+                [
+                    'identifier' => $identifier,
+                    'action' => $this->getName(),
+                ]
+            );
+        }
+
+        // Delete the template
+        $extension = ContaoTwigUtil::getExtension($this->filesystemLoader->getFirst($identifier));
+        $isLast = \count($this->filesystemLoader->getInheritanceChains()[$identifier]) === 1;
+
+        $this->customTemplatesStorage->delete("$identifier.$extension");
+
+        // Delete directory?
+
+        // Refresh things
         // todo
-        return ActionResult::success('The template was saved.');
+
+        return ActionResult::streamStep(
+            '@Contao/backend/template_studio/editor/action/delete_custom_template.stream.html.twig',
+            [
+                'identifier' => $identifier,
+                'close_tab' => $isLast,
+            ]
+        );#
     }
 }

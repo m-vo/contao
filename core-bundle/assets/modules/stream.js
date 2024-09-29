@@ -43,4 +43,27 @@ export class Stream {
             })
         ;
     }
+
+    performSubmit(formEvent) {
+        const form = formEvent.target;
+
+        const params = {
+            method: 'POST',
+            headers: {
+                'Accept': 'text/vnd.turbo-stream.html',
+            },
+            body: new FormData(formEvent.target, formEvent.submitter),
+        };
+
+        fetch(form.getAttribute('action'), params)
+            .then(response => response.text())
+            .then(html => {
+                Turbo.renderStreamMessage(html)
+            })
+            .catch((e) => {
+                if (e.name !== 'AbortError')
+                    console.error(e, e.type);
+            })
+        ;
+    }
 }

@@ -2,10 +2,10 @@
 <xliff version="1.1">
     <file source-language="en">
         <body>
-            <trans-unit id="action.update_custom_template.0">
+            <trans-unit id="action.save_custom_template.0">
                 <source>Save</source>
             </trans-unit>
-            <trans-unit id="action.update_custom_template.1">
+            <trans-unit id="action.save_custom_template.1">
                 <source>Save the custom "%s" template</source>
             </trans-unit>
             <trans-unit id="action.delete_custom_template.0">

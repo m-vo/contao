@@ -13,9 +13,9 @@ final class ActionResult
     {
     }
 
-    public static function streamStep(string $template, ActionContext $actionContext): self
+    public static function streamStep(string $template, array $parameters = []): self
     {
-        return new self(null, step: [$template, $actionContext->getParameters()]);
+        return new self(null, step: [$template, $parameters]);
     }
 
     public static function success(string $message): self

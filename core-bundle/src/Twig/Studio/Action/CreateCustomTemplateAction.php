@@ -9,14 +9,14 @@ use Contao\CoreBundle\Twig\Loader\ContaoFilesystemLoader;
 use Contao\CoreBundle\Twig\Studio\ActionContext;
 use Contao\CoreBundle\Twig\Studio\ActionInterface;
 use Contao\CoreBundle\Twig\Studio\ActionResult;
-use Contao\CoreBundle\Twig\Studio\TemplateSkeleton;
-use Symfony\Component\Filesystem\Path;
+use Contao\CoreBundle\Twig\Studio\TemplateSkeletonFactory;
 
 class CreateCustomTemplateAction implements ActionInterface
 {
     public function __construct(
         private readonly ContaoFilesystemLoader     $filesystemLoader,
-        private readonly VirtualFilesystemInterface $customTemplatesStorage
+        private readonly VirtualFilesystemInterface $customTemplatesStorage,
+        private readonly TemplateSkeletonFactory $templateSkeletonFactory,
     )
     {
     }
@@ -38,18 +38,18 @@ class CreateCustomTemplateAction implements ActionInterface
     public function execute(ActionContext $context): ActionResult
     {
         $identifier = $context->getParameter('identifier');
+        $first = $this->filesystemLoader->getFirst($identifier);
 
-        $extension = ContaoTwigUtil::getExtension($this->filesystemLoader->getFirst($identifier));
-        $filename = Path::join('content_element', "$identifier.$extension");
+        $extension = ContaoTwigUtil::getExtension($first);
+        $filename = "$identifier.$extension";
 
         // Create a new template skeleton for the custom template
-        $templateSkeleton = new TemplateSkeleton();
+        $templateSkeleton = $this->templateSkeletonFactory->create();
+        $content = $templateSkeleton->getContent("@Contao/$identifier.$extension");
 
-        $this->customTemplatesStorage->write($filename, $templateSkeleton->getContent());
+        $this->customTemplatesStorage->write($filename, $content);
 
-        // Reset and prime filesystem loader // todo check if this is needed
-        $this->filesystemLoader->reset();
-        $this->filesystemLoader->exists("@Contao/$filename");
+        // todo: Reset and prime filesystem loader?
 
         return ActionResult::success('A custom template was created.');
     }

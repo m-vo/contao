@@ -26,19 +26,11 @@ export class TwigEditor {
             name: 'save',
             bindKey: {win: 'Ctrl-S', mac: 'Command-S'},
             exec: (editor, args) => {
-               if(editor.getSession().getUndoManager().isClean()) {
-                   return;
-               }
+                if (editor.getSession().getUndoManager().isClean()) {
+                    return;
+                }
 
-                editor.container.dispatchEvent(
-                   new CustomEvent('save', {
-                       bubbles: true,
-                       detail: {
-                           resourceUrl: this.resourceUrl,
-                           content: editor.getValue(),
-                       }
-                   })
-               );
+                document.querySelector('#template-studio button[data-action-name="save_custom_template"]')?.click();
             },
         });
 
@@ -46,15 +38,15 @@ export class TwigEditor {
             name: 'showBlockInfo',
             readOnly: true,
             exec: (editor, args) => {
-               editor.container.dispatchEvent(
-                   new CustomEvent('block-info', {
-                       bubbles: true,
-                       detail: {
-                           name: this.name,
-                           block: args[0],
-                       }
-                   })
-               );
+                editor.container.dispatchEvent(
+                    new CustomEvent('block-info', {
+                        bubbles: true,
+                        detail: {
+                            name: this.name,
+                            block: args[0],
+                        }
+                    })
+                );
             },
         });
 
@@ -109,7 +101,7 @@ export class TwigEditor {
     analyzeBlocks() {
         let blocks = [];
 
-        for(let row = 0; row < this.editor.getSession().getLength(); row++) {
+        for (let row = 0; row < this.editor.getSession().getLength(); row++) {
             const tokens = this.editor.getSession().getTokens(row);
 
             for (let i = 0; i < tokens.length; i++) {
@@ -130,19 +122,19 @@ export class TwigEditor {
     analyzeReferences() {
         let references = [];
 
-        for(let row = 0; row < this.editor.getSession().getLength(); row++) {
+        for (let row = 0; row < this.editor.getSession().getLength(); row++) {
             const tokens = this.editor.getSession().getTokens(row);
 
             for (let i = 0; i < tokens.length; i++) {
                 if (tokens[i].type === 'meta.tag.twig' &&
                     /^{%-?$/.test(tokens[i].value) &&
                     tokens[i + 2]?.type === 'keyword.control.twig' &&
-                    ['extends', 'use'].includes(tokens[i+2].value) &&
+                    ['extends', 'use'].includes(tokens[i + 2].value) &&
                     tokens[i + 4]?.type === 'string'
                 ) {
-                    const name = tokens[i+4].value.replace(/["']/g, '');
+                    const name = tokens[i + 4].value.replace(/["']/g, '');
 
-                    if(name.test(/^@Contao(_.+)?\//)) {
+                    if (name.test(/^@Contao(_.+)?\//)) {
                         references.push({name, row, column: tokens[i].start});
                     }
                 }
@@ -150,6 +142,14 @@ export class TwigEditor {
         }
 
         return references;
+    }
+
+    isEditable() {
+        return !this.editor.getReadOnly();
+    }
+
+    getContent() {
+        return this.editor.getValue();
     }
 
     destroy() {

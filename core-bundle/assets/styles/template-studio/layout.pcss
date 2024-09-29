@@ -1,4 +1,6 @@
+@import "panel.pcss";
 @import "message.pcss";
+@import "dialog.pcss";
 @import "browser.pcss";
 @import "editor.pcss";
 @import "info.pcss";
@@ -61,5 +63,9 @@
         grid-area: info;
         border-left: 1px solid var(--border);
         overflow-y: auto;
+
+        &:empty {
+            display: none;
+        }
     }
 }

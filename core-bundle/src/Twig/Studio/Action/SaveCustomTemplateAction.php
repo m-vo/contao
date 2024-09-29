@@ -9,10 +9,8 @@ use Contao\CoreBundle\Twig\Loader\ContaoFilesystemLoader;
 use Contao\CoreBundle\Twig\Studio\ActionContext;
 use Contao\CoreBundle\Twig\Studio\ActionInterface;
 use Contao\CoreBundle\Twig\Studio\ActionResult;
-use Contao\CoreBundle\Twig\Studio\TemplateSkeleton;
-use Symfony\Component\Filesystem\Path;
 
-class UpdateTemplateAction implements ActionInterface
+class SaveCustomTemplateAction implements ActionInterface
 {
     public function __construct(
         private readonly ContaoFilesystemLoader     $filesystemLoader,
@@ -23,7 +21,7 @@ class UpdateTemplateAction implements ActionInterface
 
     public function getName(): string
     {
-        return 'update_custom_template';
+        return 'save_custom_template';
     }
 
     public function canExecute(ActionContext $context): bool
@@ -39,7 +37,16 @@ class UpdateTemplateAction implements ActionInterface
     {
         $identifier = $context->getParameter('identifier');
 
-        // todo
+        // Get the file that an editor is allowed to edit
+        $first = $this->filesystemLoader->getFirst($identifier);
+
+        if ((ContaoTwigUtil::parseContaoName($first)[0] ?? '') !== 'Contao_Global') {
+            throw new \InvalidArgumentException(sprintf('There is no user template for identifier "%s".', $identifier));
+        }
+
+        $extension = ContaoTwigUtil::getExtension($this->filesystemLoader->getFirst($identifier));
+        $this->customTemplatesStorage->write("$identifier.$extension", $context->getParameter('request')->getContent());
+
         return ActionResult::success('The template was saved.');
     }
 }
