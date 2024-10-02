@@ -14,7 +14,12 @@ namespace Contao\CoreBundle\Controller;
 
 use Contao\CoreBundle\Twig\ContaoTwigUtil;
 use Contao\CoreBundle\Twig\Finder\FinderFactory;
+use Contao\CoreBundle\Twig\Inspector\BlockInformation;
+use Contao\CoreBundle\Twig\Inspector\BlockType;
+use Contao\CoreBundle\Twig\Inspector\InspectionException;
+use Contao\CoreBundle\Twig\Inspector\Inspector;
 use Contao\CoreBundle\Twig\Loader\ContaoFilesystemLoader;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Twig\Source;
@@ -24,6 +29,7 @@ class BackendTemplateStudioController extends AbstractBackendController
     public function __construct(
         private readonly ContaoFilesystemLoader $loader,
         private readonly FinderFactory $finder,
+        private readonly Inspector $inspector,
     ) {
     }
 
@@ -58,7 +64,7 @@ class BackendTemplateStudioController extends AbstractBackendController
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
         if (!($this->loader->getInheritanceChains()[$identifier] ?? false)) {
-            return new Response(\sprintf('Invalid identifier "%s"', $identifier), Response::HTTP_UNPROCESSABLE_ENTITY);
+            return new Response('Could not find template identifier..', Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $sources = array_map(
@@ -147,6 +153,125 @@ class BackendTemplateStudioController extends AbstractBackendController
 
         return $this->render('@Contao/backend/template_studio/tree.html.twig', [
             'tree' => $prefixTree,
+        ]);
+    }
+
+    /**
+     * Resolve a logical template name and open a tab with the associated identifier.
+     */
+    #[Route(
+        '/_contao/template-studio-follow',
+        name: '_contao_template_studio_follow',
+        defaults: ['_scope' => 'backend'],
+        methods: ['GET'],
+    )]
+    public function follow(Request $request): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        if (($logicalName = $request->get('name')) === null) {
+            return new Response(
+                'Malformed request - did you forget to add the "name" parameter?',
+                Response::HTTP_BAD_REQUEST,
+            );
+        }
+
+        $identifier = ContaoTwigUtil::getIdentifier($logicalName);
+
+        if (!$identifier) {
+            return new Response('Could not retrieve template identifier.', Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        return $this->editorTab($identifier);
+    }
+
+    /**
+     * Generate hierarchical block information for a given template and block name.
+     */
+    #[Route(
+        '/_contao/template-studio-block-info',
+        name: '_contao_template_studio_block_info',
+        defaults: ['_scope' => 'backend'],
+        methods: ['GET'],
+    )]
+    public function blockInfo(Request $request): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        if (($blockName = $request->query->get('block')) === null ||
+            ($logicalName = $request->query->get('name')) === null) {
+            return new Response(
+                'Malformed request - did you forget to add the "block" or "name" query parameter?',
+                Response::HTTP_BAD_REQUEST,
+            );
+        }
+
+        try {
+            $firstLogicalName = $this->loader->getFirst($logicalName);
+        } catch (\LogicException) {
+            return new Response('Could not find requested template.', Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        try {
+            $blockHierarchy = $this->inspector->getBlockHierarchy($firstLogicalName, $blockName);
+        } catch (InspectionException) {
+            return new Response('Could not retrieve requested block information.', Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        // Enrich data
+        $blockHierarchy = array_values(
+            array_map(
+                fn (BlockInformation $info): array => [
+                    'target' => false,
+                    'shadowed' => false,
+                    'warning' => false,
+                    'info' => $info,
+                    'template' => $this->getTemplateNameInformation($info->getTemplateName()),
+                ],
+                array_filter(
+                    $blockHierarchy,
+                    static fn (BlockInformation $hierarchy): bool => BlockType::transparent !== $hierarchy->getType(),
+                ),
+            ),
+        );
+
+        $numBlocks = \count($blockHierarchy);
+
+        for ($i = 0; $i < $numBlocks; ++$i) {
+            if ($blockHierarchy[$i]['info']->getTemplateName() === $logicalName) {
+                $blockHierarchy[$i]['target'] = true;
+                break;
+            }
+        }
+
+        $shadowed = false;
+        $lastOverwrite = null;
+
+        for ($i = 0; $i < $numBlocks; ++$i) {
+            if (BlockType::overwrite === $blockHierarchy[$i]['info']->getType()) {
+                $shadowed = true;
+
+                if (null !== $lastOverwrite) {
+                    $blockHierarchy[$lastOverwrite]['warning'] = true;
+                    $blockHierarchy[$i]['shadowed'] = true;
+                }
+
+                $lastOverwrite = $i;
+
+                continue;
+            }
+
+            $blockHierarchy[$i]['shadowed'] = $shadowed;
+
+            if (null !== $lastOverwrite && BlockType::origin === $blockHierarchy[$i]['info']->getType() && !$blockHierarchy[$i]['info']->isPrototype()) {
+                $blockHierarchy[$lastOverwrite]['warning'] = true;
+            }
+        }
+
+        return $this->render('@Contao/backend/template_studio/info/block_info.stream.html.twig', [
+            'hierarchy' => $blockHierarchy,
+            'block' => $blockName,
+            'target_template' => $this->getTemplateNameInformation($logicalName),
         ]);
     }
 

@@ -1,10 +1,17 @@
 {% extends '@Contao/be_main.html5' %}
 
+{% block head %}
+    {{ parent() }}
+    <script src="{{ asset('js/ext-code_lens.js',  'contao-components/ace') }}"></script>
+{% endblock %}
+
 {% block main %}
     <main id="main"
           aria-labelledby="main_headline"
           data-controller="contao--template-studio"
           data-action="contao--color-scheme:change@window->contao--template-studio#colorChange"
+          data-contao--template-studio-follow-url-value="{{ path('_contao_template_studio_follow') }}"
+          data-contao--template-studio-block-info-url-value="{{ path('_contao_template_studio_block_info') }}"
     >
         {# Headline #}
         <h1 id="main_headline">{{ headline }}</h1>
@@ -22,6 +29,9 @@
 
             {# Info panel #}
             <div id="template-studio--info"></div>
+
+            {# Overlays #}
+            <div id="template-studio--message" data-message-outlet></div>
         </section>
     </main>
 {% endblock %}

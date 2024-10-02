@@ -1,4 +1,7 @@
 {
-  "backend.css": "/bundles/contaocore/backend.e1f03a29.css",
-  "backend.js": "/bundles/contaocore/backend.802608de.js"
+  "backend.css": "/bundles/contaocore/backend.css",
+  "backend.js": "/bundles/contaocore/backend.js",
+  "images/search.svg": "/bundles/contaocore/images/search.5659cc96.svg",
+  "images/error.svg": "/bundles/contaocore/images/error.acaa5a14.svg",
+  "images/ok.svg": "/bundles/contaocore/images/ok.2dec1917.svg"
 }

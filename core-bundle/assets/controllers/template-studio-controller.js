@@ -1,10 +1,28 @@
 import { Controller } from '@hotwired/stimulus';
 import { TwigEditor } from "../modules/twig-editor";
+import { TurboCable } from "../modules/turbo-cable";
 
 export default class extends Controller {
     editors = new Map();
+    turboCable = new TurboCable();
+
+    static values = {
+        followUrl: String,
+        blockInfoUrl: String,
+    }
 
     static targets = ['editor'];
+
+    connect() {
+        // Subscribe to events dispatched by the editors
+        this.element.addEventListener('twig-editor:lens:follow', (e) => {
+            this.turboCable.get(this.followUrlValue, {name: e.detail.name});
+        })
+
+        this.element.addEventListener('twig-editor:lens:block-info', (e) => {
+            this.turboCable.get(this.blockInfoUrlValue, e.detail);
+        })
+    }
 
     openTab(el) {
         fetch(el.currentTarget.dataset.url, {
