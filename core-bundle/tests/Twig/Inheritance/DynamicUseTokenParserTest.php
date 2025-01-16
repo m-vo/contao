@@ -86,9 +86,15 @@ class DynamicUseTokenParserTest extends TestCase
 
     public function testHandlesContaoUsesWithThemeContext(): void
     {
-        $environment = $this->getDemoEnvironment();
+        $pageFinder = $this->createMock(PageFinder::class);
+        $pageFinder
+            ->method('getCurrentPage')
+            ->willReturn(
+                $this->mockClassWithProperties(PageModel::class, ['templateGroup' => 'templates/theme']),
+            )
+        ;
 
-        $GLOBALS['objPage'] = $this->mockClassWithProperties(PageModel::class, ['templateGroup' => 'templates/theme']);
+        $environment = $this->getDemoEnvironment($pageFinder);
 
         // When in a theme context at runtime, the theme's component is used as first
         // template in the chain:
@@ -107,11 +113,9 @@ class DynamicUseTokenParserTest extends TestCase
                 HTML,
             trim($environment->render('@Contao/element/menu.html.twig')),
         );
-
-        unset($GLOBALS['objPage']);
     }
 
-    private function getDemoEnvironment(): Environment
+    private function getDemoEnvironment(PageFinder|null $pageFinder = null): Environment
     {
         $projectDir = Path::canonicalize(__DIR__.'/../../Fixtures/Twig/use');
 
@@ -141,7 +145,7 @@ class DynamicUseTokenParserTest extends TestCase
             $templateLocator,
             $themeNamespace,
             $this->createMock(ContaoFramework::class),
-            $this->createMock(PageFinder::class),
+            $pageFinder ?? $this->createMock(PageFinder::class),
             $projectDir,
         );
 

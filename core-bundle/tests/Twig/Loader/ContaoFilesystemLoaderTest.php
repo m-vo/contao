@@ -571,23 +571,29 @@ class ContaoFilesystemLoaderTest extends TestCase
 
     public function testGetCurrentThemeSlug(): void
     {
+        $page1 = $this->mockClassWithProperties(PageModel::class, ['templateGroup' => null]);
+        $page2 = $this->mockClassWithProperties(PageModel::class, ['templateGroup' => 'templates/foo/bar']);
+
+        $pageFinder = $this->createMock(PageFinder::class);
+        $pageFinder
+            ->method('getCurrentPage')
+            ->willReturnOnConsecutiveCalls($page1, $page2)
+        ;
+
         $loader = new ContaoFilesystemLoader(
             new NullAdapter(),
             $this->createMock(TemplateLocator::class),
             new ThemeNamespace(),
             $this->createMock(ContaoFramework::class),
-            $this->createMock(PageFinder::class),
+            $pageFinder,
             '/',
         );
 
-        $this->assertNull($loader->getCurrentThemeSlug(), 'no theme slug by default');
+        $this->assertNull($loader->getCurrentThemeSlug(), 'no theme slug (page 1)');
 
         $loader->reset();
-        $GLOBALS['objPage'] = $this->mockClassWithProperties(PageModel::class, ['templateGroup' => 'templates/foo/bar']);
 
-        $this->assertSame('foo_bar', $loader->getCurrentThemeSlug(), 'read theme slug from context');
-
-        unset($GLOBALS['objPage']);
+        $this->assertSame('foo_bar', $loader->getCurrentThemeSlug(), 'theme slug from context (page 2)');
     }
 
     public function testPersistsAndRecallsHierarchy(): void
