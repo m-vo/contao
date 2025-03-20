@@ -117,6 +117,7 @@ class Configuration implements ConfigurationInterface
                 ->append($this->addCspNode())
                 ->append($this->addAltchaNode())
                 ->append($this->addTemplateStudioNode())
+                ->append($this->addFileManagerNode())
             ->end()
         ;
 
@@ -990,6 +991,15 @@ class Configuration implements ConfigurationInterface
     private function addTemplateStudioNode(): NodeDefinition
     {
         return (new TreeBuilder('template_studio'))
+            ->getRootNode()
+            ->addDefaultsIfNotSet()
+            ->canBeDisabled()
+        ;
+    }
+
+    private function addFileManagerNode(): NodeDefinition
+    {
+        return (new TreeBuilder('file_manager'))
             ->getRootNode()
             ->addDefaultsIfNotSet()
             ->canBeDisabled()

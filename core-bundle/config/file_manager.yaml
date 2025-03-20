@@ -1,0 +1,36 @@
+services:
+    _defaults:
+        autoconfigure: true
+
+    _instanceof:
+        Symfony\Bundle\FrameworkBundle\Controller\AbstractController:
+            calls:
+                - [setContainer, ['@Psr\Container\ContainerInterface']]
+
+    Contao\CoreBundle\Controller\BackendFileManagerController:
+        arguments:
+            - '@contao.filesystem.virtual.files'
+            - '@security.helper'
+            - '@contao.image.studio'
+            - !tagged_iterator { tag: contao.operation.file_manager_elements, index_by: name }
+            - !tagged_iterator { tag: contao.operation.file_manager_view, index_by: name }
+
+    contao.filesystem.file_manager.delete_elements_operation:
+        class: Contao\CoreBundle\Filesystem\FileManager\Operation\ElementsDeleteOperation
+
+    contao.filesystem.file_manager.edit_elements_operation:
+        class: Contao\CoreBundle\Filesystem\FileManager\Operation\ElementsEditOperation
+        arguments:
+            - '@contao.data_container.dca_request_switcher'
+            - '@event_dispatcher'
+
+    contao.filesystem.file_manager.upload_view_operation:
+        class: Contao\CoreBundle\Filesystem\FileManager\Operation\ViewUploadOperation
+        arguments:
+            - '@event_dispatcher'
+
+    contao.filesystem.file_manager.upload.restrict_file_types_listener:
+        class: Contao\CoreBundle\Filesystem\FileManager\Upload\RestrictUploadFileTypesListener
+        arguments:
+            - '@translator'
+
