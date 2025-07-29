@@ -16,12 +16,26 @@ class AttrsTokenParser extends AbstractTokenParser
      *
      * Example using the "attrs()" function:
      *   {% set foo_attributes = attrs().addClass('bar').setIfExists('data-value', value|default).mergeWith(foo_attributes|default) %}
-     *   <div{{ foo_attributes}}></div>
+     *   <div{{ foo_attributes }}></div>
      *
      * Same example using the "{% attrs %}" tag:
      *   {% attrs foo_attributes addClass('bar') setIfExists('data-value', value) %}
-     *   <div{{ foo_attributes}}></div>
-     */
+     *   <div{{ foo_attributes }}></div>
+     *
+     * Or with using line breaks:
+     *    {% attrs foo_attributes
+     *      addClass('bar')
+     *      setIfExists('data-value', value)
+     *    %}
+     *    <div{{ foo_attributes }}></div>
+     *
+     *  // todo: maybe merge priorities with `!`?
+     *    {% attrs foo_attributes
+     *      addClass('bar')
+     *      !removeClass('x')
+     *      setIfExists('data-value', value)
+     *    %}
+ */
     public function parse(Token $token): Node
     {
         $stream = $this->parser->getStream();
