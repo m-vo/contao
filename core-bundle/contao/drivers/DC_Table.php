@@ -457,13 +457,12 @@ class DC_Table extends DataContainer implements ListableDataContainerInterface, 
 			}
 		}
 
-		$parameters = array(
-			'panel' => $this->panel(),
-		);
+		$parameters = array();
 
 		// Render view
 		if ($this->treeView)
 		{
+			$parameters['panel'] = $this->panel();
 			$parameters['view'] = $this->treeView();
 		}
 		else
@@ -474,6 +473,7 @@ class DC_Table extends DataContainer implements ListableDataContainerInterface, 
 				$this->values[] = $this->currentPid;
 			}
 
+			$parameters['panel'] = $this->panel();
 			$parameters['view'] = ($GLOBALS['TL_DCA'][$this->strTable]['list']['sorting']['mode'] ?? null) == self::MODE_PARENT ? $this->parentView() : $this->listView();
 		}
 
