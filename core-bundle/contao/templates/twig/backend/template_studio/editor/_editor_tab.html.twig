@@ -14,6 +14,15 @@
             </form>
         {% endif %}
 
+        {# Wizards #}
+        {% if wizards|length %}
+            <form class="wizards" method="post">
+                {% for wizard in wizards %}
+                    {{ include('@Contao/backend/template_studio/editor/_wizard_button.html.twig') }}
+                {% endfor %}
+            </form>
+        {% endif %}
+
         {# Editor listing #}
         {% for template in templates %}
             {% set editable = can_edit and loop.first %}

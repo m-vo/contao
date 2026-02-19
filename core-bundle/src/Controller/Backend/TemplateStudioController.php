@@ -253,6 +253,7 @@ class TemplateStudioController extends AbstractBackendController
             'identifier' => $identifier,
             'templates' => $templates,
             'operations' => $operationNames,
+            'wizards' => ['a'],
             'can_edit' => $canEdit,
         ]);
     }
@@ -439,7 +440,23 @@ class TemplateStudioController extends AbstractBackendController
         ]);
     }
 
-    protected function getOperationContext(string $identifier): OperationContext
+    /**
+     * Execute an operation and stream the result.
+     */
+    #[Route(
+        '/%contao.backend.route_prefix%/template-studio/resource/{identifier}',
+        name: '_contao_template_studio_wizard.stream',
+        requirements: ['identifier' => '.+'],
+        defaults: ['_scope' => 'backend', '_token_check' => false, '_store_referrer' => false],
+        methods: ['POST'],
+        condition: "'text/vnd.turbo-stream.html' in request.getAcceptableContentTypes()",
+    )]
+    public function wizard(Request $request, string $identifier, #[MapQueryParameter('wizard')] string $operationName): Response
+    {
+
+    }
+
+    private function getOperationContext(string $identifier): OperationContext
     {
         return $this->operationContextFactory->create(
             $identifier,

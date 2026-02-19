@@ -1,0 +1,10 @@
+{% trans_default_domain 'contao_template_studio' %}
+
+{% set button_attributes = attrs()
+    .set('formaction', path('_contao_template_studio_wizard.stream', {identifier, wizard}))
+    .set('data-wizard', wizard)
+    .set('title', ('template_studio.wizard.' ~ wizard ~ '.1')|trans([identifier]))
+    .addClass('wizard wizard--' ~ wizard)
+    .mergeWith(button_attributes|default)
+%}
+<button{{ button_attributes }}>{{ ('template_studio.wizard.' ~ wizard ~ '.0')|trans() }}</button>
