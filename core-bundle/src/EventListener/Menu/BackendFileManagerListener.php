@@ -12,7 +12,8 @@ declare(strict_types=1);
 
 namespace Contao\CoreBundle\EventListener\Menu;
 
-use Contao\CoreBundle\Controller\BackendFileManagerController;
+use Contao\CoreBundle\Controller\Backend\FileManagerController;
+use Contao\CoreBundle\Controller\Backend\TemplateStudioController;
 use Contao\CoreBundle\Event\MenuEvent;
 use Knp\Menu\Util\MenuManipulator;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
@@ -54,11 +55,12 @@ class BackendFileManagerListener
 
         $fileManagerNode = $event->getFactory()
             ->createItem('file-manager')
-            ->setLabel($this->translator->trans('MOD.files.0', [], 'contao_modules'))
+            ->setLabel('MOD.file_manager.0')
+            ->setExtra('translation_domain', 'contao_modules')
             ->setUri($this->router->generate('contao_file_manager'))
             ->setLinkAttribute('class', 'navigation file-manager')
-            ->setLinkAttribute('title', $this->translator->trans('MOD.files.1', [], 'contao_modules'))
-            ->setCurrent(BackendFileManagerController::class === $request->get('_controller'))
+            ->setLinkAttribute('title', $this->translator->trans('MOD.file_manager.1', [], 'contao_modules'))
+            ->setCurrent(TemplateStudioController::class === $request->get('_controller'))
         ;
 
         $categoryNode->addChild($fileManagerNode);

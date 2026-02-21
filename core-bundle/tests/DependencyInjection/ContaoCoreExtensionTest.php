@@ -12,9 +12,9 @@ declare(strict_types=1);
 
 namespace Contao\CoreBundle\Tests\DependencyInjection;
 
+use Contao\CoreBundle\Controller\Backend\FileManagerController;
 use Contao\CoreBundle\Controller\Backend\SearchController;
 use Contao\CoreBundle\Controller\Backend\TemplateStudioController;
-use Contao\CoreBundle\Controller\BackendFileManagerController;
 use Contao\CoreBundle\Cron\CronJob;
 use Contao\CoreBundle\DependencyInjection\Attribute\AsCallback;
 use Contao\CoreBundle\DependencyInjection\Attribute\AsContentElement;
@@ -830,14 +830,14 @@ class ContaoCoreExtensionTest extends TestCase
             ],
         ]);
 
-        $this->assertFalse($container->hasDefinition(BackendFileManagerController::class));
+        $this->assertFalse($container->hasDefinition(FileManagerController::class));
     }
 
     public function testRegistersTheFileManagerRelatedServicesCorrectly(): void
     {
         $container = $this->getContainerBuilder();
 
-        $this->assertTrue($container->hasDefinition(BackendFileManagerController::class));
+        $this->assertTrue($container->hasDefinition(FileManagerController::class));
     }
 
     public function testRegistersAsContentElementAttribute(): void

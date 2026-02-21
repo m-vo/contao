@@ -7,7 +7,7 @@ services:
             calls:
                 - [setContainer, ['@Psr\Container\ContainerInterface']]
 
-    Contao\CoreBundle\Controller\BackendFileManagerController:
+    Contao\CoreBundle\Controller\Backend\FileManagerController:
         arguments:
             - '@contao.filesystem.virtual.files'
             - '@security.helper'

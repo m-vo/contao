@@ -1070,7 +1070,10 @@ class Configuration implements ConfigurationInterface
         ;
     }
 
-    private function addFileManagerNode(): NodeDefinition
+    /**
+     * @return ArrayNodeDefinition<TreeBuilder<'array'>>
+     */
+    private function addFileManagerNode(): ArrayNodeDefinition
     {
         return (new TreeBuilder('file_manager'))
             ->getRootNode()

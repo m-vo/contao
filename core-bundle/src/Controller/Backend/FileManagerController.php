@@ -10,7 +10,7 @@ declare(strict_types=1);
  * @license LGPL-3.0-or-later
  */
 
-namespace Contao\CoreBundle\Controller;
+namespace Contao\CoreBundle\Controller\Backend;
 
 use Contao\BackendUser;
 use Contao\CoreBundle\Filesystem\DirectoryFilterVirtualFilesystem;
@@ -34,7 +34,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * @experimental
  */
 #[IsGranted('ROLE_ADMIN', message: 'Access restricted to administrators.')] // todo remove once every method is secured
-class BackendFileManagerController extends AbstractBackendController
+class FileManagerController extends AbstractBackendController
 {
     private VirtualFilesystemInterface $storage;
 
